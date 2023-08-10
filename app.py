@@ -5,7 +5,7 @@ import os
 from influxdb_client.client.influxdb_client_async import InfluxDBClientAsync
 from influxdb_client.client.write_api import ASYNCHRONOUS
 
-
+influx_url = os.environ.get('INFLUX_URL')
 influx_api_token = os.environ.get('INFLUX_API_TOKEN')
 influx_org = os.environ.get('INFLUX_ORG')
 influx_bucket = os.environ.get('INFLUX_BUCKET')
@@ -24,7 +24,7 @@ logger.setLevel(logging.DEBUG)
 async def startup_event():
     global client, write_api
     
-    client = InfluxDBClientAsync(url="https://influxdb.staging.deltixhub.io", token=influx_api_token, org=influx_org)
+    client = InfluxDBClientAsync(url=influx_url, token=influx_api_token, org=influx_org)
     write_api = client.write_api()
 
 async def on_new_message(message):

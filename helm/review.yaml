@@ -1,0 +1,23 @@
+image:
+  pullPolicy: Always
+  registry: registry-test.deltixhub.com
+  repository: ai/dial/application/dial-analytics
+#  tag: development
+  pullSecrets:
+    - epm-rtc-registry-test
+
+
+containerSecurityContext:
+  runAsUser: 1666
+
+podSecurityContext:
+  fsGroup: 1666
+
+podAnnotations:
+  autorestart: '{{ dateInZone "2006-01-02 15:04:05Z" (now) "UTC" }}'
+
+ingress:
+  enabled: false
+
+env:
+  WEB_CONCURRENCY: "5"

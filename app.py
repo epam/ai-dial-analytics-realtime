@@ -39,22 +39,23 @@ async def shutdown_event():
 async def on_rate_message(request, response):
     logger.info(f'Rate message length {len(request) + len(response)}')
 
-async def publish_usage(usage):
+async def publish_usage(deployment, model, project_id, chat_id, usage):
     logger.info(f'Chat completion message length {usage["total_tokens"]}')
 
     data = [
-        f"tokens,host=dial completion_tokens={usage['completion_tokens']}",
-        f"tokens,host=dial prompt_tokens={usage['prompt_tokens']}",
+        f"tokens,deployment={deployment},model={model},project_id={project_id}{f',chat_id={chat_id}' if len(chat_id) > 0 else ''} completion_tokens={usage['completion_tokens']}",
+        f"tokens,deployment={deployment},model={model},project_id={project_id}{f',chat_id={chat_id}' if len(chat_id) > 0 else ''} prompt_tokens={usage['prompt_tokens']}",
     ]
     await write_api.write(influx_bucket, influx_org, data)
 
 
-async def on_chat_completion_message(deployment, request, response):
+async def on_chat_completion_message(deployment, project_id, chat_id, request, response):
     if response['status'] != '200':
         return
 
     request_body = json.loads(request['body'])
     stream = request_body.get('stream', False)
+    model = request_body.get('model', deployment)
 
     if stream:
         body = response['body']
@@ -67,18 +68,20 @@ async def on_chat_completion_message(deployment, request, response):
             chunk = json.loads(chunk)
 
             if 'usage' in chunk and chunk['usage'] != None:
-                await publish_usage(chunk['usage'])
+                await publish_usage(deployment, model, project_id, chat_id, chunk['usage'])
     else:
         body_json = json.loads(response['body'])
 
         if 'usage' in body_json and body_json['usage'] != None:
-            await publish_usage(body_json['usage'])
+            await publish_usage(deployment, model, project_id, chat_id, body_json['usage'])
 
 
 async def on_new_message(message):
     request = message['request']
     uri = message['request']['uri']
     response = message['response']
+    project_id = message['project']['id']
+    chat_id = message['chat']['id']
 
     match = re.search(RATE_PATTERN, uri)
     if match:
@@ -87,8 +90,8 @@ async def on_new_message(message):
     match = re.search(CHAT_COMPLETION_PATTERN, uri)
     if match:
         deployment = match.group(1)
-        await on_chat_completion_message(deployment, request, response)
-    
+        await on_chat_completion_message(deployment, project_id, chat_id, request, response)
+
 @app.post('/data')
 async def chat(request: Request):
     data = await request.json()

@@ -43,8 +43,8 @@ async def publish_usage(deployment, model, project_id, chat_id, usage):
     logger.info(f'Chat completion message length {usage["total_tokens"]}')
 
     data = [
-        f"tokens,deployment={deployment},model={model},project_id={project_id}{f',chat_id={chat_id}' if len(chat_id) > 0 else ''} completion_tokens={usage['completion_tokens']}",
-        f"tokens,deployment={deployment},model={model},project_id={project_id}{f',chat_id={chat_id}' if len(chat_id) > 0 else ''} prompt_tokens={usage['prompt_tokens']}",
+        f"tokens,deployment={deployment},model={model},project_id={project_id} completion_tokens={usage['completion_tokens']}",
+        f"tokens,deployment={deployment},model={model},project_id={project_id} prompt_tokens={usage['prompt_tokens']}",
     ]
     await write_api.write(influx_bucket, influx_org, data)
 

@@ -12,7 +12,7 @@ variables:
   CHART: "dial-application" # Helm chart name, e.g. "gitlab-runner"
   VERSION: "0.1.2" # Helm chart version
   NAMESPACE: ${CI_PROJECT_NAME}
-  HELM_EXTRA_ARGS: ""
+  HELM_EXTRA_ARGS: "-f ${HELM_SECRET_FILE}"
   RELEASE: ${CI_PROJECT_NAME}
 
   development_ENV_ID: "staging"

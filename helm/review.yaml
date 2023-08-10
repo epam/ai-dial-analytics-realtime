@@ -20,4 +20,6 @@ ingress:
   enabled: false
 
 env:
-  WEB_CONCURRENCY: "5"
+  INFLUX_URL: http://influxdb2.influxdb
+  INFLUX_BUCKET: default
+  INFLUX_ORG: deltix

@@ -20,9 +20,7 @@ RUN adduser -u 1666 --disabled-password --gecos "" appuser
 
 # Install pip requirements
 COPY --from=dep-builder [ "/build/dist/*.whl", "/install/" ]
-RUN pip install --no-index --no-cache-dir /install/*.whl \
-    && rm -rf /install
-
+RUN pip install --no-cache-dir /install/*.whl
 
 WORKDIR /app
 COPY --chown=appuser . /app

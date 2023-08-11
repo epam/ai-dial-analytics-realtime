@@ -1,6 +1,7 @@
 -f https://download.pytorch.org/whl/cpu/torch_stable.html
 torch==2.0.0+cpu
 
+aiohttp==3.8.5
 Flask==2.3.2
 fastapi==0.97.0
 uvicorn==0.22.0

@@ -50,7 +50,7 @@ def make_point(deployment: str,
     point.field('chat_id', chat_id if len(chat_id) > 0 else 'undefined')
 
     usage = response['usage']
-    if usage != None:
+    if usage != None and 'completion_tokens' in usage and 'prompt_tokens' in usage:
         point.field('completion_tokens', usage['completion_tokens']) \
             .field('prompt_tokens', usage['prompt_tokens'])
     else:

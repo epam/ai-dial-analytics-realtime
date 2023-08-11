@@ -13,3 +13,4 @@ tiktoken==0.4.0
 anthropic==0.2.10
 faiss-cpu==1.7.3
 influxdb-client==1.37.0
+langid==1.1.6

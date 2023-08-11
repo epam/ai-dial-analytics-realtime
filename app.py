@@ -60,6 +60,10 @@ async def on_chat_completion_message(deployment, project_id, chat_id, request, r
             chunk = json.loads(chunk)
 
             response_body['choices'] = merge(response_body['choices'], chunk['choices'])
+        
+        for i in range(len(response_body['choices'])):
+            response_body['choices'][i]['message'] = response_body['choices'][i]['delta']
+            del response_body['choices'][i]['delta']
     else:
         response_body = json.loads(response['body'])
 

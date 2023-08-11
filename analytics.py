@@ -4,6 +4,23 @@ import os
 from logging import Logger
 from influxdb_client.client.influxdb_client_async import InfluxDBClientAsync
 
+from langid.langid import LanguageIdentifier, model
+identifier = LanguageIdentifier.from_modelstring(model, norm_probs=True)
+
+def detect_lang(request, response):
+    try:
+        print(response['choices'][0])
+        text = request['messages'][-1]['content'] + '\n\n' + response['choices'][0]['message']['content']
+
+        lang, prob = identifier.classify(text)
+
+        if prob > 0.998:
+            return lang
+
+        return 'undefined'
+    except:
+        return 'undefined'
+
 influx_org = os.environ.get('INFLUX_ORG')
 influx_bucket = os.environ.get('INFLUX_BUCKET')
 
@@ -24,7 +41,7 @@ async def on_message(logger: Logger,
         .tag('deployment', deployment) \
         .tag('model', model) \
         .tag('project_id', project_id) \
-        .tag('language', 'English') \
+        .tag('language', detect_lang(request, response)) \
         .tag('upstream', 'undefined') \
         .tag('topic', 'general') \
         .field('user_hash', 'undefined') \

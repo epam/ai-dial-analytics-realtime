@@ -35,7 +35,7 @@ def make_point(deployment: str,
     response_content = response['choices'][0]['message']['content']
     topic = get_topic(request['messages'], response_content)
 
-    point = (Point('analytics_dev')
+    point = (Point('analytics')
         .tag('model', model)
         .tag('deployment', deployment)
         .tag('model', model)

@@ -1,0 +1,75 @@
+{
+  "calculate_probabilities": false,
+  "language": null,
+  "low_memory": false,
+  "min_topic_size": 10,
+  "n_gram_range": [
+    1,
+    1
+  ],
+  "nr_topics": null,
+  "seed_topic_list": [
+    [
+      "business",
+      "finance",
+      "revenue",
+      "company"
+    ],
+    [
+      "programming",
+      "java",
+      "code"
+    ],
+    [
+      "programming",
+      "python",
+      "code"
+    ],
+    [
+      "programming",
+      "c++",
+      "code"
+    ],
+    [
+      "programming",
+      "javascript",
+      "code"
+    ],
+    [
+      "devops",
+      "docker",
+      "kubernetes",
+      "jenkins",
+      "aws",
+      "cloud",
+      "yaml",
+      "container"
+    ],
+    [
+      "education",
+      "school",
+      "student",
+      "learn"
+    ],
+    [
+      "question",
+      "answer",
+      "comment"
+    ],
+    [
+      "art",
+      "paint",
+      "draw",
+      "photo",
+      "image"
+    ],
+    [
+      "sql",
+      "database",
+      "table"
+    ]
+  ],
+  "top_n_words": 10,
+  "verbose": true,
+  "embedding_model": "paraphrase-multilingual-MiniLM-L12-v2"
+}

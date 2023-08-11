@@ -24,7 +24,7 @@ async def on_message(logger: Logger,
         .tag('deployment', deployment) \
         .tag('model', model) \
         .tag('project_id', project_id) \
-        .field('number_request_message', len(request['messages'])) \
+        .field('number_request_messages', len(request['messages'])) \
         .time(datetime.utcnow(), WritePrecision.NS)
 
     if len(chat_id) > 0:

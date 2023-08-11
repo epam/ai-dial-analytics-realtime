@@ -25,17 +25,22 @@ async def on_message(logger: Logger,
         .tag('model', model) \
         .tag('project_id', project_id) \
         .tag('language', 'English') \
-        .field('user_hash', 'undefined') \
         .tag('upstream', 'undefined') \
         .tag('topic', 'general') \
+        .field('user_hash', 'undefined') \
         .field('number_request_messages', len(request['messages'])) \
         .time(datetime.utcnow(), WritePrecision.NS)
 
     if len(chat_id) > 0:
         point.field('chat_id', chat_id)
+    else:
+        point.field('chat_id', 'undefined')
 
     if usage != None:
         point.field('completion_tokens', usage['completion_tokens']) \
             .field('prompt_tokens', usage['prompt_tokens'])
+    else:
+        point.field('completion_tokens', 0) \
+            .field('prompt_tokens', 0)
 
     await influx_write_api.write(influx_bucket, influx_org, point)

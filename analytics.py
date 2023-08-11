@@ -24,11 +24,15 @@ async def on_message(logger: Logger,
         .tag('deployment', deployment) \
         .tag('model', model) \
         .tag('project_id', project_id) \
+        .tag('language', 'English') \
+        .field('user_hash', 'undefined') \
+        .tag('upstream', 'undefined') \
+        .tag('topic', 'general') \
         .field('number_request_messages', len(request['messages'])) \
         .time(datetime.utcnow(), WritePrecision.NS)
 
     if len(chat_id) > 0:
-        point.tag('chat_id', chat_id)
+        point.field('chat_id', chat_id)
 
     if usage != None:
         point.field('completion_tokens', usage['completion_tokens']) \

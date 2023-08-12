@@ -7,6 +7,7 @@ import re
 from influxdb_client.client.influxdb_client_async import InfluxDBClientAsync
 from analytics import on_message
 from universal_api_utils import merge
+from dateutil import parser
 
 RATE_PATTERN = r"/v1/rate"
 CHAT_COMPLETION_PATTERN = r"/openai/deployments/(.+?)/chat/completions"
@@ -45,6 +46,7 @@ async def on_chat_completion_message(deployment: str,
                                      upstream_url: str,
                                      user_hash: str,
                                      user_title: str,
+                                     timestamp_ms: int,
                                      request: any,
                                      response: any):
     if response['status'] != '200':
@@ -74,7 +76,7 @@ async def on_chat_completion_message(deployment: str,
     else:
         response_body = json.loads(response['body'])
 
-    await on_message(logger, influx_write_api, deployment, model, project_id, chat_id, upstream_url, user_hash, user_title, request_body, response_body)
+    await on_message(logger, influx_write_api, deployment, model, project_id, chat_id, upstream_url, user_hash, user_title, timestamp_ms, request_body, response_body)
 
 
 async def on_log_message(message):
@@ -86,6 +88,7 @@ async def on_log_message(message):
     user_hash = message['user']['id']
     user_title = message['user']['title']
     upstream_url = response['upstream_uri'] if 'upstream_uri' in response else ''
+    timestamp_ms = int(parser.parse(request['time']).timestamp() * (10 ** 3))
 
     match = re.search(RATE_PATTERN, uri)
     if match:
@@ -94,7 +97,7 @@ async def on_log_message(message):
     match = re.search(CHAT_COMPLETION_PATTERN, uri)
     if match:
         deployment = match.group(1)
-        await on_chat_completion_message(deployment, project_id, chat_id, upstream_url, user_hash, user_title, request, response)
+        await on_chat_completion_message(deployment, project_id, chat_id, upstream_url, user_hash, user_title, timestamp_ms, request, response)
 
 @app.post('/data')
 async def on_log_messages(request: Request):

@@ -34,6 +34,7 @@ def make_point(deployment: str,
                upstream_url: str,
                user_hash: str,
                user_title: str,
+               timestamp_ms: int,
                request: any,
                response: any):
     response_content = response['choices'][0]['message']['content']
@@ -48,10 +49,11 @@ def make_point(deployment: str,
         .tag('upstream', to_string(upstream_url))
         .tag('topic', topic)
         .tag('title', to_string(user_title))
+        .tag('response_id', response['id'])
         .field('user_hash', to_string(user_hash))
         .field('number_request_messages', len(request['messages']))
         .field('chat_id', to_string(chat_id))
-        .time(datetime.utcnow(), WritePrecision.NS))
+        .time(timestamp_ms * (10 ** 6)))
 
     usage = response['usage']
     if usage != None and 'completion_tokens' in usage and 'prompt_tokens' in usage:
@@ -73,10 +75,11 @@ async def on_message(logger: Logger,
                      upstream_url: str,
                      user_hash: str,
                      user_title: str,
+                     timestamp_ms: int,
                      request: any,
                      response: any):
     logger.info(f'Chat completion response length {len(response)}')
 
-    point = make_point(deployment, model, project_id, chat_id, upstream_url, user_hash, user_title, request, response)
+    point = make_point(deployment, model, project_id, chat_id, upstream_url, user_hash, user_title, timestamp_ms, request, response)
 
     await influx_write_api.write(influx_bucket, influx_org, point)

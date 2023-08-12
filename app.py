@@ -39,7 +39,14 @@ async def shutdown_event():
 async def on_rate_message(request, response):
     logger.info(f'Rate message length {len(request) + len(response)}')
 
-async def on_chat_completion_message(deployment, project_id, chat_id, request, response):
+async def on_chat_completion_message(deployment: str,
+                                     project_id: str,
+                                     chat_id: str,
+                                     upstream_url: str,
+                                     user_hash: str,
+                                     user_title: str,
+                                     request: any,
+                                     response: any):
     if response['status'] != '200':
         return
 
@@ -67,7 +74,7 @@ async def on_chat_completion_message(deployment, project_id, chat_id, request, r
     else:
         response_body = json.loads(response['body'])
 
-    await on_message(logger, influx_write_api, deployment, model, project_id, chat_id, request_body, response_body)
+    await on_message(logger, influx_write_api, deployment, model, project_id, chat_id, upstream_url, user_hash, user_title, request_body, response_body)
 
 
 async def on_log_message(message):
@@ -76,6 +83,9 @@ async def on_log_message(message):
     response = message['response']
     project_id = message['project']['id']
     chat_id = message['chat']['id']
+    user_hash = message['user']['id']
+    user_title = message['user']['title']
+    upstream_url = response['upstream_uri'] if 'upstream_uri' in response else ''
 
     match = re.search(RATE_PATTERN, uri)
     if match:
@@ -84,7 +94,7 @@ async def on_log_message(message):
     match = re.search(CHAT_COMPLETION_PATTERN, uri)
     if match:
         deployment = match.group(1)
-        await on_chat_completion_message(deployment, project_id, chat_id, request, response)
+        await on_chat_completion_message(deployment, project_id, chat_id, upstream_url, user_hash, user_title, request, response)
 
 @app.post('/data')
 async def on_log_messages(request: Request):

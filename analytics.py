@@ -10,7 +10,6 @@ identifier = LanguageIdentifier.from_modelstring(model, norm_probs=True)
 
 def detect_lang(request, response):
     try:
-        print(response['choices'][0])
         text = request['messages'][-1]['content'] + '\n\n' + response['choices'][0]['message']['content']
 
         lang, prob = identifier.classify(text)
@@ -25,11 +24,16 @@ def detect_lang(request, response):
 influx_org = os.environ.get('INFLUX_ORG')
 influx_bucket = os.environ.get('INFLUX_BUCKET')
 
+def to_string(obj: str):
+    return 'undefined' if obj == None or len(obj) == 0 else str(obj)
 
 def make_point(deployment: str,
                model: str,
                project_id: str,
                chat_id: str,
+               upstream_url: str,
+               user_hash: str,
+               user_title: str,
                request: any,
                response: any):
     response_content = response['choices'][0]['message']['content']
@@ -41,13 +45,13 @@ def make_point(deployment: str,
         .tag('model', model)
         .tag('project_id', project_id)
         .tag('language', detect_lang(request, response))
-        .tag('upstream', 'undefined')
+        .tag('upstream', to_string(upstream_url))
         .tag('topic', topic)
-        .field('user_hash', 'undefined')
+        .tag('title', to_string(user_title))
+        .field('user_hash', to_string(user_hash))
         .field('number_request_messages', len(request['messages']))
+        .field('chat_id', to_string(chat_id))
         .time(datetime.utcnow(), WritePrecision.NS))
-
-    point.field('chat_id', chat_id if len(chat_id) > 0 else 'undefined')
 
     usage = response['usage']
     if usage != None and 'completion_tokens' in usage and 'prompt_tokens' in usage:
@@ -66,10 +70,13 @@ async def on_message(logger: Logger,
                      model: str,
                      project_id: str,
                      chat_id: str,
+                     upstream_url: str,
+                     user_hash: str,
+                     user_title: str,
                      request: any,
                      response: any):
     logger.info(f'Chat completion response length {len(response)}')
 
-    point = make_point(deployment, model, project_id, chat_id, request, response)
+    point = make_point(deployment, model, project_id, chat_id, upstream_url, user_hash, user_title, request, response)
 
     await influx_write_api.write(influx_bucket, influx_org, point)

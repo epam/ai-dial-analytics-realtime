@@ -49,7 +49,8 @@ def make_point(deployment: str,
                timestamp_ms: int,
                request: any,
                response: any,
-               request_type: RequestType):
+               request_type: RequestType,
+               usage: any):
     topic = None
     if request_type == RequestType.CHAT_COMPLETION:
         response_content = response['choices'][0]['message']['content']
@@ -71,7 +72,6 @@ def make_point(deployment: str,
         .field('chat_id', to_string(chat_id))
         .time(timestamp_ms * (10 ** 6)))
 
-    usage = response.get('usage', None)
     if usage != None:
         point.field('completion_tokens', usage['completion_tokens'] if 'completion_tokens' in usage else 0)
         point.field('prompt_tokens', usage['prompt_tokens'] if 'prompt_tokens' in usage else 0)
@@ -80,6 +80,20 @@ def make_point(deployment: str,
         point.field('prompt_tokens', 0)
 
     return point
+
+async def parse_usage_per_model(response: any):
+    statistics = response.get('statistics', None)
+    if statistics == None:
+        return []
+    
+    if type(statistics) != dict or 'usage_per_model' not in statistics:
+        return []
+    
+    usage_per_model = statistics['usage_per_model']
+    if type(usage_per_model) != list:
+        return []
+    
+    return usage_per_model
 
 
 async def on_message(logger: Logger,
@@ -97,6 +111,12 @@ async def on_message(logger: Logger,
                      type: RequestType):
     logger.info(f'Chat completion response length {len(response)}')
 
-    point = make_point(deployment, model, project_id, chat_id, upstream_url, user_hash, user_title, timestamp_ms, request, response, type)
+    usage_per_model = parse_usage_per_model(response)
 
-    await influx_write_api.write(influx_bucket, influx_org, point)
+    if len(usage_per_model) == 0:
+        point = make_point(deployment, model, project_id, chat_id, upstream_url, user_hash, user_title, timestamp_ms, request, response, type, response.get('usage', None))
+        await influx_write_api.write(influx_bucket, influx_org, point)
+    else:
+        for usage in usage_per_model:
+            point = make_point(deployment, usage['model'], project_id, chat_id, upstream_url, user_hash, user_title, timestamp_ms, request, response, type, usage)
+            await influx_write_api.write(influx_bucket, influx_org, point)

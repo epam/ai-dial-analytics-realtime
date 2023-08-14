@@ -5,12 +5,13 @@ import os
 import json
 import re
 from influxdb_client.client.influxdb_client_async import InfluxDBClientAsync
-from analytics import on_message
+from analytics import on_message, RequestType
 from universal_api_utils import merge
 from dateutil import parser
 
 RATE_PATTERN = r"/v1/rate"
 CHAT_COMPLETION_PATTERN = r"/openai/deployments/(.+?)/chat/completions"
+EMBEDDING_PATTERN = r"/openai/deployments/(.+?)/embeddings"
 
 influx_url = os.environ.get('INFLUX_URL')
 influx_api_token = os.environ.get('INFLUX_API_TOKEN')
@@ -76,8 +77,21 @@ async def on_chat_completion_message(deployment: str,
     else:
         response_body = json.loads(response['body'])
 
-    await on_message(logger, influx_write_api, deployment, model, project_id, chat_id, upstream_url, user_hash, user_title, timestamp_ms, request_body, response_body)
+    await on_message(logger, influx_write_api, deployment, model, project_id, chat_id, upstream_url, user_hash, user_title, timestamp_ms, request_body, response_body, RequestType.CHAT_COMPLETION)
 
+async def on_embedding_message(deployment: str,
+                               project_id: str,
+                               chat_id: str,
+                               upstream_url: str,
+                               user_hash: str,
+                               user_title: str,
+                               timestamp_ms: int,
+                               request: any,
+                               response: any):
+    if response['status'] != '200':
+        return
+        
+    await on_message(logger, influx_write_api, deployment, deployment, project_id, chat_id, upstream_url, user_hash, user_title, timestamp_ms, json.loads(request['body']), json.loads(response['body']), RequestType.EMBEDDING)
 
 async def on_log_message(message):
     request = message['request']
@@ -99,12 +113,21 @@ async def on_log_message(message):
         deployment = match.group(1)
         await on_chat_completion_message(deployment, project_id, chat_id, upstream_url, user_hash, user_title, timestamp_ms, request, response)
 
+    match = re.search(EMBEDDING_PATTERN, uri)
+    if match:
+        deployment = match.group(1)
+        await on_embedding_message(deployment, project_id, chat_id, upstream_url, user_hash, user_title, timestamp_ms, request, response)
+        
+
 @app.post('/data')
 async def on_log_messages(request: Request):
     data = await request.json()
 
     for item in data:
-        await on_log_message(json.loads(item['message']))
+        try:
+            await on_log_message(json.loads(item['message']))
+        except Exception as e:
+            logging.exception(e)
 
 @app.get('/health')
 def health():

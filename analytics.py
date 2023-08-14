@@ -75,6 +75,9 @@ def make_point(deployment: str,
     if usage != None:
         point.field('completion_tokens', usage['completion_tokens'] if 'completion_tokens' in usage else 0)
         point.field('prompt_tokens', usage['prompt_tokens'] if 'prompt_tokens' in usage else 0)
+    else:
+        point.field('completion_tokens', 0)
+        point.field('prompt_tokens', 0)
 
     return point
 

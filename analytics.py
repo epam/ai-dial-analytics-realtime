@@ -111,7 +111,7 @@ async def on_message(logger: Logger,
                      type: RequestType):
     logger.info(f'Chat completion response length {len(response)}')
 
-    usage_per_model = parse_usage_per_model(response)
+    usage_per_model = await parse_usage_per_model(response)
 
     if len(usage_per_model) == 0:
         point = make_point(deployment, model, project_id, chat_id, upstream_url, user_hash, user_title, timestamp_ms, request, response, type, response.get('usage', None))

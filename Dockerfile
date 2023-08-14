@@ -1,9 +1,14 @@
 # dep builder: builds wheels for all deps
 FROM python:3.11 AS dep-builder
 
-COPY requirements.txt /build/requirements.txt
-RUN pip wheel -w /build/dist -r /build/requirements.txt
+ENV PYTHONDONTWRITEBYTECODE 1
+ENV PYTHONUNBUFFERED 1
 
+RUN python -m venv /opt/venv
+ENV PATH="/opt/venv/bin:$PATH"
+
+COPY requirements.txt .
+RUN pip install -r requirements.txt
 
 
 # For more information, please refer to https://aka.ms/vscode-docker-python
@@ -19,11 +24,12 @@ ENV PYTHONUNBUFFERED=1
 RUN adduser -u 1666 --disabled-password --gecos "" appuser
 
 # Install pip requirements
-COPY --from=dep-builder [ "/build/dist/*.whl", "/install/" ]
-RUN pip install --no-cache-dir /install/*.whl
+COPY --from=dep-builder /opt/venv /opt/venv
 
 WORKDIR /app
 COPY --chown=appuser . /app
+
+ENV PATH="/opt/venv/bin:$PATH"
 
 
 USER appuser

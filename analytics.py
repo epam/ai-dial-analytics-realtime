@@ -43,7 +43,6 @@ def make_point(deployment: str,
     point = (Point('analytics')
         .tag('model', model)
         .tag('deployment', deployment)
-        .tag('model', model)
         .tag('project_id', project_id)
         .tag('language', detect_lang(request, response))
         .tag('upstream', to_string(upstream_url))
@@ -55,7 +54,7 @@ def make_point(deployment: str,
         .field('chat_id', to_string(chat_id))
         .time(timestamp_ms * (10 ** 6)))
 
-    usage = response['usage']
+    usage = response.get('usage', None)
     if usage != None and 'completion_tokens' in usage and 'prompt_tokens' in usage:
         point.field('completion_tokens', usage['completion_tokens']) \
             .field('prompt_tokens', usage['prompt_tokens'])

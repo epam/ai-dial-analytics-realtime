@@ -62,7 +62,7 @@ async def on_chat_completion_message(deployment: str,
         body = response['body']
         chunks = body.split('\n\ndata: ')
 
-        chunks[0] = chunks[0].removeprefix('data: ')
+        chunks[0] = chunks[0][chunks[0].find('data: ')+6:0]
         if chunks[-1] == '[DONE]\n':
             chunks = chunks[0:len(chunks)-1]
 

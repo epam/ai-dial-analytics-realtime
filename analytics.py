@@ -37,8 +37,11 @@ def detect_lang_by_text(text):
 influx_org = os.environ.get('INFLUX_ORG')
 influx_bucket = os.environ.get('INFLUX_BUCKET')
 
+def is_empty(obj: str):
+    return obj == None or len(obj) == 0
+
 def to_string(obj: str):
-    return 'undefined' if obj == None or len(obj) == 0 else str(obj)
+    return 'undefined' if is_empty(obj) else str(obj)
 
 def make_point(deployment: str,
                model: str,
@@ -58,11 +61,11 @@ def make_point(deployment: str,
     if request_type == RequestType.CHAT_COMPLETION:
         response_content = response['choices'][0]['message']['content']
         request_content = "\n".join([message['content'] for message in request['messages']])
-        if chat_id != None:
+        if not is_empty(chat_id):
             topic = get_topic(request['messages'], response_content)
     else:
         request_content = request['input'] if type(request['input']) == str else "\n".join(request['input'])
-        if chat_id != None:
+        if not is_empty(chat_id):
             topic = get_topic_by_text(request['input'] if type(request['input']) == str else "\n\n".join(request['input']))
 
     price = rates.calculate_price(model, request_content, response_content, usage)
@@ -71,7 +74,7 @@ def make_point(deployment: str,
         .tag('model', model)
         .tag('deployment', deployment)
         .tag('project_id', project_id)
-        .tag('language', 'undefined' if chat_id == None else detect_lang(request, response, request_type))
+        .tag('language', 'undefined' if is_empty(chat_id) else detect_lang(request, response, request_type))
         .tag('upstream', to_string(upstream_url))
         .tag('topic', topic)
         .tag('title', to_string(user_title))

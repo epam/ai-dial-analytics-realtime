@@ -128,6 +128,7 @@ async def on_message(logger: Logger,
         await influx_write_api.write(influx_bucket, influx_org, point)
     else:
         point = make_point(deployment, model, project_id, chat_id, upstream_url, user_hash, user_title, timestamp_ms, request, response, type, None)
+        await influx_write_api.write(influx_bucket, influx_org, point)
 
         for usage in usage_per_model:
             point = make_point(deployment, usage['model'], project_id, None, None, user_hash, user_title, timestamp_ms, request, response, type, usage)

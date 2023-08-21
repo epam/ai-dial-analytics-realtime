@@ -1,6 +1,7 @@
-from influxdb_client import Point, WritePrecision
-from datetime import datetime
 import os
+import rates
+
+from influxdb_client import Point
 from logging import Logger
 from influxdb_client.client.influxdb_client_async import InfluxDBClientAsync
 from topic_model import get_topic, get_topic_by_text
@@ -52,22 +53,31 @@ def make_point(deployment: str,
                request_type: RequestType,
                usage: any):
     topic = None
+    response_content = ''
+    request_content = ''
     if request_type == RequestType.CHAT_COMPLETION:
         response_content = response['choices'][0]['message']['content']
-        topic = get_topic(request['messages'], response_content)
+        request_content = "\n".join([message['content'] for message in request['messages']])
+        if chat_id != None:
+            topic = get_topic(request['messages'], response_content)
     else:
-        topic = get_topic_by_text(request['input'] if type(request['input']) == str else "\n\n".join(request['input']))
+        request_content = request['input'] if type(request['input']) == str else "\n".join(request['input'])
+        if chat_id != None:
+            topic = get_topic_by_text(request['input'] if type(request['input']) == str else "\n\n".join(request['input']))
+
+    price = rates.calculate_price(model, request_content, response_content, usage)
 
     point = (Point('analytics')
         .tag('model', model)
         .tag('deployment', deployment)
         .tag('project_id', project_id)
-        .tag('language', detect_lang(request, response, request_type))
+        .tag('language', 'undefined' if chat_id == None else detect_lang(request, response, request_type))
         .tag('upstream', to_string(upstream_url))
         .tag('topic', topic)
         .tag('title', to_string(user_title))
         .tag('response_id', response['id'] if request_type == RequestType.CHAT_COMPLETION else uuid4())
         .field('user_hash', to_string(user_hash))
+        .field('price', price)
         .field('number_request_messages', len(request['messages']) if request_type == RequestType.CHAT_COMPLETION else (1 if type(request['input']) == str else len(request['input'])))
         .field('chat_id', to_string(chat_id))
         .time(timestamp_ms * (10 ** 6)))
@@ -117,6 +127,8 @@ async def on_message(logger: Logger,
         point = make_point(deployment, model, project_id, chat_id, upstream_url, user_hash, user_title, timestamp_ms, request, response, type, response.get('usage', None))
         await influx_write_api.write(influx_bucket, influx_org, point)
     else:
+        point = make_point(deployment, model, project_id, chat_id, upstream_url, user_hash, user_title, timestamp_ms, request, response, type, None)
+
         for usage in usage_per_model:
-            point = make_point(deployment, usage['model'], project_id, chat_id, upstream_url, user_hash, user_title, timestamp_ms, request, response, type, usage)
+            point = make_point(deployment, usage['model'], project_id, None, None, user_hash, user_title, timestamp_ms, request, response, type, usage)
             await influx_write_api.write(influx_bucket, influx_org, point)

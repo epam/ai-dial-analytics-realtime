@@ -20,6 +20,8 @@ ENV PYTHONDONTWRITEBYTECODE=1
 # Turns off buffering for easier container logging
 ENV PYTHONUNBUFFERED=1
 
+ENV MODEL_RATES='{"gpt-4":{"unit":"token","prompt_price":"0.00003","completion_price":"0.00006"},"gpt-35-turbo":{"unit":"token","prompt_price":"0.000002","completion_price":"0.0000015"},"gpt-4-32k":{"unit":"token","prompt_price":"0.00006","completion_price":"0.00012"},"text-embedding-ada-002":{"unit":"token","prompt_price":"0.0000001"},"chat-bison@001":{"unit":"char","prompt_price":"0.0000005","completion_price":"0.0000005"}}'
+
 # Creates a non-root user with an explicit UID
 RUN adduser -u 1666 --disabled-password --gecos "" appuser
 

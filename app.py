@@ -62,9 +62,11 @@ async def on_chat_completion_message(deployment: str,
         body = response['body']
         chunks = body.split('\n\ndata: ')
 
+        chunks = [chunk.strip() for chunk in chunks]
+
         chunks[0] = chunks[0][chunks[0].find('data: ')+6:]
-        if chunks[-1].startswith('[DONE]'):
-            chunks = chunks[0:len(chunks)-1]
+        if chunks[-1] == '[DONE]':
+            chunks.pop(len(chunks) - 1)
 
         response_body = json.loads(chunks[-1])
         for chunk in chunks[0:len(chunks)-1]:

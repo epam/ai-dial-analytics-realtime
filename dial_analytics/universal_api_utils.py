@@ -4,6 +4,7 @@ def merge_str(target, source):
     else:
         return target + source
 
+
 def merge_dicts(target, source):
     for key, value in source.items():
         if key in target:
@@ -18,9 +19,10 @@ def merge_dicts(target, source):
 
     return target
 
+
 def merge_lists(target, source):
     for i in source:
-        index = i['index']
+        index = i["index"]
 
         if index < len(target):
             merge(target[index], i)
@@ -28,6 +30,7 @@ def merge_lists(target, source):
             target.append(i)
 
     return target
+
 
 def merge(target, source):
     if isinstance(source, list):

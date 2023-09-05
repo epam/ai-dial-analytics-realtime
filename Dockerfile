@@ -4,11 +4,15 @@ FROM python:3.11 AS dep-builder
 ENV PYTHONDONTWRITEBYTECODE 1
 ENV PYTHONUNBUFFERED 1
 
+RUN pip install "poetry==1.6.1"
+
 RUN python -m venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
 
-COPY requirements.txt .
-RUN pip install -r requirements.txt
+COPY pyproject.toml poetry.lock .
+
+#RUN poetry install --without dev --no-root
+RUN poetry export -f requirements.txt | pip install -r /dev/stdin
 
 
 # For more information, please refer to https://aka.ms/vscode-docker-python
@@ -28,8 +32,9 @@ RUN adduser -u 1666 --disabled-password --gecos "" appuser
 # Install pip requirements
 COPY --from=dep-builder /opt/venv /opt/venv
 
-WORKDIR /app
-COPY --chown=appuser . /app
+WORKDIR /
+COPY --chown=appuser ./dial_analytics /dial_analytics
+COPY --chown=appuser ./topic_model /topic_model
 
 ENV PATH="/opt/venv/bin:$PATH"
 
@@ -38,4 +43,4 @@ USER appuser
 
 # During debugging, this entry point will be overridden. For more information, please refer to https://aka.ms/vscode-docker-python-debug
 EXPOSE 5000
-CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "5000"]
+CMD ["uvicorn", "dial_analytics.app:app", "--host", "0.0.0.0", "--port", "5000"]

@@ -1,10 +1,11 @@
 import os
+from datetime import timedelta
 from enum import Enum
 from logging import Logger
 from uuid import uuid4
 
 from influxdb_client import Point
-from influxdb_client.client.influxdb_client_async import InfluxDBClientAsync
+from influxdb_client.client.write_api_async import WriteApiAsync
 from langid.langid import LanguageIdentifier, model
 
 import dial_analytics.rates as rates
@@ -47,31 +48,27 @@ def detect_lang_by_text(text):
         return "undefined"
 
 
-influx_org = os.environ.get("INFLUX_ORG")
-influx_bucket = os.environ.get("INFLUX_BUCKET")
+influx_org = os.environ["INFLUX_ORG"]
+influx_bucket = os.environ["INFLUX_BUCKET"]
 
 
-def is_empty(obj: str):
-    return obj is None or len(obj) == 0
-
-
-def to_string(obj: str):
-    return "undefined" if is_empty(obj) else str(obj)
+def to_string(obj: str | None):
+    return obj if obj else "undefined"
 
 
 def make_point(
     deployment: str,
     model: str,
     project_id: str,
-    chat_id: str,
-    upstream_url: str,
+    chat_id: str | None,
+    upstream_url: str | None,
     user_hash: str,
     user_title: str,
     timestamp_ms: int,
-    request: any,
-    response: any,
+    request: dict,
+    response: dict,
     request_type: RequestType,
-    usage: any,
+    usage: dict | None,
 ):
     topic = None
     response_content = ""
@@ -81,13 +78,13 @@ def make_point(
         request_content = "\n".join(
             [message["content"] for message in request["messages"]]
         )
-        if not is_empty(chat_id):
+        if chat_id:
             topic = get_topic(request["messages"], response_content)
     else:
         request_content = (
             request["input"] if request["input"] is str else "\n".join(request["input"])
         )
-        if not is_empty(chat_id):
+        if chat_id:
             topic = get_topic_by_text(
                 request["input"]
                 if request["input"] is str
@@ -104,7 +101,7 @@ def make_point(
         .tag(
             "language",
             "undefined"
-            if is_empty(chat_id)
+            if not chat_id
             else detect_lang(request, response, request_type),
         )
         .tag("upstream", to_string(upstream_url))
@@ -123,7 +120,7 @@ def make_point(
             else (1 if request["input"] is str else len(request["input"])),
         )
         .field("chat_id", to_string(chat_id))
-        .time(timestamp_ms * (10**6))
+        .time(timedelta(milliseconds=timestamp_ms))
     )
 
     if usage is not None:
@@ -141,7 +138,7 @@ def make_point(
     return point
 
 
-async def parse_usage_per_model(response: any):
+async def parse_usage_per_model(response: dict):
     statistics = response.get("statistics", None)
     if statistics is None:
         return []
@@ -158,7 +155,7 @@ async def parse_usage_per_model(response: any):
 
 async def on_message(
     logger: Logger,
-    influx_write_api: InfluxDBClientAsync,
+    influx_write_api: WriteApiAsync,
     deployment: str,
     model: str,
     project_id: str,
@@ -167,8 +164,8 @@ async def on_message(
     user_hash: str,
     user_title: str,
     timestamp_ms: int,
-    request: any,
-    response: any,
+    request: dict,
+    response: dict,
     type: RequestType,
 ):
     logger.info(f"Chat completion response length {len(response)}")

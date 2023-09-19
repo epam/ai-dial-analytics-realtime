@@ -15,7 +15,7 @@ RATE_PATTERN = r"/v1/rate"
 CHAT_COMPLETION_PATTERN = r"/openai/deployments/(.+?)/chat/completions"
 EMBEDDING_PATTERN = r"/openai/deployments/(.+?)/embeddings"
 
-influx_url = os.environ.get("INFLUX_URL")
+influx_url = os.environ["INFLUX_URL"]
 influx_api_token = os.environ.get("INFLUX_API_TOKEN")
 influx_org = os.environ.get("INFLUX_ORG")
 
@@ -55,8 +55,8 @@ async def on_chat_completion_message(
     user_hash: str,
     user_title: str,
     timestamp_ms: int,
-    request: any,
-    response: any,
+    request: dict,
+    response: dict,
 ):
     if response["status"] != "200":
         return
@@ -115,8 +115,8 @@ async def on_embedding_message(
     user_hash: str,
     user_title: str,
     timestamp_ms: int,
-    request: any,
-    response: any,
+    request: dict,
+    response: dict,
 ):
     if response["status"] != "200":
         return

@@ -1,8 +1,16 @@
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+
 [tool.poetry]
-name = "dial-analytics"
-version = "0.1.0"
+name = "ai-dial-analytics-realtime"
+version = "0.1.4"
 description = ""
-authors = ["Aliaksei_Labanau <aliaksei_labanau@epam.com>"]
+authors = [
+    "Aliaksei_Labanau <aliaksei_labanau@epam.com>",
+    "Vladislav Vishnevsky <vvishnevsky@deltixlab.com>"]
+license = "MIT"
 readme = "README.md"
 
 
@@ -36,7 +44,3 @@ flake8 = "^6.1.0"
 autoflake = "^2.2.1"
 pyright = "^1.1.325"
 
-
-[build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"

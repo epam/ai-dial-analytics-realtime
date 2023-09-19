@@ -16,7 +16,7 @@ def number_of_chars_without_whitespaces(a: str):
 
 
 def calculate_price(
-    model: str, request_content: str, response_content: str, usage: any
+    model: str, request_content: str, response_content: str, usage: dict | None
 ) -> Decimal:
     model_rate = rates.get(model)
     if not model_rate:

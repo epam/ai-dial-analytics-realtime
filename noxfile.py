@@ -11,7 +11,7 @@ def lint(session):
     session.run("isort", "--profile", "black", "dial_analytics")
     session.run("black", "dial_analytics")
     session.run("flake8", "dial_analytics")
-    # session.run("pyright")
+    session.run("pyright", "dial_analytics")
 
 
 @nox.session(python=["3.11"])

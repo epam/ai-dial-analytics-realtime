@@ -11,7 +11,6 @@ ENV PATH="/opt/venv/bin:$PATH"
 
 COPY pyproject.toml poetry.lock .
 
-#RUN poetry install --without dev --no-root
 RUN poetry export -f requirements.txt | pip install -r /dev/stdin
 
 

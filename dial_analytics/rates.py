@@ -28,16 +28,18 @@ def calculate_price(
             return price
 
         if "prompt_price" in model_rate:
-            price += model_rate["prompt_price"] * Decimal(usage["prompt_tokens"])
+            price += model_rate["prompt_price"] * Decimal(
+                usage["prompt_tokens"]
+            )
         if "completion_price" in model_rate:
             price += model_rate["completion_price"] * Decimal(
                 usage["completion_tokens"]
             )
     elif model_rate["unit"] == "char_without_whitespace":
         if "prompt_price" in model_rate:
-            price += model_rate["prompt_price"] * number_of_chars_without_whitespaces(
-                request_content
-            )
+            price += model_rate[
+                "prompt_price"
+            ] * number_of_chars_without_whitespaces(request_content)
         if "completion_price" in model_rate:
             price += model_rate[
                 "completion_price"

@@ -17,7 +17,7 @@ EMBEDDING_PATTERN = r"/openai/deployments/(.+?)/embeddings"
 
 influx_url = os.environ["INFLUX_URL"]
 influx_api_token = os.environ.get("INFLUX_API_TOKEN")
-influx_org = os.environ.get("INFLUX_ORG")
+influx_org = os.environ["INFLUX_ORG"]
 
 app = FastAPI()
 logging.basicConfig(
@@ -34,7 +34,9 @@ logger.setLevel(logging.DEBUG)
 async def startup_event():
     global client, influx_write_api
 
-    client = InfluxDBClientAsync(url=influx_url, token=influx_api_token, org=influx_org)
+    client = InfluxDBClientAsync(
+        url=influx_url, token=influx_api_token, org=influx_org
+    )
     influx_write_api = client.write_api()
 
 
@@ -80,12 +82,14 @@ async def on_chat_completion_message(
         for chunk in chunks[0 : len(chunks) - 1]:
             chunk = json.loads(chunk)
 
-            response_body["choices"] = merge(response_body["choices"], chunk["choices"])
+            response_body["choices"] = merge(
+                response_body["choices"], chunk["choices"]
+            )
 
         for i in range(len(response_body["choices"])):
-            response_body["choices"][i]["message"] = response_body["choices"][i][
-                "delta"
-            ]
+            response_body["choices"][i]["message"] = response_body["choices"][
+                i
+            ]["delta"]
             del response_body["choices"][i]["delta"]
     else:
         response_body = json.loads(response["body"])
@@ -146,7 +150,9 @@ async def on_log_message(message):
     chat_id = message["chat"]["id"]
     user_hash = message["user"]["id"]
     user_title = message["user"]["title"]
-    upstream_url = response["upstream_uri"] if "upstream_uri" in response else ""
+    upstream_url = (
+        response["upstream_uri"] if "upstream_uri" in response else ""
+    )
     timestamp_ms = int(parser.parse(request["time"]).timestamp() * (10**3))
 
     match = re.search(RATE_PATTERN, uri)

@@ -48,7 +48,6 @@ def detect_lang_by_text(text):
         return "undefined"
 
 
-influx_org = os.environ["INFLUX_ORG"]
 influx_bucket = os.environ["INFLUX_BUCKET"]
 
 
@@ -82,7 +81,9 @@ def make_point(
             topic = get_topic(request["messages"], response_content)
     else:
         request_content = (
-            request["input"] if request["input"] is str else "\n".join(request["input"])
+            request["input"]
+            if request["input"] is str
+            else "\n".join(request["input"])
         )
         if chat_id:
             topic = get_topic_by_text(
@@ -91,7 +92,9 @@ def make_point(
                 else "\n\n".join(request["input"])
             )
 
-    price = rates.calculate_price(model, request_content, response_content, usage)
+    price = rates.calculate_price(
+        model, request_content, response_content, usage
+    )
 
     point = (
         Point("analytics")
@@ -109,7 +112,9 @@ def make_point(
         .tag("title", to_string(user_title))
         .tag(
             "response_id",
-            response["id"] if request_type == RequestType.CHAT_COMPLETION else uuid4(),
+            response["id"]
+            if request_type == RequestType.CHAT_COMPLETION
+            else uuid4(),
         )
         .field("user_hash", to_string(user_hash))
         .field("price", price)
@@ -129,7 +134,8 @@ def make_point(
             usage["completion_tokens"] if "completion_tokens" in usage else 0,
         )
         point.field(
-            "prompt_tokens", usage["prompt_tokens"] if "prompt_tokens" in usage else 0
+            "prompt_tokens",
+            usage["prompt_tokens"] if "prompt_tokens" in usage else 0,
         )
     else:
         point.field("completion_tokens", 0)
@@ -187,7 +193,7 @@ async def on_message(
             type,
             response.get("usage", None),
         )
-        await influx_write_api.write(influx_bucket, influx_org, point)
+        await influx_write_api.write(influx_bucket, record=point)
     else:
         point = make_point(
             deployment,
@@ -203,7 +209,7 @@ async def on_message(
             type,
             None,
         )
-        await influx_write_api.write(influx_bucket, influx_org, point)
+        await influx_write_api.write(influx_bucket, record=point)
 
         for usage in usage_per_model:
             point = make_point(
@@ -220,4 +226,4 @@ async def on_message(
                 type,
                 usage,
             )
-            await influx_write_api.write(influx_bucket, influx_org, point)
+            await influx_write_api.write(influx_bucket, record=point)

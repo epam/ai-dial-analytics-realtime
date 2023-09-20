@@ -1,13 +1,16 @@
-.PHONY: all install lint test
+.PHONY: all install test lint format
 
-all: lint test
-
+all:
+	nox
 
 install:
 	poetry install
 
 test:
-	nox -s test
+	nox -s tests
 
 lint:
 	nox -s lint
+
+format:
+	nox -s format

@@ -30,12 +30,12 @@ class InfluxWriteApiMock:
 
 @mock.patch("influxdb_client.client.influxdb_client_async.InfluxDBClientAsync")
 def test_data_request(influxdb_client_async):
-    import dial_analytics.app
+    import ai_dial_analytics_realtime.app
 
     write_api_mock = InfluxWriteApiMock()
-    dial_analytics.app.influx_write_api = write_api_mock
+    ai_dial_analytics_realtime.app.influx_write_api = write_api_mock
 
-    client = TestClient(dial_analytics.app.app)
+    client = TestClient(ai_dial_analytics_realtime.app.app)
     response = client.post(
         "/data",
         json=[

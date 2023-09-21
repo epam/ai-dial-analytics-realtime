@@ -8,8 +8,8 @@ from influxdb_client import Point
 from influxdb_client.client.write_api_async import WriteApiAsync
 from langid.langid import LanguageIdentifier, model
 
-import dial_analytics.rates as rates
-from dial_analytics.topic_model import get_topic, get_topic_by_text
+import ai_dial_analytics_realtime.rates as rates
+from ai_dial_analytics_realtime.topic_model import get_topic, get_topic_by_text
 
 identifier = LanguageIdentifier.from_modelstring(model, norm_probs=True)
 

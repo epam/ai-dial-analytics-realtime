@@ -29,4 +29,4 @@ def format(session):
 def tests(session):
     """Runs tests"""
     session.run("poetry", "install", external=True)
-    session.run("pytest")
+    session.run("pytest", *session.posargs)

@@ -24,6 +24,7 @@ python-dateutil = "2.8.2"
 torch = {version = "^2.0.1+cpu", source = "pytorch"}
 bertopic = "^0.15.0"
 llvmlite = "^0.40.1"
+python-dotenv = "^1.0.0"
 
 [[tool.poetry.source]]
 name = "pytorch"

@@ -14,7 +14,7 @@ build:                  ## build the source and wheels archives
 
 serve:                  ## run the server locally
 	poetry install
-	poetry run uvicorn ai_dial_analytics_realtime.app:app --host=0.0.0.0 --port=$(PORT)
+	poetry run uvicorn ai_dial_analytics_realtime.app:app --port=$(PORT) --env-file .env
 
 
 docker_serve:           ## run the server from the docker

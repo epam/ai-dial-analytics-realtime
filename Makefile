@@ -14,7 +14,7 @@ build:
 
 
 serve:
-	poetry install
+	poetry install --only main
 	poetry run uvicorn aidial_analytics_realtime.app:app --port=$(PORT) --env-file .env
 
 

@@ -9,7 +9,7 @@ SRC = "."
 @nox.session
 def lint(session):
     """Runs linters and fixers"""
-    session.run("poetry", "install", "--only", "main", external=True)
+    session.run("poetry", "install", external=True)
     session.run("isort", "--check", SRC)
     session.run("black", "--check", SRC)
     session.run("flake8", SRC)

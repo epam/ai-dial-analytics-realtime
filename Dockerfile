@@ -32,7 +32,7 @@ RUN adduser -u 1666 --disabled-password --gecos "" appuser
 COPY --from=dep-builder /opt/venv /opt/venv
 
 WORKDIR /
-COPY --chown=appuser ./ai_dial_analytics_realtime /ai_dial_analytics_realtime
+COPY --chown=appuser ./aidial_analytics_realtime /aidial_analytics_realtime
 COPY --chown=appuser ./topic_model /topic_model
 
 ENV PATH="/opt/venv/bin:$PATH"
@@ -42,4 +42,4 @@ USER appuser
 
 # During debugging, this entry point will be overridden. For more information, please refer to https://aka.ms/vscode-docker-python-debug
 EXPOSE 5000
-CMD ["uvicorn", "ai_dial_analytics_realtime.app:app", "--host", "0.0.0.0", "--port", "5000"]
+CMD ["uvicorn", "aidial_analytics_realtime.app:app", "--host", "0.0.0.0", "--port", "5000"]

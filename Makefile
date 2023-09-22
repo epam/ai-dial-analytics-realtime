@@ -15,7 +15,7 @@ build:
 
 serve:
 	poetry install
-	poetry run uvicorn ai_dial_analytics_realtime.app:app --port=$(PORT) --env-file .env
+	poetry run uvicorn aidial_analytics_realtime.app:app --port=$(PORT) --env-file .env
 
 
 docker_build:

@@ -8,8 +8,8 @@ from dateutil import parser
 from fastapi import FastAPI, Request
 from influxdb_client.client.influxdb_client_async import InfluxDBClientAsync
 
-from ai_dial_analytics_realtime.analytics import RequestType, on_message
-from ai_dial_analytics_realtime.universal_api_utils import merge
+from aidial_analytics_realtime.analytics import RequestType, on_message
+from aidial_analytics_realtime.universal_api_utils import merge
 
 RATE_PATTERN = r"/v1/rate"
 CHAT_COMPLETION_PATTERN = r"/openai/deployments/(.+?)/chat/completions"

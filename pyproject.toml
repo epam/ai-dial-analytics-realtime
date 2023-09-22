@@ -4,7 +4,7 @@ build-backend = "poetry.core.masonry.api"
 
 
 [tool.poetry]
-name = "ai-dial-analytics-realtime"
+name = "aidial-analytics-realtime"
 version = "0.1.4"
 description = "Realtime analytics server for AI DIAL"
 authors = ["DIAL Team"]

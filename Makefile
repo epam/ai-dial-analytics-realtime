@@ -1,45 +1,63 @@
 PORT = 5001
 IMAGE_NAME = ai-dial-analytics-realtime
+ARGS =
 
 
-.PHONY: all build serve docker_serve lint format test clean help
+.PHONY: all build serve docker_build docker_serve lint format test docs clean help
 
 
 all: build
 
 
-build:                  ## build the source and wheels archives
+build:
 	poetry build
 
 
-serve:                  ## run the server locally
+serve:
 	poetry install
 	poetry run uvicorn ai_dial_analytics_realtime.app:app --port=$(PORT) --env-file .env
 
 
-docker_serve:           ## run the server from the docker
+docker_build:
 	docker build --platform linux/amd64 -t $(IMAGE_NAME):latest .
+
+
+docker_serve: docker_build
 	docker run --platform linux/amd64 --env-file ./.env --rm -p $(PORT):5000 $(IMAGE_NAME):latest
 
 
-lint:                   ## run linters
+lint:
 	nox -s lint
 
 
-format:                 ## run code formatters
+format:
 	nox -s format
 
 
-test:                   ## run unit tests
-	nox -s tests
+test:
+	nox -s tests -- $(ARGS)
 
 
-clean:                  ## clean virtual env and build artifacts
+docs:
+	# Do nothing
+
+
+clean:
 	@rm -rf .venv
 	@rm -rf .nox
 	@find . -type f -name '*.py[co]' -delete -o -type d -name __pycache__ -delete
 
 
-help:                   ## show this help
+help:
 	@echo '===================='
-	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sed -e 's/##/- /'
+	@echo 'build                        - build the source and wheels archives'
+	@echo 'docker_build                 - build the docker image'
+	@echo 'clean                        - clean virtual env and build artifacts'
+	@echo '-- LINTING --'
+	@echo 'format                       - run code formatters'
+	@echo 'lint                         - run linters'
+	@echo '-- RUN --'
+	@echo 'serve                        - run the server locally'
+	@echo 'docker_serve                 - run the server using docker'
+	@echo '-- TESTS --'
+	@echo 'test                         - run unit tests'

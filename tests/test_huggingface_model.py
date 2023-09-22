@@ -14,6 +14,7 @@ def mock_settings_env_vars():
             "INFLUX_URL": "influx_url",
             "INFLUX_ORG": "influx_org",
             "INFLUX_BUCKET": "influx_bucket",
+            "TOPIC_MODEL": "davanstrien/chat_topics",
         },
     ):
         yield
@@ -76,5 +77,5 @@ def test_data_request(influxdb_client_async):
     )
     assert response.status_code == 200
     assert write_api_mock.points == [
-        'analytics,deployment=gpt-4,language=undefined,model=gpt-4,project_id=PROJECT-KEY,response_id=chatcmpl-1,title=undefined,topic=Greeting\\ and\\ Request\\ for\\ Assistance,upstream=undefined chat_id="chat-1",completion_tokens=189i,number_request_messages=2i,price=0,prompt_tokens=22i,user_hash="undefined" 1692207759997000000'
+        'analytics,deployment=gpt-4,language=undefined,model=gpt-4,project_id=PROJECT-KEY,response_id=chatcmpl-1,title=undefined,topic=4_letter_sincerely_regards_email,upstream=undefined chat_id="chat-1",completion_tokens=189i,number_request_messages=2i,price=0,prompt_tokens=22i,user_hash="undefined" 1692207759997000000'
     ]

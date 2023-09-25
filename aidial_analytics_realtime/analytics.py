@@ -1,11 +1,10 @@
-import os
 from datetime import timedelta
 from enum import Enum
 from logging import Logger
+from typing import Awaitable, Callable
 from uuid import uuid4
 
 from influxdb_client import Point
-from influxdb_client.client.write_api_async import WriteApiAsync
 from langid.langid import LanguageIdentifier, model
 
 import aidial_analytics_realtime.rates as rates
@@ -46,9 +45,6 @@ def detect_lang_by_text(text):
         return "undefined"
     except Exception:
         return "undefined"
-
-
-influx_bucket = os.environ["INFLUX_BUCKET"]
 
 
 def to_string(obj: str | None):
@@ -161,7 +157,7 @@ async def parse_usage_per_model(response: dict):
 
 async def on_message(
     logger: Logger,
-    influx_write_api: WriteApiAsync,
+    influx_writer: Callable[[Point], Awaitable[None]],
     deployment: str,
     model: str,
     project_id: str,
@@ -193,7 +189,7 @@ async def on_message(
             type,
             response.get("usage", None),
         )
-        await influx_write_api.write(influx_bucket, record=point)
+        await influx_writer(point)
     else:
         point = make_point(
             deployment,
@@ -209,7 +205,7 @@ async def on_message(
             type,
             None,
         )
-        await influx_write_api.write(influx_bucket, record=point)
+        await influx_writer(point)
 
         for usage in usage_per_model:
             point = make_point(
@@ -226,4 +222,4 @@ async def on_message(
                 type,
                 usage,
             )
-            await influx_write_api.write(influx_bucket, record=point)
+            await influx_writer(point)

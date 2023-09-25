@@ -2,39 +2,17 @@ import json
 import os
 from unittest import mock
 
-import pytest
 from fastapi.testclient import TestClient
 
-
-@pytest.fixture(autouse=True)
-def mock_settings_env_vars():
-    with mock.patch.dict(
-        os.environ,
-        {
-            "INFLUX_URL": "influx_url",
-            "INFLUX_ORG": "influx_org",
-            "INFLUX_BUCKET": "influx_bucket",
-            "TOPIC_MODEL": "davanstrien/chat_topics",
-        },
-    ):
-        yield
+from tests.influx_writer_mock import InfluxWriterMock
 
 
-class InfluxWriteApiMock:
-    def __init__(self):
-        self.points = []
-
-    async def write(self, bucket, record):
-        assert bucket == "influx_bucket"
-        self.points.append(str(record))
-
-
-@mock.patch("influxdb_client.client.influxdb_client_async.InfluxDBClientAsync")
-def test_data_request(influxdb_client_async):
+@mock.patch.dict(os.environ, {"TOPIC_MODEL": "davanstrien/chat_topics"})
+def test_data_request():
     import aidial_analytics_realtime.app as app
 
-    write_api_mock = InfluxWriteApiMock()
-    app.influx_write_api = write_api_mock
+    write_api_mock = InfluxWriterMock()
+    app.app.dependency_overrides[app.get_influx_db] = lambda: write_api_mock
 
     client = TestClient(app.app)
     response = client.post(

@@ -2,10 +2,12 @@ import json
 import logging
 import os
 import re
+from typing import Annotated, Awaitable, Callable
 
 import uvicorn
 from dateutil import parser
-from fastapi import FastAPI, Request
+from fastapi import Depends, FastAPI, Request
+from influxdb_client import Point
 from influxdb_client.client.influxdb_client_async import InfluxDBClientAsync
 
 from aidial_analytics_realtime.analytics import RequestType, on_message
@@ -15,9 +17,6 @@ RATE_PATTERN = r"/v1/rate"
 CHAT_COMPLETION_PATTERN = r"/openai/deployments/(.+?)/chat/completions"
 EMBEDDING_PATTERN = r"/openai/deployments/(.+?)/embeddings"
 
-influx_url = os.environ["INFLUX_URL"]
-influx_api_token = os.environ.get("INFLUX_API_TOKEN")
-influx_org = os.environ["INFLUX_ORG"]
 
 app = FastAPI()
 logging.basicConfig(
@@ -32,17 +31,34 @@ logger.setLevel(logging.DEBUG)
 
 @app.on_event("startup")
 async def startup_event():
-    global client, influx_write_api
+    global _client, _influx_write_api, _influx_writer
 
-    client = InfluxDBClientAsync(
+    influx_url = os.environ["INFLUX_URL"]
+    influx_api_token = os.environ.get("INFLUX_API_TOKEN")
+    influx_org = os.environ["INFLUX_ORG"]
+    influx_bucket = os.environ["INFLUX_BUCKET"]
+
+    _client = InfluxDBClientAsync(
         url=influx_url, token=influx_api_token, org=influx_org
     )
-    influx_write_api = client.write_api()
+    influx_write_api = _client.write_api()
+
+    async def influx_writer_impl(record: Point):
+        await influx_write_api.write(bucket=influx_bucket, record=record)
+
+    _influx_writer = influx_writer_impl
 
 
 @app.on_event("shutdown")
 async def shutdown_event():
-    await client.close()
+    await _client.close()
+
+
+InfluxWriterAsync = Callable[[Point], Awaitable[None]]
+
+
+def get_influx_db() -> InfluxWriterAsync:
+    return _influx_writer
 
 
 async def on_rate_message(request, response):
@@ -59,6 +75,7 @@ async def on_chat_completion_message(
     timestamp_ms: int,
     request: dict,
     response: dict,
+    influx_writer: InfluxWriterAsync,
 ):
     if response["status"] != "200":
         return
@@ -96,7 +113,7 @@ async def on_chat_completion_message(
 
     await on_message(
         logger,
-        influx_write_api,
+        influx_writer,
         deployment,
         model,
         project_id,
@@ -121,13 +138,14 @@ async def on_embedding_message(
     timestamp_ms: int,
     request: dict,
     response: dict,
+    influx_writer: InfluxWriterAsync,
 ):
     if response["status"] != "200":
         return
 
     await on_message(
         logger,
-        influx_write_api,
+        influx_writer,
         deployment,
         deployment,
         project_id,
@@ -142,7 +160,7 @@ async def on_embedding_message(
     )
 
 
-async def on_log_message(message):
+async def on_log_message(message: dict, influx_writer: InfluxWriterAsync):
     request = message["request"]
     uri = message["request"]["uri"]
     response = message["response"]
@@ -172,6 +190,7 @@ async def on_log_message(message):
             timestamp_ms,
             request,
             response,
+            influx_writer,
         )
 
     match = re.search(EMBEDDING_PATTERN, uri)
@@ -187,16 +206,20 @@ async def on_log_message(message):
             timestamp_ms,
             request,
             response,
+            influx_writer,
         )
 
 
 @app.post("/data")
-async def on_log_messages(request: Request):
+async def on_log_messages(
+    request: Request,
+    influx_writer: Annotated[InfluxWriterAsync, Depends(get_influx_db)],
+):
     data = await request.json()
 
     for item in data:
         try:
-            await on_log_message(json.loads(item["message"]))
+            await on_log_message(json.loads(item["message"]), influx_writer)
         except Exception as e:
             logging.exception(e)
 

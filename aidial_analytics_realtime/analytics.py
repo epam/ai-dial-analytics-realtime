@@ -1,15 +1,14 @@
-import os
-from datetime import timedelta
+from datetime import datetime
 from enum import Enum
 from logging import Logger
+from typing import Awaitable, Callable
 from uuid import uuid4
 
 from influxdb_client import Point
-from influxdb_client.client.write_api_async import WriteApiAsync
 from langid.langid import LanguageIdentifier, model
 
 import aidial_analytics_realtime.rates as rates
-from aidial_analytics_realtime.topic_model import get_topic, get_topic_by_text
+from aidial_analytics_realtime.topic_model import TopicModel
 
 identifier = LanguageIdentifier.from_modelstring(model, norm_probs=True)
 
@@ -48,9 +47,6 @@ def detect_lang_by_text(text):
         return "undefined"
 
 
-influx_bucket = os.environ["INFLUX_BUCKET"]
-
-
 def to_string(obj: str | None):
     return obj if obj else "undefined"
 
@@ -63,11 +59,12 @@ def make_point(
     upstream_url: str | None,
     user_hash: str,
     user_title: str,
-    timestamp_ms: int,
+    timestamp: datetime,
     request: dict,
     response: dict,
     request_type: RequestType,
     usage: dict | None,
+    topic_model: TopicModel,
 ):
     topic = None
     response_content = ""
@@ -78,7 +75,7 @@ def make_point(
             [message["content"] for message in request["messages"]]
         )
         if chat_id:
-            topic = get_topic(request["messages"], response_content)
+            topic = topic_model.get_topic(request["messages"], response_content)
     else:
         request_content = (
             request["input"]
@@ -86,7 +83,7 @@ def make_point(
             else "\n".join(request["input"])
         )
         if chat_id:
-            topic = get_topic_by_text(
+            topic = topic_model.get_topic_by_text(
                 request["input"]
                 if request["input"] is str
                 else "\n\n".join(request["input"])
@@ -125,7 +122,7 @@ def make_point(
             else (1 if request["input"] is str else len(request["input"])),
         )
         .field("chat_id", to_string(chat_id))
-        .time(timedelta(milliseconds=timestamp_ms))
+        .time(timestamp)
     )
 
     if usage is not None:
@@ -161,7 +158,7 @@ async def parse_usage_per_model(response: dict):
 
 async def on_message(
     logger: Logger,
-    influx_write_api: WriteApiAsync,
+    influx_writer: Callable[[Point], Awaitable[None]],
     deployment: str,
     model: str,
     project_id: str,
@@ -169,10 +166,11 @@ async def on_message(
     upstream_url: str,
     user_hash: str,
     user_title: str,
-    timestamp_ms: int,
+    timestamp: datetime,
     request: dict,
     response: dict,
     type: RequestType,
+    topic_model: TopicModel,
 ):
     logger.info(f"Chat completion response length {len(response)}")
 
@@ -187,13 +185,14 @@ async def on_message(
             upstream_url,
             user_hash,
             user_title,
-            timestamp_ms,
+            timestamp,
             request,
             response,
             type,
             response.get("usage", None),
+            topic_model,
         )
-        await influx_write_api.write(influx_bucket, record=point)
+        await influx_writer(point)
     else:
         point = make_point(
             deployment,
@@ -203,13 +202,14 @@ async def on_message(
             upstream_url,
             user_hash,
             user_title,
-            timestamp_ms,
+            timestamp,
             request,
             response,
             type,
             None,
+            topic_model,
         )
-        await influx_write_api.write(influx_bucket, record=point)
+        await influx_writer(point)
 
         for usage in usage_per_model:
             point = make_point(
@@ -220,10 +220,11 @@ async def on_message(
                 None,
                 user_hash,
                 user_title,
-                timestamp_ms,
+                timestamp,
                 request,
                 response,
                 type,
                 usage,
+                topic_model,
             )
-            await influx_write_api.write(influx_bucket, record=point)
+            await influx_writer(point)

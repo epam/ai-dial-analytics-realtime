@@ -49,6 +49,8 @@ Also, following environment valuables can be used to configure the service behav
 |Variable|Default|Description|
 |---|---|---|
 |MODEL_RATES| {} | Specifies per-token price rates for models in JSON format|
+|TOPIC_MODEL| ./topic_model | Specifies the name or path for the topic model. If the model is specified by name, it will be downloaded from, the [Huggingface]( https://huggingface.co/).|
+|TOPIC_EMBEDDINGS_MODEL| None | Specifies the name or path for the embeddings model used with the topic model. If the model is specified by name, it will be downloaded from, the [Huggingface]( https://huggingface.co/). If None, the name will be used from the topic model config.|
 
 Example of the MODEL_RATES configuration:
 ```json

@@ -34,10 +34,40 @@ variables:
 
 stages:
   - tag
+  - lint
+  - test
   - publish # publush docker images
   - deploy
   - promote # copy docker image to public repo
   - production # Stage name used in include. Not used. ToDo - delete this
+
+lint:
+  image: python:3.11
+  stage: lint
+  before_script:
+    - apt-get update && apt-get install -y make
+    - pip install poetry==1.6.1 nox==2023.4.22
+  script:
+    - make lint
+  rules:
+    - if: $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "development" && $review_DEPLOY_ENV == "true"
+    - if: $CI_COMMIT_BRANCH  == "development"
+  tags:
+    - kubernetes
+
+test:
+  image: python:3.11
+  stage: test
+  before_script:
+    - apt-get update && apt-get install -y make
+    - pip install poetry==1.6.1 nox==2023.4.22
+  script:
+    - make test
+  rules:
+    - if: $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "development" && $review_DEPLOY_ENV == "true"
+    - if: $CI_COMMIT_BRANCH  == "development"
+  tags:
+    - kubernetes
 
 deploy_development:
   image: "registry.deltixhub.com/deltix.docker/devops/kubernetes-tools:0.17.1"

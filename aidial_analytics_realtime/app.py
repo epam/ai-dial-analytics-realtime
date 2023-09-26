@@ -1,23 +1,23 @@
 import json
 import logging
-import os
 import re
+from datetime import datetime, timezone
 
 import uvicorn
-from dateutil import parser
-from fastapi import FastAPI, Request
-from influxdb_client.client.influxdb_client_async import InfluxDBClientAsync
+from fastapi import Depends, FastAPI, Request
 
 from aidial_analytics_realtime.analytics import RequestType, on_message
+from aidial_analytics_realtime.influx_writer import (
+    InfluxWriterAsync,
+    create_influx_writer,
+)
+from aidial_analytics_realtime.topic_model import TopicModel
 from aidial_analytics_realtime.universal_api_utils import merge
 
 RATE_PATTERN = r"/v1/rate"
 CHAT_COMPLETION_PATTERN = r"/openai/deployments/(.+?)/chat/completions"
 EMBEDDING_PATTERN = r"/openai/deployments/(.+?)/embeddings"
 
-influx_url = os.environ["INFLUX_URL"]
-influx_api_token = os.environ.get("INFLUX_API_TOKEN")
-influx_org = os.environ["INFLUX_ORG"]
 
 app = FastAPI()
 logging.basicConfig(
@@ -32,17 +32,17 @@ logger.setLevel(logging.DEBUG)
 
 @app.on_event("startup")
 async def startup_event():
-    global client, influx_write_api
+    influx_client, influx_writer = create_influx_writer()
+    app.state.influx_client = influx_client
+    app.dependency_overrides[InfluxWriterAsync] = lambda: influx_writer
 
-    client = InfluxDBClientAsync(
-        url=influx_url, token=influx_api_token, org=influx_org
-    )
-    influx_write_api = client.write_api()
+    topic_model = TopicModel()
+    app.dependency_overrides[TopicModel] = lambda: topic_model
 
 
 @app.on_event("shutdown")
 async def shutdown_event():
-    await client.close()
+    await app.state.influx_client.close()
 
 
 async def on_rate_message(request, response):
@@ -56,9 +56,11 @@ async def on_chat_completion_message(
     upstream_url: str,
     user_hash: str,
     user_title: str,
-    timestamp_ms: int,
+    timestamp: datetime,
     request: dict,
     response: dict,
+    influx_writer: InfluxWriterAsync,
+    topic_model: TopicModel,
 ):
     if response["status"] != "200":
         return
@@ -96,7 +98,7 @@ async def on_chat_completion_message(
 
     await on_message(
         logger,
-        influx_write_api,
+        influx_writer,
         deployment,
         model,
         project_id,
@@ -104,10 +106,11 @@ async def on_chat_completion_message(
         upstream_url,
         user_hash,
         user_title,
-        timestamp_ms,
+        timestamp,
         request_body,
         response_body,
         RequestType.CHAT_COMPLETION,
+        topic_model,
     )
 
 
@@ -118,16 +121,18 @@ async def on_embedding_message(
     upstream_url: str,
     user_hash: str,
     user_title: str,
-    timestamp_ms: int,
+    timestamp: datetime,
     request: dict,
     response: dict,
+    influx_writer: InfluxWriterAsync,
+    topic_model: TopicModel,
 ):
     if response["status"] != "200":
         return
 
     await on_message(
         logger,
-        influx_write_api,
+        influx_writer,
         deployment,
         deployment,
         project_id,
@@ -135,14 +140,19 @@ async def on_embedding_message(
         upstream_url,
         user_hash,
         user_title,
-        timestamp_ms,
+        timestamp,
         json.loads(request["body"]),
         json.loads(response["body"]),
         RequestType.EMBEDDING,
+        topic_model,
     )
 
 
-async def on_log_message(message):
+async def on_log_message(
+    message: dict,
+    influx_writer: InfluxWriterAsync,
+    topic_model: TopicModel,
+):
     request = message["request"]
     uri = message["request"]["uri"]
     response = message["response"]
@@ -153,7 +163,11 @@ async def on_log_message(message):
     upstream_url = (
         response["upstream_uri"] if "upstream_uri" in response else ""
     )
-    timestamp_ms = int(parser.parse(request["time"]).timestamp() * (10**3))
+
+    timestamp = datetime.fromisoformat(request["time"])
+    if timestamp.tzinfo is None:
+        # The logs may come without the timezone information. We want it to be interpreted as UTC, not local time.
+        timestamp = timestamp.replace(tzinfo=timezone.utc)
 
     match = re.search(RATE_PATTERN, uri)
     if match:
@@ -169,9 +183,11 @@ async def on_log_message(message):
             upstream_url,
             user_hash,
             user_title,
-            timestamp_ms,
+            timestamp,
             request,
             response,
+            influx_writer,
+            topic_model,
         )
 
     match = re.search(EMBEDDING_PATTERN, uri)
@@ -184,19 +200,27 @@ async def on_log_message(message):
             upstream_url,
             user_hash,
             user_title,
-            timestamp_ms,
+            timestamp,
             request,
             response,
+            influx_writer,
+            topic_model,
         )
 
 
 @app.post("/data")
-async def on_log_messages(request: Request):
+async def on_log_messages(
+    request: Request,
+    influx_writer: InfluxWriterAsync = Depends(),
+    topic_model: TopicModel = Depends(),
+):
     data = await request.json()
 
     for item in data:
         try:
-            await on_log_message(json.loads(item["message"]))
+            await on_log_message(
+                json.loads(item["message"]), influx_writer, topic_model
+            )
         except Exception as e:
             logging.exception(e)
 

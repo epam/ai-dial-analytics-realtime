@@ -1,23 +1,39 @@
-from typing import Any
+import os
 
 from bertopic import BERTopic
 
-topic_model = BERTopic.load("./topic_model")
-topic_model.transform(["test"])  # Make sure the model is loaded
 
+class TopicModel:
+    def __init__(
+        self,
+        topic_model_name: str | None = None,
+        topic_embeddings_model_name: str | None = None,
+    ):
+        if not topic_model_name:
+            topic_model_name = os.environ.get("TOPIC_MODEL", "./topic_model")
+            topic_embeddings_model_name = os.environ.get(
+                "TOPIC_EMBEDDINGS_MODEL", None
+            )
+        assert topic_model_name is not None
+        self.model = BERTopic.load(
+            topic_model_name, topic_embeddings_model_name
+        )
+        self.model.transform(["test"])  # Make sure the model is loaded
 
-def get_topic(request_messages, response_content):
-    text = "\n\n".join(
-        [message["content"] for message in request_messages]
-        + [response_content]
-    )
+    def get_topic(self, request_messages, response_content):
+        text = "\n\n".join(
+            [message["content"] for message in request_messages]
+            + [response_content]
+        )
 
-    return get_topic_by_text(text)
+        return self.get_topic_by_text(text)
 
+    def get_topic_by_text(self, text):
+        topics, _ = self.model.transform([text])
+        topic = self.model.get_topic_info(topics[0])
 
-def get_topic_by_text(text):
-    topics, _ = topic_model.transform([text])
-    topic: Any = topic_model.get_topic(topics[0], full=True)
+        if "GeneratedName" in topic:
+            # "GeneratedName" is an expected name for the human readable topic representation
+            return topic["GeneratedName"][0][0][0]
 
-    # Model should have "GeneratedName" topic representation
-    return topic["GeneratedName"][0][0]
+        return topic["Name"][0]

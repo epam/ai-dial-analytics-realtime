@@ -3,7 +3,7 @@ IMAGE_NAME = ai-dial-analytics-realtime
 ARGS =
 
 
-.PHONY: all build serve docker_build docker_serve lint format test docs clean help
+.PHONY: all build serve docker_build docker_serve lint format test test_all docs clean help
 
 
 all: build
@@ -13,17 +13,22 @@ build:
 	poetry build
 
 
-serve:
+embeddings_model:
+	poetry install --only main
+	poetry run python download_model.py
+
+
+serve: embeddings_model
 	poetry install --only main
 	poetry run uvicorn aidial_analytics_realtime.app:app --port=$(PORT) --env-file .env
 
 
 docker_build:
-	docker build --platform linux/amd64 -t $(IMAGE_NAME):latest .
+	docker build --platform linux/amd64 -t $(IMAGE_NAME):dev .
 
 
 docker_serve: docker_build
-	docker run --platform linux/amd64 --env-file ./.env --rm -p $(PORT):5000 $(IMAGE_NAME):latest
+	docker run --platform linux/amd64 --env-file ./.env --rm -p $(PORT):5000 $(IMAGE_NAME):dev
 
 
 lint:
@@ -35,6 +40,10 @@ format:
 
 
 test:
+	nox -s tests -- -m "not with_external" $(ARGS)
+
+
+test_all: embeddings_model
 	nox -s tests -- $(ARGS)
 
 

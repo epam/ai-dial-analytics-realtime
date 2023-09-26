@@ -1,48 +1,77 @@
-import json
 import os
 from decimal import Decimal
+from typing import Annotated, Dict, Literal, Union
 
-rates = json.loads(os.environ.get("MODEL_RATES", "{}"))
-
-for model, rate in rates.items():
-    if "prompt_price" in rate:
-        rate["prompt_price"] = Decimal(rate["prompt_price"])
-    if "completion_price" in rate:
-        rate["completion_price"] = Decimal(rate["completion_price"])
+from pydantic import BaseModel, Field, parse_raw_as
 
 
-def number_of_chars_without_whitespaces(a: str):
-    return sum([1 if i != " " else 0 for i in a])
+class ModelRate(BaseModel):
+    prompt_price: Annotated[Decimal, Field(default_factory=Decimal)]
+    completion_price: Annotated[Decimal, Field(default_factory=Decimal)]
 
 
-def calculate_price(
-    model: str, request_content: str, response_content: str, usage: dict | None
-) -> Decimal:
-    model_rate = rates.get(model)
-    if not model_rate:
-        return Decimal(0)
+class TokenModelRate(ModelRate):
+    unit: Literal["token"]
 
-    price = Decimal(0)
-    if model_rate["unit"] == "token":
+    def calculate(
+        self, request_content: str, response_content: str, usage: dict | None
+    ):
+        price = Decimal(0)
         if usage is None:
             return price
 
-        if "prompt_price" in model_rate:
-            price += model_rate["prompt_price"] * Decimal(
-                usage["prompt_tokens"]
-            )
-        if "completion_price" in model_rate:
-            price += model_rate["completion_price"] * Decimal(
-                usage["completion_tokens"]
-            )
-    elif model_rate["unit"] == "char_without_whitespace":
-        if "prompt_price" in model_rate:
-            price += model_rate[
-                "prompt_price"
-            ] * number_of_chars_without_whitespaces(request_content)
-        if "completion_price" in model_rate:
-            price += model_rate[
-                "completion_price"
-            ] * number_of_chars_without_whitespaces(response_content)
+        prompt_tokens = Decimal(usage["prompt_tokens"])
+        completion_tokens = Decimal(usage["completion_tokens"])
 
-    return price
+        return (
+            self.prompt_price * prompt_tokens
+            + self.completion_price * completion_tokens
+        )
+
+
+class CharWithoutSpaceModelRate(ModelRate):
+    unit: Literal["char_without_whitespace"]
+
+    @staticmethod
+    def get_chars_without_whitespaces(a: str):
+        return sum([1 if i != " " else 0 for i in a])
+
+    def calculate(
+        self, request_content: str, response_content: str, usage: dict | None
+    ):
+        request_len = self.get_chars_without_whitespaces(request_content)
+        response_len = self.get_chars_without_whitespaces(response_content)
+        return (
+            self.prompt_price * request_len
+            + self.completion_price * response_len
+        )
+
+
+Rates = Dict[
+    str,
+    Annotated[
+        Union[TokenModelRate, CharWithoutSpaceModelRate],
+        Field(discriminator="unit"),
+    ],
+]
+
+
+class RatesCalculator:
+    def __init__(self, rates_str: str | None = None):
+        if rates_str is None:
+            rates_str = os.environ.get("MODEL_RATES", "{}")
+        assert rates_str is not None
+        self.rates = parse_raw_as(Rates, rates_str)
+
+    def calculate_price(
+        self,
+        model: str,
+        request_content: str,
+        response_content: str,
+        usage: dict | None,
+    ) -> Decimal:
+        model_rate = self.rates.get(model)
+        if not model_rate:
+            return Decimal(0)
+
+        return model_rate.calculate(request_content, response_content, usage)

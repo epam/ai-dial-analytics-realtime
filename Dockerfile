@@ -31,7 +31,7 @@ ENV TOPIC_MODEL=/topic_model
 ENV TOPIC_EMBEDDINGS_MODEL=/embeddings_model
 
 # Creates a non-root user with an explicit UID
-RUN adduser -u 1666 --disabled-password --gecos "" appuser
+RUN adduser -u 1001 --disabled-password --gecos "" appuser
 
 WORKDIR /
 

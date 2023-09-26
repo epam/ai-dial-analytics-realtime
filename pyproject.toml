@@ -83,3 +83,8 @@ exclude = [
     "\\.nox",
     "\\.venv"
 ]
+
+[tool.pytest.ini_options]
+markers = [
+    "with_external: marks tests may require external resources, like the download models (deselect with '-m \"not with_external\"')",
+]

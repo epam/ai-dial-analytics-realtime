@@ -8,7 +8,7 @@ from influxdb_client import Point
 from langid.langid import LanguageIdentifier, model
 
 import aidial_analytics_realtime.rates as rates
-from aidial_analytics_realtime.topic_model import get_topic, get_topic_by_text
+from aidial_analytics_realtime.topic_model import TopicModel
 
 identifier = LanguageIdentifier.from_modelstring(model, norm_probs=True)
 
@@ -64,6 +64,7 @@ def make_point(
     response: dict,
     request_type: RequestType,
     usage: dict | None,
+    topic_model: TopicModel,
 ):
     topic = None
     response_content = ""
@@ -74,7 +75,7 @@ def make_point(
             [message["content"] for message in request["messages"]]
         )
         if chat_id:
-            topic = get_topic(request["messages"], response_content)
+            topic = topic_model.get_topic(request["messages"], response_content)
     else:
         request_content = (
             request["input"]
@@ -82,7 +83,7 @@ def make_point(
             else "\n".join(request["input"])
         )
         if chat_id:
-            topic = get_topic_by_text(
+            topic = topic_model.get_topic_by_text(
                 request["input"]
                 if request["input"] is str
                 else "\n\n".join(request["input"])
@@ -169,6 +170,7 @@ async def on_message(
     request: dict,
     response: dict,
     type: RequestType,
+    topic_model: TopicModel,
 ):
     logger.info(f"Chat completion response length {len(response)}")
 
@@ -188,6 +190,7 @@ async def on_message(
             response,
             type,
             response.get("usage", None),
+            topic_model,
         )
         await influx_writer(point)
     else:
@@ -204,6 +207,7 @@ async def on_message(
             response,
             type,
             None,
+            topic_model,
         )
         await influx_writer(point)
 
@@ -221,5 +225,6 @@ async def on_message(
                 response,
                 type,
                 usage,
+                topic_model,
             )
             await influx_writer(point)

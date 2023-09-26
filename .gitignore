@@ -5,3 +5,4 @@
 .history
 __pycache__
 dist
+embeddings_model

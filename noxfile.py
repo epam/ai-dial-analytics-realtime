@@ -10,6 +10,7 @@ SRC = "."
 def lint(session):
     """Runs linters and fixers"""
     session.run("poetry", "install", external=True)
+    session.run("poetry", "check", "--lock", external=True)
     session.run("isort", "--check", SRC)
     session.run("black", "--check", SRC)
     session.run("flake8", SRC)

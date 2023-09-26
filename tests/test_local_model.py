@@ -12,7 +12,7 @@ def test_data_request():
     write_api_mock = InfluxWriterMock()
     app.app.dependency_overrides[app.InfluxWriterAsync] = lambda: write_api_mock
 
-    topic_model = app.TopicModel("davanstrien/chat_topics")
+    topic_model = app.TopicModel("./topic_model", "./embeddings_model")
     app.app.dependency_overrides[app.TopicModel] = lambda: topic_model
 
     client = TestClient(app.app)
@@ -56,5 +56,5 @@ def test_data_request():
     )
     assert response.status_code == 200
     assert write_api_mock.points == [
-        'analytics,deployment=gpt-4,language=undefined,model=gpt-4,project_id=PROJECT-KEY,response_id=chatcmpl-1,title=undefined,topic=4_letter_sincerely_regards_email,upstream=undefined chat_id="chat-1",completion_tokens=189i,number_request_messages=2i,price=0,prompt_tokens=22i,user_hash="undefined" 1692207759997000000'
+        'analytics,deployment=gpt-4,language=undefined,model=gpt-4,project_id=PROJECT-KEY,response_id=chatcmpl-1,title=undefined,topic=Greeting\\ and\\ Request\\ for\\ Assistance,upstream=undefined chat_id="chat-1",completion_tokens=189i,number_request_messages=2i,price=0,prompt_tokens=22i,user_hash="undefined" 1692207759997000000'
     ]

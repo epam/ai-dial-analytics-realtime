@@ -1,15 +1,19 @@
 import json
+from unittest.mock import Mock
 
 from fastapi.testclient import TestClient
 
+import aidial_analytics_realtime.app as app
 from tests.influx_writer_mock import InfluxWriterMock
 
 
 def test_data_request():
-    import aidial_analytics_realtime.app as app
-
     write_api_mock = InfluxWriterMock()
-    app.app.dependency_overrides[app.get_influx_db] = lambda: write_api_mock
+    app.app.dependency_overrides[app.InfluxWriterAsync] = lambda: write_api_mock
+
+    topic_model = Mock()
+    topic_model.get_topic.return_value = "TestTopic"
+    app.app.dependency_overrides[app.TopicModel] = lambda: topic_model
 
     client = TestClient(app.app)
     response = client.post(
@@ -52,5 +56,5 @@ def test_data_request():
     )
     assert response.status_code == 200
     assert write_api_mock.points == [
-        'analytics,deployment=gpt-4,language=undefined,model=gpt-4,project_id=PROJECT-KEY,response_id=chatcmpl-1,title=undefined,topic=Greeting\\ and\\ Request\\ for\\ Assistance,upstream=undefined chat_id="chat-1",completion_tokens=189i,number_request_messages=2i,price=0,prompt_tokens=22i,user_hash="undefined" 1692207759997000000'
+        'analytics,deployment=gpt-4,language=undefined,model=gpt-4,project_id=PROJECT-KEY,response_id=chatcmpl-1,title=undefined,topic=TestTopic,upstream=undefined chat_id="chat-1",completion_tokens=189i,number_request_messages=2i,price=0,prompt_tokens=22i,user_hash="undefined" 1692207759997000000'
     ]

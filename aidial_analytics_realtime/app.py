@@ -1,16 +1,17 @@
 import json
 import logging
-import os
 import re
-from typing import Annotated, Awaitable, Callable
 
 import uvicorn
 from dateutil import parser
 from fastapi import Depends, FastAPI, Request
-from influxdb_client import Point
-from influxdb_client.client.influxdb_client_async import InfluxDBClientAsync
 
 from aidial_analytics_realtime.analytics import RequestType, on_message
+from aidial_analytics_realtime.influx_writer import (
+    InfluxWriterAsync,
+    create_influx_writer,
+)
+from aidial_analytics_realtime.topic_model import TopicModel
 from aidial_analytics_realtime.universal_api_utils import merge
 
 RATE_PATTERN = r"/v1/rate"
@@ -31,34 +32,17 @@ logger.setLevel(logging.DEBUG)
 
 @app.on_event("startup")
 async def startup_event():
-    global _client, _influx_write_api, _influx_writer
+    influx_client, influx_writer = create_influx_writer()
+    app.state.influx_client = influx_client
+    app.dependency_overrides[InfluxWriterAsync] = lambda: influx_writer
 
-    influx_url = os.environ["INFLUX_URL"]
-    influx_api_token = os.environ.get("INFLUX_API_TOKEN")
-    influx_org = os.environ["INFLUX_ORG"]
-    influx_bucket = os.environ["INFLUX_BUCKET"]
-
-    _client = InfluxDBClientAsync(
-        url=influx_url, token=influx_api_token, org=influx_org
-    )
-    influx_write_api = _client.write_api()
-
-    async def influx_writer_impl(record: Point):
-        await influx_write_api.write(bucket=influx_bucket, record=record)
-
-    _influx_writer = influx_writer_impl
+    topic_model = TopicModel()
+    app.dependency_overrides[TopicModel] = lambda: topic_model
 
 
 @app.on_event("shutdown")
 async def shutdown_event():
-    await _client.close()
-
-
-InfluxWriterAsync = Callable[[Point], Awaitable[None]]
-
-
-def get_influx_db() -> InfluxWriterAsync:
-    return _influx_writer
+    await app.state.influx_client.close()
 
 
 async def on_rate_message(request, response):
@@ -76,6 +60,7 @@ async def on_chat_completion_message(
     request: dict,
     response: dict,
     influx_writer: InfluxWriterAsync,
+    topic_model: TopicModel,
 ):
     if response["status"] != "200":
         return
@@ -125,6 +110,7 @@ async def on_chat_completion_message(
         request_body,
         response_body,
         RequestType.CHAT_COMPLETION,
+        topic_model,
     )
 
 
@@ -139,6 +125,7 @@ async def on_embedding_message(
     request: dict,
     response: dict,
     influx_writer: InfluxWriterAsync,
+    topic_model: TopicModel,
 ):
     if response["status"] != "200":
         return
@@ -157,10 +144,15 @@ async def on_embedding_message(
         json.loads(request["body"]),
         json.loads(response["body"]),
         RequestType.EMBEDDING,
+        topic_model,
     )
 
 
-async def on_log_message(message: dict, influx_writer: InfluxWriterAsync):
+async def on_log_message(
+    message: dict,
+    influx_writer: InfluxWriterAsync,
+    topic_model: TopicModel,
+):
     request = message["request"]
     uri = message["request"]["uri"]
     response = message["response"]
@@ -191,6 +183,7 @@ async def on_log_message(message: dict, influx_writer: InfluxWriterAsync):
             request,
             response,
             influx_writer,
+            topic_model,
         )
 
     match = re.search(EMBEDDING_PATTERN, uri)
@@ -207,19 +200,23 @@ async def on_log_message(message: dict, influx_writer: InfluxWriterAsync):
             request,
             response,
             influx_writer,
+            topic_model,
         )
 
 
 @app.post("/data")
 async def on_log_messages(
     request: Request,
-    influx_writer: Annotated[InfluxWriterAsync, Depends(get_influx_db)],
+    influx_writer: InfluxWriterAsync = Depends(),
+    topic_model: TopicModel = Depends(),
 ):
     data = await request.json()
 
     for item in data:
         try:
-            await on_log_message(json.loads(item["message"]), influx_writer)
+            await on_log_message(
+                json.loads(item["message"]), influx_writer, topic_model
+            )
         except Exception as e:
             logging.exception(e)
 

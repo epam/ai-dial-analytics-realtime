@@ -1,9 +1,9 @@
 import json
 import logging
 import re
+from datetime import datetime, timezone
 
 import uvicorn
-from dateutil import parser
 from fastapi import Depends, FastAPI, Request
 
 from aidial_analytics_realtime.analytics import RequestType, on_message
@@ -56,7 +56,7 @@ async def on_chat_completion_message(
     upstream_url: str,
     user_hash: str,
     user_title: str,
-    timestamp_ms: int,
+    timestamp: datetime,
     request: dict,
     response: dict,
     influx_writer: InfluxWriterAsync,
@@ -106,7 +106,7 @@ async def on_chat_completion_message(
         upstream_url,
         user_hash,
         user_title,
-        timestamp_ms,
+        timestamp,
         request_body,
         response_body,
         RequestType.CHAT_COMPLETION,
@@ -121,7 +121,7 @@ async def on_embedding_message(
     upstream_url: str,
     user_hash: str,
     user_title: str,
-    timestamp_ms: int,
+    timestamp: datetime,
     request: dict,
     response: dict,
     influx_writer: InfluxWriterAsync,
@@ -140,7 +140,7 @@ async def on_embedding_message(
         upstream_url,
         user_hash,
         user_title,
-        timestamp_ms,
+        timestamp,
         json.loads(request["body"]),
         json.loads(response["body"]),
         RequestType.EMBEDDING,
@@ -163,7 +163,11 @@ async def on_log_message(
     upstream_url = (
         response["upstream_uri"] if "upstream_uri" in response else ""
     )
-    timestamp_ms = int(parser.parse(request["time"]).timestamp() * (10**3))
+
+    timestamp = datetime.fromisoformat(request["time"])
+    if timestamp.tzinfo is None:
+        # The logs may come without the timezone information. We want it to be interpreted as UTC, not local time.
+        timestamp = timestamp.replace(tzinfo=timezone.utc)
 
     match = re.search(RATE_PATTERN, uri)
     if match:
@@ -179,7 +183,7 @@ async def on_log_message(
             upstream_url,
             user_hash,
             user_title,
-            timestamp_ms,
+            timestamp,
             request,
             response,
             influx_writer,
@@ -196,7 +200,7 @@ async def on_log_message(
             upstream_url,
             user_hash,
             user_title,
-            timestamp_ms,
+            timestamp,
             request,
             response,
             influx_writer,

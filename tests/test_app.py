@@ -56,5 +56,5 @@ def test_data_request():
     )
     assert response.status_code == 200
     assert write_api_mock.points == [
-        'analytics,deployment=gpt-4,language=undefined,model=gpt-4,project_id=PROJECT-KEY,response_id=chatcmpl-1,title=undefined,topic=TestTopic,upstream=undefined chat_id="chat-1",completion_tokens=189i,number_request_messages=2i,price=0,prompt_tokens=22i,user_hash="undefined" 1692207759997000000'
+        'analytics,deployment=gpt-4,language=undefined,model=gpt-4,project_id=PROJECT-KEY,response_id=chatcmpl-1,title=undefined,topic=TestTopic,upstream=undefined chat_id="chat-1",completion_tokens=189i,number_request_messages=2i,price=0,prompt_tokens=22i,user_hash="undefined" 1692214959997000000'
     ]

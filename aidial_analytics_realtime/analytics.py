@@ -1,4 +1,4 @@
-from datetime import timedelta
+from datetime import datetime
 from enum import Enum
 from logging import Logger
 from typing import Awaitable, Callable
@@ -59,7 +59,7 @@ def make_point(
     upstream_url: str | None,
     user_hash: str,
     user_title: str,
-    timestamp_ms: int,
+    timestamp: datetime,
     request: dict,
     response: dict,
     request_type: RequestType,
@@ -122,7 +122,7 @@ def make_point(
             else (1 if request["input"] is str else len(request["input"])),
         )
         .field("chat_id", to_string(chat_id))
-        .time(timedelta(milliseconds=timestamp_ms))
+        .time(timestamp)
     )
 
     if usage is not None:
@@ -166,7 +166,7 @@ async def on_message(
     upstream_url: str,
     user_hash: str,
     user_title: str,
-    timestamp_ms: int,
+    timestamp: datetime,
     request: dict,
     response: dict,
     type: RequestType,
@@ -185,7 +185,7 @@ async def on_message(
             upstream_url,
             user_hash,
             user_title,
-            timestamp_ms,
+            timestamp,
             request,
             response,
             type,
@@ -202,7 +202,7 @@ async def on_message(
             upstream_url,
             user_hash,
             user_title,
-            timestamp_ms,
+            timestamp,
             request,
             response,
             type,
@@ -220,7 +220,7 @@ async def on_message(
                 None,
                 user_hash,
                 user_title,
-                timestamp_ms,
+                timestamp,
                 request,
                 response,
                 type,

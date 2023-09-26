@@ -7,7 +7,7 @@ from uuid import uuid4
 from influxdb_client import Point
 from langid.langid import LanguageIdentifier, model
 
-import aidial_analytics_realtime.rates as rates
+from aidial_analytics_realtime.rates import RatesCalculator
 from aidial_analytics_realtime.topic_model import TopicModel
 
 identifier = LanguageIdentifier.from_modelstring(model, norm_probs=True)
@@ -65,6 +65,7 @@ def make_point(
     request_type: RequestType,
     usage: dict | None,
     topic_model: TopicModel,
+    rates_calculator: RatesCalculator,
 ):
     topic = None
     response_content = ""
@@ -89,7 +90,7 @@ def make_point(
                 else "\n\n".join(request["input"])
             )
 
-    price = rates.calculate_price(
+    price = rates_calculator.calculate_price(
         model, request_content, response_content, usage
     )
 
@@ -171,6 +172,7 @@ async def on_message(
     response: dict,
     type: RequestType,
     topic_model: TopicModel,
+    rates_calculator: RatesCalculator,
 ):
     logger.info(f"Chat completion response length {len(response)}")
 
@@ -191,6 +193,7 @@ async def on_message(
             type,
             response.get("usage", None),
             topic_model,
+            rates_calculator,
         )
         await influx_writer(point)
     else:
@@ -208,6 +211,7 @@ async def on_message(
             type,
             None,
             topic_model,
+            rates_calculator,
         )
         await influx_writer(point)
 
@@ -226,5 +230,6 @@ async def on_message(
                 type,
                 usage,
                 topic_model,
+                rates_calculator,
             )
             await influx_writer(point)

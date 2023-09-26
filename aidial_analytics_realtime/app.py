@@ -11,6 +11,7 @@ from aidial_analytics_realtime.influx_writer import (
     InfluxWriterAsync,
     create_influx_writer,
 )
+from aidial_analytics_realtime.rates import RatesCalculator
 from aidial_analytics_realtime.topic_model import TopicModel
 from aidial_analytics_realtime.universal_api_utils import merge
 
@@ -39,6 +40,9 @@ async def startup_event():
     topic_model = TopicModel()
     app.dependency_overrides[TopicModel] = lambda: topic_model
 
+    rates_calculator = RatesCalculator()
+    app.dependency_overrides[RatesCalculator] = lambda: rates_calculator
+
 
 @app.on_event("shutdown")
 async def shutdown_event():
@@ -61,6 +65,7 @@ async def on_chat_completion_message(
     response: dict,
     influx_writer: InfluxWriterAsync,
     topic_model: TopicModel,
+    rates_calculator: RatesCalculator,
 ):
     if response["status"] != "200":
         return
@@ -111,6 +116,7 @@ async def on_chat_completion_message(
         response_body,
         RequestType.CHAT_COMPLETION,
         topic_model,
+        rates_calculator,
     )
 
 
@@ -126,6 +132,7 @@ async def on_embedding_message(
     response: dict,
     influx_writer: InfluxWriterAsync,
     topic_model: TopicModel,
+    rates_calculator: RatesCalculator,
 ):
     if response["status"] != "200":
         return
@@ -145,6 +152,7 @@ async def on_embedding_message(
         json.loads(response["body"]),
         RequestType.EMBEDDING,
         topic_model,
+        rates_calculator,
     )
 
 
@@ -152,6 +160,7 @@ async def on_log_message(
     message: dict,
     influx_writer: InfluxWriterAsync,
     topic_model: TopicModel,
+    rates_calculator: RatesCalculator,
 ):
     request = message["request"]
     uri = message["request"]["uri"]
@@ -188,6 +197,7 @@ async def on_log_message(
             response,
             influx_writer,
             topic_model,
+            rates_calculator,
         )
 
     match = re.search(EMBEDDING_PATTERN, uri)
@@ -205,6 +215,7 @@ async def on_log_message(
             response,
             influx_writer,
             topic_model,
+            rates_calculator,
         )
 
 
@@ -213,13 +224,17 @@ async def on_log_messages(
     request: Request,
     influx_writer: InfluxWriterAsync = Depends(),
     topic_model: TopicModel = Depends(),
+    rates_calculator: RatesCalculator = Depends(),
 ):
     data = await request.json()
 
     for item in data:
         try:
             await on_log_message(
-                json.loads(item["message"]), influx_writer, topic_model
+                json.loads(item["message"]),
+                influx_writer,
+                topic_model,
+                rates_calculator,
             )
         except Exception as e:
             logging.exception(e)

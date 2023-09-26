@@ -10,10 +10,10 @@ image:
 fullnameOverride: "dial-analytics"
 
 containerSecurityContext:
-  runAsUser: 1666
+  runAsUser: 1001
 
 podSecurityContext:
-  fsGroup: 1666
+  fsGroup: 1001
 
 podAnnotations:
   autorestart: '{{ dateInZone "2006-01-02 15:04:05Z" (now) "UTC" }}'

@@ -28,7 +28,7 @@ def detect_lang(request, response, request_type):
     else:
         text = (
             request["input"]
-            if request["input"] is str
+            if isinstance(request["input"], str)
             else "\n\n".join(request["input"])
         )
 
@@ -80,13 +80,13 @@ def make_point(
     else:
         request_content = (
             request["input"]
-            if request["input"] is str
+            if isinstance(request["input"], str)
             else "\n".join(request["input"])
         )
         if chat_id:
             topic = topic_model.get_topic_by_text(
                 request["input"]
-                if request["input"] is str
+                if isinstance(request["input"], str)
                 else "\n\n".join(request["input"])
             )
 
@@ -120,7 +120,11 @@ def make_point(
             "number_request_messages",
             len(request["messages"])
             if request_type == RequestType.CHAT_COMPLETION
-            else (1 if request["input"] is str else len(request["input"])),
+            else (
+                1
+                if isinstance(request["input"], str)
+                else len(request["input"])
+            ),
         )
         .field("chat_id", to_string(chat_id))
         .time(timestamp)
@@ -147,11 +151,11 @@ async def parse_usage_per_model(response: dict):
     if statistics is None:
         return []
 
-    if statistics is dict or "usage_per_model" not in statistics:
+    if not isinstance(statistics, dict) or "usage_per_model" not in statistics:
         return []
 
     usage_per_model = statistics["usage_per_model"]
-    if usage_per_model is not list:
+    if not isinstance(usage_per_model, list):
         return []
 
     return usage_per_model

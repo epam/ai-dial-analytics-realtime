@@ -10,11 +10,13 @@
 **/.ssh
 **/.flake8
 **/.DS_Store
+**/.nox
 **/coverage
 **/env
-**/pyproject.toml
 **/venv
 **/__pycache__
 **/*.pyc
 Dockerfile
+dist
+embeddings_model
 README.md

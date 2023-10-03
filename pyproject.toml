@@ -46,6 +46,10 @@ pyright = "^1.1.325"
 nox = "^2023.4.22"
 
 
+[tool.poetry.group.nox.dependencies]
+nox = "^2023.4.22"
+
+
 [tool.pyright]
 typeCheckingMode = "basic"
 reportUnusedVariable = "error"

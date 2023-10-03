@@ -32,18 +32,22 @@ docker_serve: docker_build
 
 
 lint:
+	poetry install --only nox
 	poetry run nox -s lint
 
 
 format:
+	poetry install --only nox
 	poetry run nox -s format
 
 
 test:
+	poetry install --only nox
 	poetry run -- nox -s tests -- -m "not with_external" $(ARGS)
 
 
 test_all: embeddings_model
+	poetry install --only nox
 	poetry run -- nox -s tests -- $(ARGS)
 
 

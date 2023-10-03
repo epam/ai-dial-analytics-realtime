@@ -26,7 +26,7 @@ def format(session):
     session.run("autoflake", SRC)
 
 
-@nox.session(python=["3.11"])
+@nox.session(python=["3.10"])
 def tests(session):
     """Runs tests"""
     session.run("poetry", "install", external=True)

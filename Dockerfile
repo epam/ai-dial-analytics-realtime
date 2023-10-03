@@ -5,18 +5,18 @@ ENV PYTHONDONTWRITEBYTECODE 1
 ENV PYTHONUNBUFFERED 1
 
 RUN apt-get update && \
-    apt-get install -y python3.11 \
-                       python3.11-venv \
-                       python3.11-dev \
+    apt-get install -y python3 \
+                       python3-venv \
+                       python3-dev \
                        python3-pip && \
-    python3.11 -m pip install "poetry==1.6.1" && \
-    python3.11 -m venv /opt/venv
+    pip install "poetry==1.6.1" && \
+    python3 -m venv /opt/venv
 
 
 ENV PATH="/opt/venv/bin:$PATH"
 
 COPY pyproject.toml poetry.lock .
-RUN poetry export -f requirements.txt | python3.11 -m pip install -r /dev/stdin
+RUN poetry export -f requirements.txt | pip install -r /dev/stdin
 
 
 FROM ubuntu:22.04
@@ -39,7 +39,7 @@ WORKDIR /
 
 # Install ca-certificates is required for https connection to InfluxDB
 RUN apt-get update && \
-    apt-get install -y python3.11 ca-certificates
+    apt-get install -y python3 ca-certificates
 
 COPY --from=dep-builder --chown=appuser /opt/venv /opt/venv
 COPY --chown=appuser ./aidial_analytics_realtime /aidial_analytics_realtime

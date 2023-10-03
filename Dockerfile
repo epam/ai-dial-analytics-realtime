@@ -1,23 +1,25 @@
-# dep builder: builds wheels for all deps
-FROM python:3.11 AS dep-builder
+# dep-builder: builds venv with all deps
+FROM ubuntu:22.04 AS dep-builder
 
 ENV PYTHONDONTWRITEBYTECODE 1
 ENV PYTHONUNBUFFERED 1
 
-RUN pip install "poetry==1.6.1"
+RUN apt-get update && \
+    apt-get install -y python3.11 \
+                       python3.11-venv \
+                       python3.11-dev \
+                       python3-pip && \
+    python3.11 -m pip install "poetry==1.6.1" && \
+    python3.11 -m venv /opt/venv
 
-RUN python -m venv /opt/venv
+
 ENV PATH="/opt/venv/bin:$PATH"
 
 COPY pyproject.toml poetry.lock .
-RUN poetry export -f requirements.txt | pip install -r /dev/stdin
-
-COPY download_model.py .
-RUN python download_model.py "paraphrase-multilingual-MiniLM-L12-v2" /opt/embeddings_model
+RUN poetry export -f requirements.txt | python3.11 -m pip install -r /dev/stdin
 
 
-# For more information, please refer to https://aka.ms/vscode-docker-python
-FROM python:3.11-slim
+FROM ubuntu:22.04
 
 # Keeps Python from generating .pyc files in the container
 ENV PYTHONDONTWRITEBYTECODE=1
@@ -35,9 +37,11 @@ RUN adduser -u 1001 --disabled-password --gecos "" appuser
 
 WORKDIR /
 
+# Install ca-certificates is required for https connection to InfluxDB
+RUN apt-get update && \
+    apt-get install -y python3.11 ca-certificates
+
 COPY --from=dep-builder --chown=appuser /opt/venv /opt/venv
-#COPY --from=dep-builder --chown=appuser /opt/embeddings_model /embeddings_model
-#COPY --chown=appuser ./topic_model /topic_model
 COPY --chown=appuser ./aidial_analytics_realtime /aidial_analytics_realtime
 
 ENV PATH="/opt/venv/bin:$PATH"

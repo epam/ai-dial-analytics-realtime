@@ -13,12 +13,7 @@ build:
 	poetry build
 
 
-embeddings_model:
-	poetry install --only main
-	poetry run python download_model.py
-
-
-serve: embeddings_model
+serve:
 	poetry install --only main
 	poetry run uvicorn aidial_analytics_realtime.app:app --port=$(PORT) --env-file .env
 
@@ -46,7 +41,7 @@ test:
 	poetry run -- nox -s tests -- -m "not with_external" $(ARGS)
 
 
-test_all: embeddings_model
+test_all:
 	poetry install --only nox
 	poetry run -- nox -s tests -- $(ARGS)
 

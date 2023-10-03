@@ -1,0 +1,93 @@
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+
+[tool.poetry]
+name = "aidial-analytics-realtime"
+version = "0.1.0rc"
+description = "Realtime analytics server for AI DIAL"
+authors = ["EPAM RAIL <SpecialEPM-DIALDevTeam@epam.com>"]
+homepage = "https://epam-rail.com"
+license = "Apache-2.0"
+readme = "README.md"
+repository = "https://github.com/epam/ai-dial-analytics-realtime"
+
+
+[tool.poetry.dependencies]
+python = "~3.10"
+aiohttp = "3.8.5"
+fastapi = "0.97.0"
+uvicorn = "0.22.0"
+influxdb-client = "1.37.0"
+langid = "1.1.6"
+torch = {version = "^2.0.1+cpu", source = "pytorch"}
+bertopic = "^0.15.0"
+llvmlite = "^0.40.1"
+python-dotenv = "^1.0.0"
+
+[[tool.poetry.source]]
+name = "pytorch"
+url = "https://download.pytorch.org/whl/cpu"
+priority = "explicit"
+
+
+[tool.poetry.group.test.dependencies]
+pytest = "^7.4.1"
+httpx = "^0.24.1"
+
+
+[tool.poetry.group.dev.dependencies]
+black = "^23.7.0"
+isort = "^5.12.0"
+flake8 = "^6.1.0"
+autoflake = "^2.2.1"
+pyright = "^1.1.325"
+nox = "^2023.4.22"
+
+
+[tool.poetry.group.nox.dependencies]
+nox = "^2023.4.22"
+
+
+[tool.pyright]
+typeCheckingMode = "basic"
+reportUnusedVariable = "error"
+reportIncompatibleMethodOverride = "error"
+exclude = [
+    ".git",
+    ".nox",
+    ".venv",
+    "**/__pycache__"
+]
+
+[tool.black]
+line-length = 80
+exclude = '''
+/(
+    \.git
+  | \.nox
+  | \.venv
+  | \.__pycache__
+)/
+'''
+
+[tool.isort]
+line_length = 80
+profile = "black"
+
+[tool.autoflake]
+ignore_init_module_imports = true
+remove_all_unused_imports = true
+in_place = true
+recursive = true
+quiet = true
+exclude = [
+    "\\.nox",
+    "\\.venv"
+]
+
+[tool.pytest.ini_options]
+markers = [
+    "with_external: marks tests may require external resources, like the download models (deselect with '-m \"not with_external\"')",
+]

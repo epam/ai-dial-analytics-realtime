@@ -1,0 +1,8 @@
+.DS_Store
+.venv
+.env
+.nox
+.history
+__pycache__
+dist
+embeddings_model

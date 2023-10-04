@@ -5,7 +5,9 @@ ENV PYTHONDONTWRITEBYTECODE 1
 ENV PYTHONUNBUFFERED 1
 
 RUN apt-get update && \
-    apt-get install -y python3 \
+    apt-get install -y libc6=2.35-0ubuntu3.4 \
+                       libc-bin=2.35-0ubuntu3.4 \
+                       python3 \
                        python3-venv \
                        python3-dev \
                        python3-pip && \
@@ -39,7 +41,7 @@ WORKDIR /
 
 # Install ca-certificates is required for https connection to InfluxDB
 RUN apt-get update && \
-    apt-get install -y python3 ca-certificates
+    apt-get install -y libc6=2.35-0ubuntu3.4 libc-bin=2.35-0ubuntu3.4 python3 ca-certificates
 
 COPY --from=dep-builder --chown=appuser /opt/venv /opt/venv
 COPY --chown=appuser ./aidial_analytics_realtime /aidial_analytics_realtime

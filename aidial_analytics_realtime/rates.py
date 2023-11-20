@@ -66,7 +66,7 @@ class RatesCalculator:
     def get_rate(self, deployment: str, model: str):
         deployment_rate = self.rates.get(deployment)
 
-        if deployment_rate != None:
+        if deployment_rate is not None:
             return deployment_rate
         else:
             return self.rates.get(model)

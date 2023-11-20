@@ -57,7 +57,7 @@ def test_token_rates(deployment: str, model: str, price: str):
     assert calculated_price == Decimal(price)
 
 
-token_rates_testdata = [
+char_rates_testdata = [
     ("chat-bison@001", "chat-bison@001", "0.0000035"),
     ("chat-bison@001", "chat-bison", "0.0000035"),
     ("chat-bison@001", "non-existent", "0.0000035"),
@@ -70,7 +70,7 @@ token_rates_testdata = [
 ]
 
 
-@pytest.mark.parametrize("deployment, model, price", token_rates_testdata)
+@pytest.mark.parametrize("deployment, model, price", char_rates_testdata)
 def test_char_rates(deployment: str, model: str, price: str):
     rates = RatesCalculator(MODEL_RATES)
     calculated_price = rates.calculate_price(

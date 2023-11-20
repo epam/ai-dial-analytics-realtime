@@ -31,7 +31,7 @@ MODEL_RATES = json.dumps(
 )
 
 
-token_rates_testdata = [
+TOKEN_RATES_TESTDATA = [
     ("gpt-4", "gpt-4", "0.00012"),
     ("gpt-4", "gpt-35-turbo", "0.00012"),
     ("gpt-4", "non-existent", "0.00012"),
@@ -44,7 +44,7 @@ token_rates_testdata = [
 ]
 
 
-@pytest.mark.parametrize("deployment, model, price", token_rates_testdata)
+@pytest.mark.parametrize("deployment, model, price", TOKEN_RATES_TESTDATA)
 def test_token_rates(deployment: str, model: str, price: str):
     rates = RatesCalculator(MODEL_RATES)
     calculated_price = rates.calculate_price(
@@ -57,7 +57,7 @@ def test_token_rates(deployment: str, model: str, price: str):
     assert calculated_price == Decimal(price)
 
 
-char_rates_testdata = [
+CHAR_RATES_TESTDATA = [
     ("chat-bison@001", "chat-bison@001", "0.0000035"),
     ("chat-bison@001", "chat-bison", "0.0000035"),
     ("chat-bison@001", "non-existent", "0.0000035"),
@@ -70,7 +70,7 @@ char_rates_testdata = [
 ]
 
 
-@pytest.mark.parametrize("deployment, model, price", char_rates_testdata)
+@pytest.mark.parametrize("deployment, model, price", CHAR_RATES_TESTDATA)
 def test_char_rates(deployment: str, model: str, price: str):
     rates = RatesCalculator(MODEL_RATES)
     calculated_price = rates.calculate_price(

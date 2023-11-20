@@ -65,13 +65,22 @@ class RatesCalculator:
 
     def calculate_price(
         self,
+        deployment: str,
         model: str,
         request_content: str,
         response_content: str,
         usage: dict | None,
     ) -> Decimal:
-        model_rate = self.rates.get(model)
-        if not model_rate:
-            return Decimal(0)
+        deployment_rate = self.rates.get(deployment)
+        if deployment_rate:
+            return deployment_rate.calculate(
+                request_content, response_content, usage
+            )
 
-        return model_rate.calculate(request_content, response_content, usage)
+        model_rate = self.rates.get(model)
+        if model_rate:
+            return model_rate.calculate(
+                request_content, response_content, usage
+            )
+
+        return Decimal(0)

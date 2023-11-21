@@ -91,7 +91,7 @@ def make_point(
             )
 
     price = rates_calculator.calculate_price(
-        model, request_content, response_content, usage
+        deployment, model, request_content, response_content, usage
     )
 
     point = (

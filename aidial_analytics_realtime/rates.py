@@ -63,15 +63,25 @@ class RatesCalculator:
         assert rates_str is not None
         self.rates = parse_raw_as(Rates, rates_str)
 
+    def get_rate(self, deployment: str, model: str):
+        deployment_rate = self.rates.get(deployment)
+
+        if deployment_rate is not None:
+            return deployment_rate
+        else:
+            return self.rates.get(model)
+
     def calculate_price(
         self,
+        deployment: str,
         model: str,
         request_content: str,
         response_content: str,
         usage: dict | None,
     ) -> Decimal:
-        model_rate = self.rates.get(model)
-        if not model_rate:
+        rate = self.get_rate(deployment, model)
+
+        if not rate:
             return Decimal(0)
 
-        return model_rate.calculate(request_content, response_content, usage)
+        return rate.calculate(request_content, response_content, usage)

@@ -6,7 +6,7 @@ nox.options.sessions = ["lint", "tests"]
 SRC = "."
 
 
-@nox.session
+@nox.session(python=["3.10"])
 def lint(session):
     """Runs linters and fixers"""
     session.run("poetry", "install", external=True)
@@ -17,7 +17,7 @@ def lint(session):
     session.run("pyright", SRC)
 
 
-@nox.session
+@nox.session(python=["3.10"])
 def format(session):
     """Runs linters and fixers"""
     session.run("poetry", "install", external=True)

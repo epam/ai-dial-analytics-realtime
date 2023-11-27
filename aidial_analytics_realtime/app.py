@@ -3,7 +3,7 @@ import logging
 import re
 from datetime import datetime, timezone
 
-import dateutil
+import dateutil.parser as dateutil_parser
 import uvicorn
 from fastapi import Depends, FastAPI, Request
 
@@ -174,7 +174,7 @@ async def on_log_message(
         response["upstream_uri"] if "upstream_uri" in response else ""
     )
 
-    timestamp = dateutil.parser.isoparse(request["time"])
+    timestamp = dateutil_parser.isoparse(request["time"])
     if timestamp.tzinfo is None:
         # The logs may come without the timezone information. We want it to be interpreted as UTC, not local time.
         timestamp = timestamp.replace(tzinfo=timezone.utc)

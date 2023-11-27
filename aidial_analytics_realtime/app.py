@@ -1,9 +1,8 @@
 import json
 import logging
 import re
-from datetime import datetime, timezone
+from datetime import datetime
 
-import dateutil.parser as dateutil_parser
 import uvicorn
 from fastapi import Depends, FastAPI, Request
 
@@ -13,6 +12,7 @@ from aidial_analytics_realtime.influx_writer import (
     create_influx_writer,
 )
 from aidial_analytics_realtime.rates import RatesCalculator
+from aidial_analytics_realtime.time import parse_time
 from aidial_analytics_realtime.topic_model import TopicModel
 from aidial_analytics_realtime.universal_api_utils import merge
 
@@ -174,10 +174,7 @@ async def on_log_message(
         response["upstream_uri"] if "upstream_uri" in response else ""
     )
 
-    timestamp = dateutil_parser.isoparse(request["time"])
-    if timestamp.tzinfo is None:
-        # The logs may come without the timezone information. We want it to be interpreted as UTC, not local time.
-        timestamp = timestamp.replace(tzinfo=timezone.utc)
+    timestamp = parse_time(request["time"])
 
     match = re.search(RATE_PATTERN, uri)
     if match:

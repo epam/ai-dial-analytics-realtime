@@ -5,7 +5,7 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.poetry]
 name = "aidial-analytics-realtime"
-version = "0.5.0rc"
+version = "0.5.0"
 description = "Realtime analytics server for AI DIAL"
 authors = ["EPAM RAIL <SpecialEPM-DIALDevTeam@epam.com>"]
 homepage = "https://epam-rail.com"

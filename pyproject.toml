@@ -16,7 +16,7 @@ repository = "https://github.com/epam/ai-dial-analytics-realtime"
 
 [tool.poetry.dependencies]
 python = "~3.10"
-aiohttp = "3.8.6"
+aiohttp = "3.9.0"
 fastapi = "0.97.0"
 uvicorn = "0.22.0"
 influxdb-client = "1.37.0"
@@ -26,6 +26,7 @@ bertopic = "^0.15.0"
 llvmlite = "^0.40.1"
 python-dotenv = "^1.0.0"
 python-dateutil = "^2.8.2"
+transformers = "4.36.0"
 
 [[tool.poetry.source]]
 name = "pytorch"

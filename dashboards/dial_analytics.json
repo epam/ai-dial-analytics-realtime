@@ -1,0 +1,853 @@
+{
+  "__requires": [
+    {
+      "type": "panel",
+      "id": "ae3e-plotly-panel",
+      "name": "Plotly panel",
+      "version": "0.3.3"
+    },
+    {
+      "type": "grafana",
+      "id": "grafana",
+      "name": "Grafana",
+      "version": "10.0.3"
+    },
+    {
+      "type": "datasource",
+      "id": "influxdb",
+      "name": "InfluxDB",
+      "version": "1.0.0"
+    },
+    {
+      "type": "panel",
+      "id": "magnesium-wordcloud-panel",
+      "name": "Word cloud",
+      "version": "1.2.4"
+    },
+    {
+      "type": "panel",
+      "id": "stat",
+      "name": "Stat",
+      "version": ""
+    },
+    {
+      "type": "panel",
+      "id": "table",
+      "name": "Table",
+      "version": ""
+    },
+    {
+      "type": "panel",
+      "id": "timeseries",
+      "name": "Time series",
+      "version": ""
+    }
+  ],
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {
+          "type": "grafana",
+          "uid": "-- Grafana --"
+        },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "editable": false,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 0,
+  "id": null,
+  "links": [],
+  "liveNow": false,
+  "panels": [
+    {
+      "datasource": {
+        "type": "influxdb",
+        "uid": "${datasource}"
+      },
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 5,
+        "w": 2,
+        "x": 0,
+        "y": 0
+      },
+      "id": 16,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "last"
+          ],
+          "fields": "/.*/",
+          "values": false
+        },
+        "textMode": "auto"
+      },
+      "pluginVersion": "10.0.3",
+      "targets": [
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "${datasource}"
+          },
+          "query": "bucket = \"${INFLUX_BUCKET}\"\r\n\r\nfrom(bucket: bucket)\r\n  |> range(start: v.timeRangeStart, stop:v.timeRangeStop)\r\n  |> filter(fn: (r) => r._measurement == \"analytics\" and r._field == \"user_hash\")\r\n  |> group()\r\n  |> distinct()\r\n  |> count()",
+          "refId": "A"
+        }
+      ],
+      "title": "Unique Users",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "influxdb",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 10,
+        "w": 22,
+        "x": 2,
+        "y": 0
+      },
+      "id": 12,
+      "options": {
+        "datasource_count_field": "_value",
+        "datasource_tags_field": "topic",
+        "series_index": 0,
+        "wordCloudOptions": {
+          "deterministic": true,
+          "enableTooltip": true,
+          "fontFamily": "arial",
+          "fontSizes": [
+            15,
+            80
+          ],
+          "padding": 1,
+          "rotationAngles": [
+            0,
+            0
+          ],
+          "rotations": 2,
+          "scale": "sqrt",
+          "spiral": "archimedean",
+          "transitionDuration": 800
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "${datasource}"
+          },
+          "query": "bucket = \"${INFLUX_BUCKET}\"\r\n\r\nfrom(bucket: bucket)\r\n  |> range(start: v.timeRangeStart, stop:v.timeRangeStop)\r\n  |> filter(fn: (r) => r._measurement == \"analytics\")\r\n  |> filter(fn: (r) => r._field == \"number_request_messages\")\r\n  |> group(columns: [\"topic\"])\r\n  |> count()\r\n  |> group()",
+          "refId": "A"
+        }
+      ],
+      "title": "Popular Topics",
+      "type": "magnesium-wordcloud-panel"
+    },
+    {
+      "datasource": {
+        "type": "influxdb",
+        "uid": "${datasource}"
+      },
+      "description": "",
+      "gridPos": {
+        "h": 15,
+        "w": 24,
+        "x": 0,
+        "y": 10
+      },
+      "id": 14,
+      "options": {
+        "config": {
+          "displayModeBar": false
+        },
+        "data": "",
+        "layout": {
+          "font": {
+            "color": "lightgrey"
+          },
+          "margin": {
+            "t": 0
+          },
+          "paper_bgcolor": "rgba(0,0,0,0)",
+          "plot_bgcolor": "rgba(0,0,0,0)",
+          "xaxis": {
+            "automargin": true,
+            "autorange": true,
+            "categoryorder": "category ascending",
+            "range": [
+              -0.5,
+              2.5
+            ],
+            "showgrid": false,
+            "showticklabels": true,
+            "type": "category"
+          },
+          "yaxis": {
+            "automargin": true,
+            "autorange": true,
+            "range": [
+              -0.5,
+              10.5
+            ],
+            "showgrid": false,
+            "type": "category"
+          }
+        },
+        "onclick": "//console.log(data)\n//window.updateVariables({query:{'var-project':'test'}, partial: true})",
+        "script": "var title = data.series[0].fields.find(x => x.name === \"title\")?.values\nvar topic = data.series[0].fields.find(x => x.name === \"topic\")?.values\nvar count = data.series[0].fields.find(x => x.name === \"_value\")?.values\n\nvar trace = {\n  x: title?.buffer || title || [\"No data\"],\n  y: topic?.buffer || topic || [\"No data\"],\n  z: count?.buffer || count || [NaN],\n  type: 'heatmap',\n  colorscale: \"YlOrRd\",\n};\n\nreturn {data:[trace]};"
+      },
+      "pluginVersion": "9.2.4",
+      "targets": [
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "${datasource}"
+          },
+          "query": "import \"influxdata/influxdb/schema\"\r\n\r\nbucket = \"${INFLUX_BUCKET}\"\r\n\r\nfrom(bucket: bucket)\r\n  |> range(start: v.timeRangeStart, stop:v.timeRangeStop)\r\n  |> filter(fn: (r) => r._measurement == \"analytics\")\r\n  |> filter(fn: (r) => r._field == \"number_request_messages\")\r\n  |> group(columns: [\"topic\", \"title\"])\r\n  |> count()\r\n  |> group()\r\n",
+          "refId": "A"
+        }
+      ],
+      "title": "Title-Topic Heatmap",
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {},
+            "indexByName": {},
+            "renameByName": {
+              "topic": " "
+            }
+          }
+        }
+      ],
+      "type": "ae3e-plotly-panel"
+    },
+    {
+      "datasource": {
+        "type": "influxdb",
+        "uid": "${datasource}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 30,
+            "gradientMode": "hue",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "lineInterpolation": "smooth",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "displayName": "Requests",
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Value"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "blue",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 24,
+        "x": 0,
+        "y": 25
+      },
+      "id": 10,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "${datasource}"
+          },
+          "query": "bucket = \"${INFLUX_BUCKET}\"\r\n\r\nfrom(bucket: bucket)\r\n  |> range(start: v.timeRangeStart, stop:v.timeRangeStop)\r\n  |> filter(fn: (r) => r._measurement == \"analytics\")\r\n  |> filter(fn: (r) => r._field == \"number_request_messages\")\r\n  |> group()\r\n  |> aggregateWindow(every: v.windowPeriod, fn: count)\r\n  |> keep(columns: [\"_time\", \"_value\"])",
+          "refId": "A"
+        }
+      ],
+      "title": "System Usage",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "influxdb",
+        "uid": "${datasource}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "inspect": false
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "money"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "currencyUSD"
+              },
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "options": {
+                      "NaN": {
+                        "index": 0,
+                        "text": "Not configured"
+                      }
+                    },
+                    "type": "value"
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 24,
+        "x": 0,
+        "y": 34
+      },
+      "id": 6,
+      "options": {
+        "cellHeight": "sm",
+        "footer": {
+          "countRows": false,
+          "enablePagination": true,
+          "fields": "",
+          "reducer": [
+            "sum"
+          ],
+          "show": false
+        },
+        "showHeader": true,
+        "sortBy": [
+          {
+            "desc": true,
+            "displayName": "Money"
+          }
+        ]
+      },
+      "pluginVersion": "10.0.3",
+      "targets": [
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "${datasource}"
+          },
+          "hide": false,
+          "query": "import \"influxdata/influxdb/schema\"\r\n\r\ngetOrDefault = (f, d) => if exists f then f else d\r\n\r\nbucket = \"${INFLUX_BUCKET}\"\r\n\r\nfrom(bucket: bucket)\r\n  |> range(start: v.timeRangeStart, stop:v.timeRangeStop)\r\n  |> filter(fn: (r) => r._measurement == \"analytics\")\r\n  |> filter(fn: (r) => r._field == \"prompt_tokens\" or r._field == \"completion_tokens\" or r._field == \"number_request_messages\" or r._field == \"user_hash\" or r._field == \"price\")\r\n  |> schema.fieldsAsCols()\r\n  |> group(columns: [\"project_id\", \"deployment\", \"model\", \"user_hash\"])\r\n  |> reduce(\r\n        fn: (r, accumulator) => ({\r\n          request_count: accumulator.request_count + 1,\r\n          prompt_tokens: getOrDefault(f: r.prompt_tokens, d: 0) + accumulator.prompt_tokens,\r\n          completion_tokens: getOrDefault(f: r.completion_tokens, d: 0) + accumulator.completion_tokens,\r\n          money: getOrDefault(f: r.price, d: 0.0) + accumulator.money\r\n        }),\r\n        identity: {request_count: 0, prompt_tokens: 0, completion_tokens: 0, money: 0.0}\r\n    )\r\n  |> group(columns: [\"project_id\", \"deployment\", \"model\"])\r\n  |> reduce(\r\n        fn: (r, accumulator) => ({\r\n          user_count: accumulator.user_count + 1,\r\n          request_count: r.request_count + accumulator.request_count,\r\n          prompt_tokens: r.prompt_tokens + accumulator.prompt_tokens,\r\n          completion_tokens: r.completion_tokens + accumulator.completion_tokens,\r\n          money: r.money + accumulator.money\r\n        }),\r\n        identity: {user_count: 0, request_count: 0, prompt_tokens: 0, completion_tokens: 0, money: 0.0}\r\n    )\r\n  |> group()",
+          "refId": "A"
+        }
+      ],
+      "title": "Stats Table",
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "_time": true
+            },
+            "indexByName": {
+              "completion_tokens": 6,
+              "deployment": 1,
+              "model": 2,
+              "money": 7,
+              "project_id": 0,
+              "prompt_tokens": 5,
+              "request_count": 4,
+              "user_count": 3
+            },
+            "renameByName": {
+              "completion_tokens": "Completion tokens",
+              "deployment": "Deployment",
+              "model": "Model",
+              "money": "Money",
+              "number_request_messages": "",
+              "project_id": "Project",
+              "prompt_tokens": "Prompt tokens",
+              "request_count": "Request count",
+              "user_count": "Users"
+            }
+          }
+        },
+        {
+          "id": "sortBy",
+          "options": {
+            "fields": {},
+            "sort": [
+              {
+                "desc": true,
+                "field": "Money"
+              }
+            ]
+          }
+        }
+      ],
+      "type": "table"
+    },
+    {
+      "datasource": {
+        "type": "influxdb",
+        "uid": "${datasource}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "inspect": false
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "money"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "currencyUSD"
+              },
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "options": {
+                      "NaN": {
+                        "index": 0,
+                        "text": "Not configured"
+                      }
+                    },
+                    "type": "value"
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 24,
+        "x": 0,
+        "y": 43
+      },
+      "id": 7,
+      "options": {
+        "cellHeight": "sm",
+        "footer": {
+          "countRows": false,
+          "enablePagination": true,
+          "fields": "",
+          "reducer": [
+            "sum"
+          ],
+          "show": false
+        },
+        "showHeader": true,
+        "sortBy": [
+          {
+            "desc": true,
+            "displayName": "Money"
+          }
+        ]
+      },
+      "pluginVersion": "10.0.3",
+      "targets": [
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "${datasource}"
+          },
+          "hide": false,
+          "query": "import \"influxdata/influxdb/schema\"\r\n\r\ngetOrDefault = (f, d) => if exists f then f else d\r\n\r\nbucket = \"${INFLUX_BUCKET}\"\r\n\r\nfrom(bucket: bucket)\r\n  |> range(start: v.timeRangeStart, stop:v.timeRangeStop)\r\n  |> filter(fn: (r) => r._measurement == \"analytics\")\r\n  |> filter(fn: (r) => r._field == \"prompt_tokens\" or r._field == \"completion_tokens\" or r._field == \"number_request_messages\" or r._field == \"price\")\r\n  |> schema.fieldsAsCols()\r\n  |> group(columns: [\"project_id\"])\r\n  |> reduce(\r\n        fn: (r, accumulator) => ({\r\n          request_count: accumulator.request_count + 1,\r\n          prompt_tokens: getOrDefault(f: r.prompt_tokens, d: 0) + accumulator.prompt_tokens,\r\n          completion_tokens: getOrDefault(f: r.completion_tokens, d: 0) + accumulator.completion_tokens,\r\n          money: getOrDefault(f: r.price, d: 0.0) + accumulator.money\r\n        }),\r\n        identity: {request_count: 0, prompt_tokens: 0, completion_tokens: 0, money: 0.0}\r\n    )\r\n  |> group()",
+          "refId": "A"
+        }
+      ],
+      "title": "Project Stats Table",
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "_time": true
+            },
+            "indexByName": {
+              "completion_tokens": 3,
+              "money": 4,
+              "project_id": 0,
+              "prompt_tokens": 2,
+              "request_count": 1
+            },
+            "renameByName": {
+              "completion_tokens": "Completion tokens",
+              "model": "",
+              "money": "Money",
+              "number_request_messages": "",
+              "project_id": "Project",
+              "prompt_tokens": "Prompt tokens",
+              "request_count": "Request count"
+            }
+          }
+        },
+        {
+          "id": "sortBy",
+          "options": {
+            "fields": {},
+            "sort": [
+              {
+                "desc": true,
+                "field": "Money"
+              }
+            ]
+          }
+        }
+      ],
+      "type": "table"
+    },
+    {
+      "datasource": {
+        "type": "influxdb",
+        "uid": "${datasource}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "inspect": false
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "money"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "currencyUSD"
+              },
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "options": {
+                      "NaN": {
+                        "index": 0,
+                        "text": "Not configured"
+                      }
+                    },
+                    "type": "value"
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 24,
+        "x": 0,
+        "y": 52
+      },
+      "id": 8,
+      "options": {
+        "cellHeight": "sm",
+        "footer": {
+          "countRows": false,
+          "enablePagination": true,
+          "fields": "",
+          "reducer": [
+            "sum"
+          ],
+          "show": false
+        },
+        "showHeader": true,
+        "sortBy": [
+          {
+            "desc": true,
+            "displayName": "Money"
+          }
+        ]
+      },
+      "pluginVersion": "10.0.3",
+      "targets": [
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "${datasource}"
+          },
+          "hide": false,
+          "query": "import \"influxdata/influxdb/schema\"\r\n\r\ngetOrDefault = (f, d) => if exists f then f else d\r\n\r\nbucket = \"${INFLUX_BUCKET}\"\r\n\r\nfrom(bucket: bucket)\r\n  |> range(start: v.timeRangeStart, stop:v.timeRangeStop)\r\n  |> filter(fn: (r) => r._measurement == \"analytics\")\r\n  |> filter(fn: (r) => r._field == \"prompt_tokens\" or r._field == \"completion_tokens\" or r._field == \"number_request_messages\" or r._field == \"price\")\r\n  |> schema.fieldsAsCols()\r\n  |> group(columns: [\"model\", \"deployment\"])\r\n  |> reduce(\r\n        fn: (r, accumulator) => ({\r\n          request_count: accumulator.request_count + 1,\r\n          prompt_tokens: getOrDefault(f: r.prompt_tokens, d: 0) + accumulator.prompt_tokens,\r\n          completion_tokens: getOrDefault(f: r.completion_tokens, d: 0) + accumulator.completion_tokens,\r\n          money: getOrDefault(f: r.price, d: 0.0) + accumulator.money\r\n        }),\r\n        identity: {request_count: 0, prompt_tokens: 0, completion_tokens: 0, money: 0.0}\r\n    )\r\n  |> group()",
+          "refId": "A"
+        }
+      ],
+      "title": "Deployment/Model Stats Table",
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "_time": true
+            },
+            "indexByName": {
+              "completion_tokens": 4,
+              "deployment": 0,
+              "model": 1,
+              "money": 5,
+              "prompt_tokens": 3,
+              "request_count": 2
+            },
+            "renameByName": {
+              "completion_tokens": "Completion tokens",
+              "deployment": "Deployment",
+              "model": "Model",
+              "money": "Money",
+              "number_request_messages": "",
+              "project_id": "",
+              "prompt_tokens": "Prompt tokens",
+              "request_count": "Request count"
+            }
+          }
+        },
+        {
+          "id": "sortBy",
+          "options": {
+            "fields": {},
+            "sort": [
+              {
+                "desc": true,
+                "field": "Money"
+              }
+            ]
+          }
+        }
+      ],
+      "type": "table"
+    }
+  ],
+  "refresh": "1m",
+  "schemaVersion": 38,
+  "style": "dark",
+  "tags": [
+    "DIAL",
+    "ai-dial-analytics-realtime"
+  ],
+  "templating": {
+    "list": [
+      {
+        "current": {
+          "selected": true,
+          "text": "default",
+          "value": "default"
+        },
+        "description": "InfluxDB datasource",
+        "hide": 0,
+        "includeAll": false,
+        "label": "Data source",
+        "multi": false,
+        "name": "datasource",
+        "options": [],
+        "query": "influxdb",
+        "queryValue": "",
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "type": "datasource"
+      },
+      {
+        "datasource": {
+          "type": "influxdb",
+          "uid": "${datasource}"
+        },
+        "definition": "buckets()",
+        "description": "A InfluxDB bucket name",
+        "hide": 0,
+        "includeAll": false,
+        "multi": false,
+        "name": "INFLUX_BUCKET",
+        "options": [],
+        "query": "buckets()",
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 0,
+        "type": "query"
+      }
+    ]
+  },
+  "time": {
+    "from": "now-2d",
+    "to": "now"
+  },
+  "timepicker": {},
+  "timezone": "",
+  "title": "DIAL Analytics",
+  "uid": "435858b2-4106-4d11-b6e8-9b0ff107b460",
+  "version": 1,
+  "weekStart": ""
+}

@@ -67,6 +67,9 @@ async def on_chat_completion_message(
     influx_writer: InfluxWriterAsync,
     topic_model: TopicModel,
     rates_calculator: RatesCalculator,
+    token_usage: dict | None,
+    parent_deployment: str | None,
+    trace: dict | None,
 ):
     if response["status"] != "200":
         return
@@ -118,6 +121,9 @@ async def on_chat_completion_message(
         RequestType.CHAT_COMPLETION,
         topic_model,
         rates_calculator,
+        token_usage,
+        parent_deployment,
+        trace,
     )
 
 
@@ -134,6 +140,9 @@ async def on_embedding_message(
     influx_writer: InfluxWriterAsync,
     topic_model: TopicModel,
     rates_calculator: RatesCalculator,
+    token_usage: dict | None,
+    parent_deployment: str | None,
+    trace: dict | None,
 ):
     if response["status"] != "200":
         return
@@ -154,6 +163,9 @@ async def on_embedding_message(
         RequestType.EMBEDDING,
         topic_model,
         rates_calculator,
+        token_usage,
+        parent_deployment,
+        trace,
     )
 
 
@@ -176,6 +188,10 @@ async def on_log_message(
 
     timestamp = parse_time(request["time"])
 
+    token_usage = message.get("token_usage", None)
+    trace = message["trace"]
+    parent_deployment = message.get("source_deployment", None)
+
     match = re.search(RATE_PATTERN, uri)
     if match:
         await on_rate_message(request, response)
@@ -196,6 +212,9 @@ async def on_log_message(
             influx_writer,
             topic_model,
             rates_calculator,
+            token_usage,
+            parent_deployment,
+            trace,
         )
 
     match = re.search(EMBEDDING_PATTERN, uri)
@@ -214,6 +233,9 @@ async def on_log_message(
             influx_writer,
             topic_model,
             rates_calculator,
+            token_usage,
+            parent_deployment,
+            trace,
         )
 
 

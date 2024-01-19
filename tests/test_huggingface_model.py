@@ -26,6 +26,18 @@ def test_data_request():
                         "chat": {"id": "chat-1"},
                         "project": {"id": "PROJECT-KEY"},
                         "user": {"id": "", "title": ""},
+                        "token_usage": {
+                            "completion_tokens": 40,
+                            "prompt_tokens": 30,
+                            "cost": 0.001,
+                            "agg_cost": 0.001,
+                        },
+                        "dest_deployment": "gpt-4",
+                        "trace": {
+                            "trace_id": "5dca3d6ed5d22b6ab574f27a6ab5ec14",
+                            "core_span_id": "9ade2b6fef0a716d",
+                            "core_parent_span_id": "20e7e64715abbe97",
+                        },
                         "request": {
                             "protocol": "HTTP/1.1",
                             "method": "POST",
@@ -56,5 +68,5 @@ def test_data_request():
     )
     assert response.status_code == 200
     assert write_api_mock.points == [
-        'analytics,deployment=gpt-4,language=undefined,model=gpt-4,project_id=PROJECT-KEY,response_id=chatcmpl-1,title=undefined,topic=4_letter_sincerely_regards_email,upstream=undefined chat_id="chat-1",completion_tokens=189i,number_request_messages=2i,price=0,prompt_tokens=22i,user_hash="undefined" 1692214959997000000'
+        'analytics,core_parent_span_id=20e7e64715abbe97,core_span_id=9ade2b6fef0a716d,deployment=gpt-4,language=undefined,model=gpt-4,parent_deployment=undefined,project_id=PROJECT-KEY,response_id=chatcmpl-1,title=undefined,topic=4_letter_sincerely_regards_email,trace_id=5dca3d6ed5d22b6ab574f27a6ab5ec14,upstream=undefined chat_id="chat-1",completion_tokens=40i,model_price=0.001,number_request_messages=2i,price=0.001,prompt_tokens=30i,user_hash="undefined" 1692214959997000000'
     ]

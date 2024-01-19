@@ -1,4 +1,5 @@
 from datetime import datetime
+from decimal import Decimal
 from enum import Enum
 from logging import Logger
 from typing import Awaitable, Callable
@@ -66,6 +67,8 @@ def make_point(
     usage: dict | None,
     topic_model: TopicModel,
     rates_calculator: RatesCalculator,
+    parent_deployment: str | None,
+    trace: dict | None,
 ):
     topic = None
     response_content = ""
@@ -90,14 +93,31 @@ def make_point(
                 else "\n\n".join(request["input"])
             )
 
-    price = rates_calculator.calculate_price(
-        deployment, model, request_content, response_content, usage
-    )
+    model_price = Decimal(0)
+    price = Decimal(0)
+    if usage is not None and usage.get("agg_cost") is not None:
+        model_price = usage.get("cost", Decimal(0))
+        price = usage["agg_cost"]
+    else:
+        price = rates_calculator.calculate_price(
+            deployment, model, request_content, response_content, usage
+        )
 
     point = (
         Point("analytics")
         .tag("model", model)
         .tag("deployment", deployment)
+        .tag("parent_deployment", to_string(parent_deployment))
+        .tag("trace_id", "undefined" if not trace else trace["trace_id"])
+        .tag(
+            "core_span_id", "undefined" if not trace else trace["core_span_id"]
+        )
+        .tag(
+            "core_parent_span_id",
+            "undefined"
+            if not trace
+            else to_string(trace.get("core_parent_span_id", None)),
+        )
         .tag("project_id", project_id)
         .tag(
             "language",
@@ -115,6 +135,7 @@ def make_point(
             else uuid4(),
         )
         .field("user_hash", to_string(user_hash))
+        .field("model_price", model_price)
         .field("price", price)
         .field(
             "number_request_messages",
@@ -177,12 +198,34 @@ async def on_message(
     type: RequestType,
     topic_model: TopicModel,
     rates_calculator: RatesCalculator,
+    token_usage: dict | None,
+    parent_deployment: str | None,
+    trace: dict | None,
 ):
     logger.info(f"Chat completion response length {len(response)}")
 
     usage_per_model = await parse_usage_per_model(response)
-
-    if len(usage_per_model) == 0:
+    if token_usage is not None:
+        point = make_point(
+            deployment,
+            model,
+            project_id,
+            chat_id,
+            upstream_url,
+            user_hash,
+            user_title,
+            timestamp,
+            request,
+            response,
+            type,
+            token_usage,
+            topic_model,
+            rates_calculator,
+            parent_deployment,
+            trace,
+        )
+        await influx_writer(point)
+    elif len(usage_per_model) == 0:
         point = make_point(
             deployment,
             model,
@@ -198,6 +241,8 @@ async def on_message(
             response.get("usage", None),
             topic_model,
             rates_calculator,
+            parent_deployment,
+            trace,
         )
         await influx_writer(point)
     else:
@@ -216,6 +261,8 @@ async def on_message(
             None,
             topic_model,
             rates_calculator,
+            parent_deployment,
+            trace,
         )
         await influx_writer(point)
 
@@ -235,5 +282,7 @@ async def on_message(
                 usage,
                 topic_model,
                 rates_calculator,
+                parent_deployment,
+                trace,
             )
             await influx_writer(point)

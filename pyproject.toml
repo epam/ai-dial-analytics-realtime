@@ -31,7 +31,6 @@ llvmlite = "^0.40.1"
 python-dotenv = "^1.0.0"
 python-dateutil = "^2.8.2"
 transformers = "4.36.0"
-pillow = "10.2.0"
 
 [[tool.poetry.source]]
 name = "pytorch"

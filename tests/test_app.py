@@ -6,6 +6,7 @@ from fastapi.testclient import TestClient
 import aidial_analytics_realtime.app as app
 from tests.influx_writer_mock import InfluxWriterMock
 
+
 def test_data_request():
     write_api_mock = InfluxWriterMock()
     app.app.dependency_overrides[app.InfluxWriterAsync] = lambda: write_api_mock
@@ -116,7 +117,7 @@ def test_data_request_with_new_format():
                             "completion_tokens": 40,
                             "prompt_tokens": 30,
                             "cost": 0.001,
-                            "agg_cost": 0.001
+                            "agg_cost": 0.001,
                         },
                         "source_deployment": "assistant",
                         "dest_deployment": "gpt-4",

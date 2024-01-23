@@ -6,6 +6,7 @@ from fastapi.testclient import TestClient
 import aidial_analytics_realtime.app as app
 from tests.influx_writer_mock import InfluxWriterMock
 
+
 @pytest.mark.with_external
 def test_data_request():
     write_api_mock = InfluxWriterMock()
@@ -57,6 +58,7 @@ def test_data_request():
     assert write_api_mock.points == [
         'analytics,core_parent_span_id=undefined,core_span_id=undefined,deployment=gpt-4,language=undefined,model=gpt-4,parent_deployment=undefined,project_id=PROJECT-KEY,response_id=chatcmpl-1,title=undefined,topic=4_letter_sincerely_regards_email,trace_id=undefined,upstream=undefined chat_id="chat-1",completion_tokens=189i,model_price=0,number_request_messages=2i,price=0,prompt_tokens=22i,user_hash="undefined" 1692214959997000000'
     ]
+
 
 @pytest.mark.with_external
 def test_data_request_with_new_format():

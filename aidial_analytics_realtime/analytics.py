@@ -93,10 +93,8 @@ def make_point(
                 else "\n\n".join(request["input"])
             )
 
-    model_price = Decimal(0)
     price = Decimal(0)
     if usage is not None and usage.get("agg_cost") is not None:
-        model_price = usage.get("cost", Decimal(0))
         price = usage["agg_cost"]
     else:
         price = rates_calculator.calculate_price(
@@ -135,7 +133,6 @@ def make_point(
             else uuid4(),
         )
         .field("user_hash", to_string(user_hash))
-        .field("model_price", model_price)
         .field("price", price)
         .field(
             "number_request_messages",

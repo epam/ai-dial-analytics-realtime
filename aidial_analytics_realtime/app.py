@@ -190,7 +190,7 @@ async def on_log_message(
 
     token_usage = message.get("token_usage", None)
     trace = message.get("trace", None)
-    parent_deployment = message.get("source_deployment", None)
+    parent_deployment = message.get("parent_deployment", None)
 
     match = re.search(RATE_PATTERN, uri)
     if match:

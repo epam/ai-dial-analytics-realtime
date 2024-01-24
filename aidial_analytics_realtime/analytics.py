@@ -94,8 +94,8 @@ def make_point(
             )
 
     price = Decimal(0)
-    if usage is not None and usage.get("agg_cost") is not None:
-        price = usage["agg_cost"]
+    if usage is not None and usage.get("price") is not None:
+        price = usage["price"]
     else:
         price = rates_calculator.calculate_price(
             deployment, model, request_content, response_content, usage

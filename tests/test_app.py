@@ -116,11 +116,10 @@ def test_data_request_with_new_format():
                         "token_usage": {
                             "completion_tokens": 40,
                             "prompt_tokens": 30,
-                            "cost": 0.001,
-                            "agg_cost": 0.001,
+                            "deployment_price": 0.001,
+                            "price": 0.001,
                         },
-                        "source_deployment": "assistant",
-                        "dest_deployment": "gpt-4",
+                        "parent_deployment": "assistant",
                         "trace": {
                             "trace_id": "5dca3d6ed5d22b6ab574f27a6ab5ec14",
                             "core_span_id": "9ade2b6fef0a716d",
@@ -162,9 +161,8 @@ def test_data_request_with_new_format():
                         "token_usage": {
                             "completion_tokens": 40,
                             "prompt_tokens": 30,
-                            "agg_cost": 0.005,
+                            "price": 0.005,
                         },
-                        "dest_deployment": "assistant",
                         "trace": {
                             "trace_id": "5dca3d6ed5d22b6ab574f27a6ab5ec14",
                             "core_span_id": "20e7e64715abbe97",

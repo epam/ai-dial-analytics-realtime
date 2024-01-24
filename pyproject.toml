@@ -21,7 +21,11 @@ fastapi = "0.97.0"
 uvicorn = "0.22.0"
 influxdb-client = "1.37.0"
 langid = "1.1.6"
-torch = {version = "^2.0.1+cpu", source = "pytorch"}
+torch = [
+    { version = "^2.0.1", source = "pypi", platform = "darwin" },
+    { version = "^2.0.1+cpu", source = "pytorch", platform = "linux" },
+    { version = "^2.0.1+cpu", source = "pytorch", platform = "win32" },
+]
 bertopic = "^0.15.0"
 llvmlite = "^0.40.1"
 python-dotenv = "^1.0.0"

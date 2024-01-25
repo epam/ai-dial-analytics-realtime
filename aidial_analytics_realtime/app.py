@@ -70,6 +70,7 @@ async def on_chat_completion_message(
     token_usage: dict | None,
     parent_deployment: str | None,
     trace: dict | None,
+    execution_path: str | None,
 ):
     if response["status"] != "200":
         return
@@ -124,6 +125,7 @@ async def on_chat_completion_message(
         token_usage,
         parent_deployment,
         trace,
+        execution_path,
     )
 
 
@@ -143,6 +145,7 @@ async def on_embedding_message(
     token_usage: dict | None,
     parent_deployment: str | None,
     trace: dict | None,
+    execution_path: str | None,
 ):
     if response["status"] != "200":
         return
@@ -166,6 +169,7 @@ async def on_embedding_message(
         token_usage,
         parent_deployment,
         trace,
+        execution_path,
     )
 
 
@@ -191,6 +195,7 @@ async def on_log_message(
     token_usage = message.get("token_usage", None)
     trace = message.get("trace", None)
     parent_deployment = message.get("parent_deployment", None)
+    execution_path = message.get("execution_path", None)
 
     match = re.search(RATE_PATTERN, uri)
     if match:
@@ -215,6 +220,7 @@ async def on_log_message(
             token_usage,
             parent_deployment,
             trace,
+            execution_path,
         )
 
     match = re.search(EMBEDDING_PATTERN, uri)
@@ -236,6 +242,7 @@ async def on_log_message(
             token_usage,
             parent_deployment,
             trace,
+            execution_path,
         )
 
 

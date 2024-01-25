@@ -69,7 +69,7 @@ def make_point(
     rates_calculator: RatesCalculator,
     parent_deployment: str | None,
     trace: dict | None,
-    execution_path: str | None,
+    execution_path: list | None,
 ):
     topic = None
     response_content = ""
@@ -109,7 +109,10 @@ def make_point(
         .tag("model", model)
         .tag("deployment", deployment)
         .tag("parent_deployment", to_string(parent_deployment))
-        .tag("execution_path", to_string(execution_path))
+        .tag(
+            "execution_path",
+            "undefined" if not execution_path else "/".join(execution_path),
+        )
         .tag("trace_id", "undefined" if not trace else trace["trace_id"])
         .tag(
             "core_span_id", "undefined" if not trace else trace["core_span_id"]
@@ -203,7 +206,7 @@ async def on_message(
     token_usage: dict | None,
     parent_deployment: str | None,
     trace: dict | None,
-    execution_path: str | None,
+    execution_path: list | None,
 ):
     logger.info(f"Chat completion response length {len(response)}")
 

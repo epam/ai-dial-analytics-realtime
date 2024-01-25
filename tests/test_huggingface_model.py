@@ -90,7 +90,7 @@ def test_data_request_with_new_format():
                             "core_span_id": "9ade2b6fef0a716d",
                             "core_parent_span_id": "20e7e64715abbe97",
                         },
-                        "execution_path": "a->b->c",
+                        "execution_path": ["a", "b", "c"],
                         "request": {
                             "protocol": "HTTP/1.1",
                             "method": "POST",
@@ -121,5 +121,5 @@ def test_data_request_with_new_format():
     )
     assert response.status_code == 200
     assert write_api_mock.points == [
-        'analytics,core_parent_span_id=20e7e64715abbe97,core_span_id=9ade2b6fef0a716d,deployment=gpt-4,execution_path=a->b->c,language=undefined,model=gpt-4,parent_deployment=undefined,project_id=PROJECT-KEY,response_id=chatcmpl-1,title=undefined,topic=4_letter_sincerely_regards_email,trace_id=5dca3d6ed5d22b6ab574f27a6ab5ec14,upstream=undefined chat_id="chat-1",completion_tokens=40i,deployment_price=0.001,number_request_messages=2i,price=0.001,prompt_tokens=30i,user_hash="undefined" 1692214959997000000'
+        'analytics,core_parent_span_id=20e7e64715abbe97,core_span_id=9ade2b6fef0a716d,deployment=gpt-4,execution_path=a/b/c,language=undefined,model=gpt-4,parent_deployment=undefined,project_id=PROJECT-KEY,response_id=chatcmpl-1,title=undefined,topic=4_letter_sincerely_regards_email,trace_id=5dca3d6ed5d22b6ab574f27a6ab5ec14,upstream=undefined chat_id="chat-1",completion_tokens=40i,deployment_price=0.001,number_request_messages=2i,price=0.001,prompt_tokens=30i,user_hash="undefined" 1692214959997000000'
     ]

@@ -70,7 +70,7 @@ async def on_chat_completion_message(
     token_usage: dict | None,
     parent_deployment: str | None,
     trace: dict | None,
-    execution_path: str | None,
+    execution_path: list | None,
 ):
     if response["status"] != "200":
         return
@@ -145,7 +145,7 @@ async def on_embedding_message(
     token_usage: dict | None,
     parent_deployment: str | None,
     trace: dict | None,
-    execution_path: str | None,
+    execution_path: list | None,
 ):
     if response["status"] != "200":
         return

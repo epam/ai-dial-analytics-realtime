@@ -69,6 +69,7 @@ def make_point(
     rates_calculator: RatesCalculator,
     parent_deployment: str | None,
     trace: dict | None,
+    execution_path: list | None,
 ):
     topic = None
     response_content = ""
@@ -94,8 +95,10 @@ def make_point(
             )
 
     price = Decimal(0)
+    deployment_price = Decimal(0)
     if usage is not None and usage.get("price") is not None:
         price = usage["price"]
+        deployment_price = usage.get("deployment_price", Decimal(0))
     else:
         price = rates_calculator.calculate_price(
             deployment, model, request_content, response_content, usage
@@ -106,6 +109,10 @@ def make_point(
         .tag("model", model)
         .tag("deployment", deployment)
         .tag("parent_deployment", to_string(parent_deployment))
+        .tag(
+            "execution_path",
+            "undefined" if not execution_path else "/".join(execution_path),
+        )
         .tag("trace_id", "undefined" if not trace else trace["trace_id"])
         .tag(
             "core_span_id", "undefined" if not trace else trace["core_span_id"]
@@ -134,6 +141,7 @@ def make_point(
         )
         .field("user_hash", to_string(user_hash))
         .field("price", price)
+        .field("deployment_price", deployment_price)
         .field(
             "number_request_messages",
             len(request["messages"])
@@ -198,6 +206,7 @@ async def on_message(
     token_usage: dict | None,
     parent_deployment: str | None,
     trace: dict | None,
+    execution_path: list | None,
 ):
     logger.info(f"Chat completion response length {len(response)}")
 
@@ -220,6 +229,7 @@ async def on_message(
             rates_calculator,
             parent_deployment,
             trace,
+            execution_path,
         )
         await influx_writer(point)
     elif len(usage_per_model) == 0:
@@ -240,6 +250,7 @@ async def on_message(
             rates_calculator,
             parent_deployment,
             trace,
+            execution_path,
         )
         await influx_writer(point)
     else:
@@ -260,6 +271,7 @@ async def on_message(
             rates_calculator,
             parent_deployment,
             trace,
+            execution_path,
         )
         await influx_writer(point)
 
@@ -281,5 +293,6 @@ async def on_message(
                 rates_calculator,
                 parent_deployment,
                 trace,
+                execution_path,
             )
             await influx_writer(point)

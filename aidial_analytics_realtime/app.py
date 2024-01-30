@@ -6,7 +6,11 @@ from datetime import datetime
 import uvicorn
 from fastapi import Depends, FastAPI, Request
 
-from aidial_analytics_realtime.analytics import RequestType, on_message
+from aidial_analytics_realtime.analytics import (
+    RequestType,
+    make_rate_point,
+    on_message,
+)
 from aidial_analytics_realtime.influx_writer import (
     InfluxWriterAsync,
     create_influx_writer,
@@ -16,7 +20,7 @@ from aidial_analytics_realtime.time import parse_time
 from aidial_analytics_realtime.topic_model import TopicModel
 from aidial_analytics_realtime.universal_api_utils import merge
 
-RATE_PATTERN = r"/v1/rate"
+RATE_PATTERN = r"/v1/(.+?)/rate"
 CHAT_COMPLETION_PATTERN = r"/openai/deployments/(.+?)/chat/completions"
 EMBEDDING_PATTERN = r"/openai/deployments/(.+?)/embeddings"
 
@@ -50,8 +54,29 @@ async def shutdown_event():
     await app.state.influx_client.close()
 
 
-async def on_rate_message(request, response):
+async def on_rate_message(
+    deployment: str,
+    project_id: str,
+    chat_id: str,
+    user_hash: str,
+    user_title: str,
+    timestamp: datetime,
+    request: dict,
+    response: dict,
+    influx_writer: InfluxWriterAsync,
+):
     logger.info(f"Rate message length {len(request) + len(response)}")
+    request_body = json.loads(request["body"])
+    point = make_rate_point(
+        deployment,
+        project_id,
+        chat_id,
+        user_hash,
+        user_title,
+        timestamp,
+        request_body,
+    )
+    await influx_writer(point)
 
 
 async def on_chat_completion_message(
@@ -199,7 +224,18 @@ async def on_log_message(
 
     match = re.search(RATE_PATTERN, uri)
     if match:
-        await on_rate_message(request, response)
+        deployment = match.group(1)
+        await on_rate_message(
+            deployment,
+            project_id,
+            chat_id,
+            user_hash,
+            user_title,
+            timestamp,
+            request,
+            response,
+            influx_writer,
+        )
 
     match = re.search(CHAT_COMPLETION_PATTERN, uri)
     if match:

@@ -172,6 +172,33 @@ def make_point(
     return point
 
 
+def make_rate_point(
+    deployment: str,
+    project_id: str,
+    chat_id: str | None,
+    user_hash: str,
+    user_title: str,
+    timestamp: datetime,
+    request_body: dict,
+):
+    like = request_body["rate"]
+    like_count = 1 if like else 0
+    dislike_count = 1 if not like else 0
+    point = (
+        Point("rate_analytics")
+        .tag("deployment", deployment)
+        .tag("project_id", project_id)
+        .tag("title", to_string(user_title))
+        .tag("response_id", request_body["responseId"])
+        .tag("user_hash", to_string(user_hash))
+        .tag("chat_id", to_string(chat_id))
+        .field("dislike_count", dislike_count)
+        .field("like_count", like_count)
+        .time(timestamp)
+    )
+    return point
+
+
 async def parse_usage_per_model(response: dict):
     statistics = response.get("statistics", None)
     if statistics is None:

@@ -52,6 +52,10 @@ def to_string(obj: str | None):
     return obj if obj else "undefined"
 
 
+def build_execution_path(path: list | None):
+    return "undefined" if not path else "/".join(map(to_string, path))
+
+
 def make_point(
     deployment: str,
     model: str,
@@ -111,7 +115,7 @@ def make_point(
         .tag("parent_deployment", to_string(parent_deployment))
         .tag(
             "execution_path",
-            "undefined" if not execution_path else "/".join(execution_path),
+            build_execution_path(execution_path),
         )
         .tag("trace_id", "undefined" if not trace else trace["trace_id"])
         .tag(

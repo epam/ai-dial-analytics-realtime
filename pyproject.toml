@@ -17,7 +17,7 @@ repository = "https://github.com/epam/ai-dial-analytics-realtime"
 [tool.poetry.dependencies]
 python = "~3.10"
 aiohttp = "3.9.0"
-fastapi = "0.97.0"
+fastapi = "0.109.1"
 uvicorn = "0.22.0"
 influxdb-client = "1.37.0"
 langid = "1.1.6"

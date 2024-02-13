@@ -22,9 +22,8 @@ uvicorn = "0.22.0"
 influxdb-client = "1.37.0"
 langid = "1.1.6"
 torch = [
-    { version = "^2.0.1", source = "pypi", platform = "darwin" },
-    { version = "^2.0.1+cpu", source = "pytorch", platform = "linux" },
-    { version = "^2.0.1+cpu", source = "pytorch", platform = "win32" },
+    { version = "^2.0.1", source = "pypi", markers = "sys_platform == 'darwin'" },
+    { version = "^2.0.1+cpu", source = "pytorch", markers = "sys_platform != 'darwin'" },
 ]
 bertopic = "^0.15.0"
 llvmlite = "^0.40.1"

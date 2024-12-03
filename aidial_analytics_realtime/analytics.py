@@ -242,6 +242,13 @@ async def on_message(
     logger.info(f"Chat completion response length {len(response)}")
 
     usage_per_model = await parse_usage_per_model(response)
+
+    # If the call chain includes interceptors, the `deployment` variable will contain the latest
+    # interceptor value, `parent_deployment` stores the original deployment value only if there are
+    # interceptors.
+    # We need to store the original deployment value in the `deployment` tag to avoid confusion.
+    deployment = parent_deployment or deployment
+
     if token_usage is not None:
         point = make_point(
             deployment,

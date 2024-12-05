@@ -33,6 +33,10 @@ transformers = "4.36.0"
 pydantic = "^1.10.14"
 
 [[tool.poetry.source]]
+name = "pypi"
+priority = "primary"
+
+[[tool.poetry.source]]
 name = "pytorch"
 url = "https://download.pytorch.org/whl/cpu"
 priority = "explicit"

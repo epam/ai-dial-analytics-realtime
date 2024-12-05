@@ -18,6 +18,7 @@ ENV PATH="/opt/venv/bin:$PATH"
 COPY pyproject.toml poetry.lock .
 RUN poetry export -f requirements.txt --without-hashes | pip install -r /dev/stdin
 
+RUN pip install --upgrade setuptools==70.0.0
 
 FROM ubuntu:22.04
 

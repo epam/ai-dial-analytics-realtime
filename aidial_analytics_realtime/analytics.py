@@ -123,37 +123,45 @@ def make_point(
         )
         .tag(
             "core_parent_span_id",
-            "undefined"
-            if not trace
-            else to_string(trace.get("core_parent_span_id", None)),
+            (
+                "undefined"
+                if not trace
+                else to_string(trace.get("core_parent_span_id", None))
+            ),
         )
         .tag("project_id", project_id)
         .tag(
             "language",
-            "undefined"
-            if not chat_id
-            else detect_lang(request, response, request_type),
+            (
+                "undefined"
+                if not chat_id
+                else detect_lang(request, response, request_type)
+            ),
         )
         .tag("upstream", to_string(upstream_url))
         .tag("topic", topic)
         .tag("title", to_string(user_title))
         .tag(
             "response_id",
-            response["id"]
-            if request_type == RequestType.CHAT_COMPLETION
-            else uuid4(),
+            (
+                response["id"]
+                if request_type == RequestType.CHAT_COMPLETION
+                else uuid4()
+            ),
         )
         .field("user_hash", to_string(user_hash))
         .field("price", price)
         .field("deployment_price", deployment_price)
         .field(
             "number_request_messages",
-            len(request["messages"])
-            if request_type == RequestType.CHAT_COMPLETION
-            else (
-                1
-                if isinstance(request["input"], str)
-                else len(request["input"])
+            (
+                len(request["messages"])
+                if request_type == RequestType.CHAT_COMPLETION
+                else (
+                    1
+                    if isinstance(request["input"], str)
+                    else len(request["input"])
+                )
             ),
         )
         .field("chat_id", to_string(chat_id))

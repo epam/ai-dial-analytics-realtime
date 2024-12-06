@@ -26,6 +26,7 @@ def test_data_request():
                         "chat": {"id": "chat-1"},
                         "project": {"id": "PROJECT-KEY"},
                         "user": {"id": "", "title": ""},
+                        "deployment": "gpt-4",
                         "request": {
                             "protocol": "HTTP/1.1",
                             "method": "POST",
@@ -79,6 +80,7 @@ def test_data_request_with_new_format():
                         "chat": {"id": "chat-1"},
                         "project": {"id": "PROJECT-KEY"},
                         "user": {"id": "", "title": ""},
+                        "deployment": "gpt-4",
                         "token_usage": {
                             "completion_tokens": 40,
                             "prompt_tokens": 30,

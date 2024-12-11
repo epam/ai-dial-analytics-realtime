@@ -26,6 +26,7 @@ def test_data_request():
                         "chat": {"id": "chat-1"},
                         "project": {"id": "PROJECT-KEY"},
                         "user": {"id": "", "title": ""},
+                        "deployment": "gpt-4",
                         "request": {
                             "protocol": "HTTP/1.1",
                             "method": "POST",
@@ -59,6 +60,7 @@ def test_data_request():
                         "chat": {"id": "chat-2"},
                         "project": {"id": "PROJECT-KEY-2"},
                         "user": {"id": "", "title": ""},
+                        "deployment": "gpt-4",
                         "request": {
                             "protocol": "HTTP/1.1",
                             "method": "POST",
@@ -113,6 +115,7 @@ def test_data_request_with_new_format():
                         "chat": {"id": "chat-1"},
                         "project": {"id": "PROJECT-KEY"},
                         "user": {"id": "", "title": ""},
+                        "deployment": "gpt-4",
                         "token_usage": {
                             "completion_tokens": 40,
                             "prompt_tokens": 30,
@@ -159,6 +162,7 @@ def test_data_request_with_new_format():
                         "chat": {"id": "chat-2"},
                         "project": {"id": "PROJECT-KEY-2"},
                         "user": {"id": "", "title": ""},
+                        "deployment": "gpt-4",
                         "token_usage": {
                             "completion_tokens": 40,
                             "prompt_tokens": 30,
@@ -223,6 +227,7 @@ def test_rate_response_request():
                         "chat": {"id": "chat-1"},
                         "project": {"id": "PROJECT-KEY"},
                         "user": {"id": "", "title": ""},
+                        "deployment": "gpt-4",
                         "request": {
                             "protocol": "HTTP/1.1",
                             "method": "POST",
@@ -249,6 +254,7 @@ def test_rate_response_request():
                         "chat": {"id": "chat-1"},
                         "project": {"id": "PROJECT-KEY"},
                         "user": {"id": "", "title": ""},
+                        "deployment": "gpt-4",
                         "request": {
                             "protocol": "HTTP/1.1",
                             "method": "POST",

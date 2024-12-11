@@ -221,10 +221,10 @@ async def on_log_message(
     trace = message.get("trace", None)
     parent_deployment = message.get("parent_deployment", None)
     execution_path = message.get("execution_path", None)
+    deployment = message.get("deployment", "")
 
     match = re.search(RATE_PATTERN, uri)
     if match:
-        deployment = match.group(1)
         await on_rate_message(
             deployment,
             project_id,
@@ -239,7 +239,6 @@ async def on_log_message(
 
     match = re.search(CHAT_COMPLETION_PATTERN, uri)
     if match:
-        deployment = match.group(1)
         await on_chat_completion_message(
             deployment,
             project_id,
@@ -261,7 +260,6 @@ async def on_log_message(
 
     match = re.search(EMBEDDING_PATTERN, uri)
     if match:
-        deployment = match.group(1)
         await on_embedding_message(
             deployment,
             project_id,

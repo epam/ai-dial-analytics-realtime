@@ -1,3 +1,4 @@
+import contextlib
 import json
 import logging
 import re
@@ -25,21 +26,9 @@ CHAT_COMPLETION_PATTERN = r"/openai/deployments/(.+?)/chat/completions"
 EMBEDDING_PATTERN = r"/openai/deployments/(.+?)/embeddings"
 
 
-app = FastAPI()
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] - %(message)s",
-    handlers=[logging.StreamHandler()],
-)
-
-logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
-
-
-@app.on_event("startup")
-async def startup_event():
+@contextlib.asynccontextmanager
+async def lifespan(app: FastAPI):
     influx_client, influx_writer = create_influx_writer()
-    app.state.influx_client = influx_client
     app.dependency_overrides[InfluxWriterAsync] = lambda: influx_writer
 
     topic_model = TopicModel()
@@ -48,10 +37,22 @@ async def startup_event():
     rates_calculator = RatesCalculator()
     app.dependency_overrides[RatesCalculator] = lambda: rates_calculator
 
+    yield
 
-@app.on_event("shutdown")
-async def shutdown_event():
-    await app.state.influx_client.close()
+    logger.info("Application shutdown started.")
+    await influx_client.close()
+
+
+app = FastAPI(lifespan=lifespan)
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] - %(message)s",
+    handlers=[logging.StreamHandler()],
+)
+
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
 
 
 async def on_rate_message(

@@ -29,18 +29,16 @@ EMBEDDING_PATTERN = r"/openai/deployments/(.+?)/embeddings"
 @contextlib.asynccontextmanager
 async def lifespan(app: FastAPI):
     influx_client, influx_writer = create_influx_writer()
-    app.dependency_overrides[InfluxWriterAsync] = lambda: influx_writer
+    async with influx_client:
+        app.dependency_overrides[InfluxWriterAsync] = lambda: influx_writer
 
-    topic_model = TopicModel()
-    app.dependency_overrides[TopicModel] = lambda: topic_model
+        topic_model = TopicModel()
+        app.dependency_overrides[TopicModel] = lambda: topic_model
 
-    rates_calculator = RatesCalculator()
-    app.dependency_overrides[RatesCalculator] = lambda: rates_calculator
+        rates_calculator = RatesCalculator()
+        app.dependency_overrides[RatesCalculator] = lambda: rates_calculator
 
-    yield
-
-    logger.info("Application shutdown started.")
-    await influx_client.close()
+        yield
 
 
 app = FastAPI(lifespan=lifespan)

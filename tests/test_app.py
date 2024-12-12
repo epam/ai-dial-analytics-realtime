@@ -1,5 +1,4 @@
 import json
-from unittest.mock import Mock
 
 from fastapi.testclient import TestClient
 
@@ -7,13 +6,15 @@ import aidial_analytics_realtime.app as app
 from tests.influx_writer_mock import InfluxWriterMock
 
 
+class TestTopicModel:
+    def get_topic_by_text(self, text):
+        return "TestTopic"
+
+
 def test_data_request():
     write_api_mock = InfluxWriterMock()
     app.app.dependency_overrides[app.InfluxWriterAsync] = lambda: write_api_mock
-
-    topic_model = Mock()
-    topic_model.get_topic.return_value = "TestTopic"
-    app.app.dependency_overrides[app.TopicModel] = lambda: topic_model
+    app.app.dependency_overrides[app.TopicModel] = lambda: TestTopicModel()
 
     client = TestClient(app.app)
     response = client.post(
@@ -99,10 +100,7 @@ def test_data_request():
 def test_data_request_with_new_format():
     write_api_mock = InfluxWriterMock()
     app.app.dependency_overrides[app.InfluxWriterAsync] = lambda: write_api_mock
-
-    topic_model = Mock()
-    topic_model.get_topic.return_value = "TestTopic"
-    app.app.dependency_overrides[app.TopicModel] = lambda: topic_model
+    app.app.dependency_overrides[app.TopicModel] = lambda: TestTopicModel()
 
     client = TestClient(app.app)
     response = client.post(
@@ -211,10 +209,7 @@ def test_data_request_with_new_format():
 def test_rate_response_request():
     write_api_mock = InfluxWriterMock()
     app.app.dependency_overrides[app.InfluxWriterAsync] = lambda: write_api_mock
-
-    topic_model = Mock()
-    topic_model.get_topic.return_value = "TestTopic"
-    app.app.dependency_overrides[app.TopicModel] = lambda: topic_model
+    app.app.dependency_overrides[app.TopicModel] = lambda: TestTopicModel()
 
     client = TestClient(app.app)
     response = client.post(

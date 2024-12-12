@@ -2,7 +2,7 @@ from datetime import datetime
 from decimal import Decimal
 from enum import Enum
 from logging import Logger
-from typing import Awaitable, Callable
+from typing import Awaitable, Callable, List
 from uuid import uuid4
 
 from influxdb_client import Point
@@ -56,6 +56,18 @@ def build_execution_path(path: list | None):
     return "undefined" if not path else "/".join(map(to_string, path))
 
 
+def get_chat_completion_request_contents(request: dict) -> List[str]:
+    return [message["content"] for message in request["messages"]]
+
+
+def get_embeddings_request_contents(request: dict) -> List[str]:
+    return (
+        [request["input"]]
+        if isinstance(request["input"], str)
+        else request["input"]
+    )
+
+
 def make_point(
     deployment: str,
     model: str,
@@ -80,23 +92,20 @@ def make_point(
     request_content = ""
     if request_type == RequestType.CHAT_COMPLETION:
         response_content = response["choices"][0]["message"]["content"]
-        request_content = "\n".join(
-            [message["content"] for message in request["messages"]]
-        )
-        if chat_id:
-            topic = topic_model.get_topic(request["messages"], response_content)
-    else:
-        request_content = (
-            request["input"]
-            if isinstance(request["input"], str)
-            else "\n".join(request["input"])
-        )
+
+        request_contents = get_chat_completion_request_contents(request)
+
+        request_content = "\n".join(request_contents)
         if chat_id:
             topic = topic_model.get_topic_by_text(
-                request["input"]
-                if isinstance(request["input"], str)
-                else "\n\n".join(request["input"])
+                "\n\n".join(request_contents + [response_content])
             )
+    else:
+        request_contents = get_embeddings_request_contents(request)
+
+        request_content = "\n".join(request_contents)
+        if chat_id:
+            topic = topic_model.get_topic_by_text("\n\n".join(request_contents))
 
     price = Decimal(0)
     deployment_price = Decimal(0)

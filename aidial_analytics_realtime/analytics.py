@@ -2,11 +2,12 @@ from datetime import datetime
 from decimal import Decimal
 from enum import Enum
 from logging import Logger
-from typing import Awaitable, Callable, List
+from typing import Any, Awaitable, Callable, List
 from uuid import uuid4
 
 from influxdb_client import Point
 from langid.langid import LanguageIdentifier, model
+from typing_extensions import assert_never
 
 from aidial_analytics_realtime.rates import RatesCalculator
 from aidial_analytics_realtime.topic_model import TopicModel
@@ -19,45 +20,12 @@ class RequestType(Enum):
     EMBEDDING = 2
 
 
-def detect_lang(request, response, request_type):
-    if request_type == RequestType.CHAT_COMPLETION:
-        text = (
-            request["messages"][-1]["content"]
-            + "\n\n"
-            + response["choices"][0]["message"]["content"]
-        )
-    else:
-        text = (
-            request["input"]
-            if isinstance(request["input"], str)
-            else "\n\n".join(request["input"])
-        )
-
-    return detect_lang_by_text(text)
-
-
-def detect_lang_by_text(text):
-    try:
-        lang, prob = identifier.classify(text)
-
-        if prob > 0.998:
-            return lang
-
-        return "undefined"
-    except Exception:
-        return "undefined"
-
-
-def to_string(obj: str | None):
-    return obj if obj else "undefined"
-
-
-def build_execution_path(path: list | None):
-    return "undefined" if not path else "/".join(map(to_string, path))
-
-
 def get_chat_completion_request_contents(request: dict) -> List[str]:
     return [message["content"] for message in request["messages"]]
+
+
+def get_chat_completion_response_contents(response: dict) -> List[str]:
+    return [response["choices"][0]["message"]["content"]]
 
 
 def get_embeddings_request_contents(request: dict) -> List[str]:
@@ -66,6 +34,46 @@ def get_embeddings_request_contents(request: dict) -> List[str]:
         if isinstance(request["input"], str)
         else request["input"]
     )
+
+
+def detect_lang(
+    request: dict, response: dict, request_type: RequestType
+) -> str:
+    match request_type:
+        case RequestType.CHAT_COMPLETION:
+            request_contents = get_chat_completion_request_contents(request)
+            response_content = get_chat_completion_response_contents(response)
+            text = "\n\n".join(request_contents[-1:] + response_content)
+        case RequestType.EMBEDDING:
+            text = "\n\n".join(get_embeddings_request_contents(request))
+        case _:
+            assert_never(request_type)
+
+    return to_string(detect_lang_by_text(text))
+
+
+def detect_lang_by_text(text: str) -> str | None:
+    text = text.strip()
+
+    if not text:
+        return None
+
+    try:
+        lang, prob = identifier.classify(text)
+        if prob > 0.998:
+            return lang
+    except Exception:
+        pass
+
+    return None
+
+
+def to_string(obj: str | None) -> str:
+    return obj or "undefined"
+
+
+def build_execution_path(path: list | None):
+    return "undefined" if not path else "/".join(map(to_string, path))
 
 
 def make_point(
@@ -90,22 +98,28 @@ def make_point(
     topic = None
     response_content = ""
     request_content = ""
-    if request_type == RequestType.CHAT_COMPLETION:
-        response_content = response["choices"][0]["message"]["content"]
+    match request_type:
+        case RequestType.CHAT_COMPLETION:
+            response_contents = get_chat_completion_response_contents(response)
+            request_contents = get_chat_completion_request_contents(request)
 
-        request_contents = get_chat_completion_request_contents(request)
+            request_content = "\n".join(request_contents)
+            response_content = "\n".join(response_contents)
 
-        request_content = "\n".join(request_contents)
-        if chat_id:
-            topic = topic_model.get_topic_by_text(
-                "\n\n".join(request_contents + [response_content])
-            )
-    else:
-        request_contents = get_embeddings_request_contents(request)
+            if chat_id:
+                topic = topic_model.get_topic_by_text(
+                    "\n\n".join(request_contents + response_contents)
+                )
+        case RequestType.EMBEDDING:
+            request_contents = get_embeddings_request_contents(request)
 
-        request_content = "\n".join(request_contents)
-        if chat_id:
-            topic = topic_model.get_topic_by_text("\n\n".join(request_contents))
+            request_content = "\n".join(request_contents)
+            if chat_id:
+                topic = topic_model.get_topic_by_text(
+                    "\n\n".join(request_contents)
+                )
+        case _:
+            assert_never(request_type)
 
     price = Decimal(0)
     deployment_price = Decimal(0)
@@ -135,7 +149,7 @@ def make_point(
             (
                 "undefined"
                 if not trace
-                else to_string(trace.get("core_parent_span_id", None))
+                else to_string(trace.get("core_parent_span_id"))
             ),
         )
         .tag("project_id", project_id)
@@ -221,7 +235,7 @@ def make_rate_point(
 
 
 async def parse_usage_per_model(response: dict):
-    statistics = response.get("statistics", None)
+    statistics = response.get("statistics")
     if statistics is None:
         return []
 
@@ -293,7 +307,7 @@ async def on_message(
             request,
             response,
             type,
-            response.get("usage", None),
+            response.get("usage"),
             topic_model,
             rates_calculator,
             parent_deployment,

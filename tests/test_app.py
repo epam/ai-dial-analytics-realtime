@@ -12,7 +12,7 @@ class TestTopicModel:
         return "TestTopic"
 
 
-def test_chat_completion():
+def test_chat_completion_plain_text():
     write_api_mock = InfluxWriterMock()
     app.app.dependency_overrides[app.InfluxWriterAsync] = lambda: write_api_mock
     app.app.dependency_overrides[app.TopicModel] = lambda: TestTopicModel()

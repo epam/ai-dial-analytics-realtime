@@ -224,8 +224,7 @@ async def on_log_message(
     execution_path = message.get("execution_path", None)
     deployment = message.get("deployment", "")
 
-    match = re.search(RATE_PATTERN, uri)
-    if match:
+    if re.search(RATE_PATTERN, uri):
         await on_rate_message(
             deployment,
             project_id,
@@ -238,8 +237,7 @@ async def on_log_message(
             influx_writer,
         )
 
-    match = re.search(CHAT_COMPLETION_PATTERN, uri)
-    if match:
+    elif re.search(CHAT_COMPLETION_PATTERN, uri):
         await on_chat_completion_message(
             deployment,
             project_id,
@@ -259,8 +257,7 @@ async def on_log_message(
             execution_path,
         )
 
-    match = re.search(EMBEDDING_PATTERN, uri)
-    if match:
+    elif re.search(EMBEDDING_PATTERN, uri):
         await on_embedding_message(
             deployment,
             project_id,
@@ -279,6 +276,9 @@ async def on_log_message(
             trace,
             execution_path,
         )
+
+    else:
+        logger.warning(f"Unsupported message type: {uri!r}")
 
 
 @app.post("/data")

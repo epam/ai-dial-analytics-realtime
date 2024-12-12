@@ -19,21 +19,15 @@ from aidial_analytics_realtime.rates import RatesCalculator
 from aidial_analytics_realtime.time import parse_time
 from aidial_analytics_realtime.topic_model import TopicModel
 from aidial_analytics_realtime.universal_api_utils import merge
+from aidial_analytics_realtime.utils.log_config import configure_loggers, logger
 
 RATE_PATTERN = r"/v1/(.+?)/rate"
 CHAT_COMPLETION_PATTERN = r"/openai/deployments/(.+?)/chat/completions"
 EMBEDDING_PATTERN = r"/openai/deployments/(.+?)/embeddings"
 
-
 app = FastAPI()
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] - %(message)s",
-    handlers=[logging.StreamHandler()],
-)
 
-logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
+configure_loggers()
 
 
 @app.on_event("startup")

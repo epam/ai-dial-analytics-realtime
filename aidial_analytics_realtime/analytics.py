@@ -2,13 +2,18 @@ from datetime import datetime
 from decimal import Decimal
 from enum import Enum
 from logging import Logger
-from typing import Any, Awaitable, Callable, List
+from typing import Awaitable, Callable
 from uuid import uuid4
 
 from influxdb_client import Point
 from langid.langid import LanguageIdentifier, model
 from typing_extensions import assert_never
 
+from aidial_analytics_realtime.dial import (
+    get_chat_completion_request_contents,
+    get_chat_completion_response_contents,
+    get_embeddings_request_contents,
+)
 from aidial_analytics_realtime.rates import RatesCalculator
 from aidial_analytics_realtime.topic_model import TopicModel
 
@@ -20,32 +25,20 @@ class RequestType(Enum):
     EMBEDDING = 2
 
 
-def get_chat_completion_request_contents(request: dict) -> List[str]:
-    return [message["content"] for message in request["messages"]]
-
-
-def get_chat_completion_response_contents(response: dict) -> List[str]:
-    return [response["choices"][0]["message"]["content"]]
-
-
-def get_embeddings_request_contents(request: dict) -> List[str]:
-    return (
-        [request["input"]]
-        if isinstance(request["input"], str)
-        else request["input"]
-    )
-
-
 def detect_lang(
-    request: dict, response: dict, request_type: RequestType
+    logger: Logger, request: dict, response: dict, request_type: RequestType
 ) -> str:
     match request_type:
         case RequestType.CHAT_COMPLETION:
-            request_contents = get_chat_completion_request_contents(request)
-            response_content = get_chat_completion_response_contents(response)
+            request_contents = get_chat_completion_request_contents(
+                logger, request
+            )
+            response_content = get_chat_completion_response_contents(
+                logger, response
+            )
             text = "\n\n".join(request_contents[-1:] + response_content)
         case RequestType.EMBEDDING:
-            text = "\n\n".join(get_embeddings_request_contents(request))
+            text = "\n\n".join(get_embeddings_request_contents(logger, request))
         case _:
             assert_never(request_type)
 
@@ -77,6 +70,7 @@ def build_execution_path(path: list | None):
 
 
 def make_point(
+    logger: Logger,
     deployment: str,
     model: str,
     project_id: str,
@@ -100,8 +94,12 @@ def make_point(
     request_content = ""
     match request_type:
         case RequestType.CHAT_COMPLETION:
-            response_contents = get_chat_completion_response_contents(response)
-            request_contents = get_chat_completion_request_contents(request)
+            response_contents = get_chat_completion_response_contents(
+                logger, response
+            )
+            request_contents = get_chat_completion_request_contents(
+                logger, request
+            )
 
             request_content = "\n".join(request_contents)
             response_content = "\n".join(response_contents)
@@ -111,7 +109,7 @@ def make_point(
                     "\n\n".join(request_contents + response_contents)
                 )
         case RequestType.EMBEDDING:
-            request_contents = get_embeddings_request_contents(request)
+            request_contents = get_embeddings_request_contents(logger, request)
 
             request_content = "\n".join(request_contents)
             if chat_id:
@@ -158,7 +156,7 @@ def make_point(
             (
                 "undefined"
                 if not chat_id
-                else detect_lang(request, response, request_type)
+                else detect_lang(logger, request, response, request_type)
             ),
         )
         .tag("upstream", to_string(upstream_url))
@@ -275,6 +273,7 @@ async def on_message(
     usage_per_model = await parse_usage_per_model(response)
     if token_usage is not None:
         point = make_point(
+            logger,
             deployment,
             model,
             project_id,
@@ -296,6 +295,7 @@ async def on_message(
         await influx_writer(point)
     elif len(usage_per_model) == 0:
         point = make_point(
+            logger,
             deployment,
             model,
             project_id,
@@ -317,6 +317,7 @@ async def on_message(
         await influx_writer(point)
     else:
         point = make_point(
+            logger,
             deployment,
             model,
             project_id,
@@ -339,6 +340,7 @@ async def on_message(
 
         for usage in usage_per_model:
             point = make_point(
+                logger,
                 deployment,
                 usage["model"],
                 project_id,

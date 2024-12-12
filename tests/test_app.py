@@ -228,7 +228,7 @@ def test_chat_completion_none_content():
     )
     assert response.status_code == 200
     assert write_api_mock.points == [
-        'analytics,core_parent_span_id=undefined,core_span_id=undefined,deployment=gpt-4,execution_path=undefined,language=undefined,model=gpt-4,parent_deployment=undefined,project_id=PROJECT-KEY,response_id=chatcmpl-1,title=undefined,topic=TestTopic,trace_id=undefined,upstream=undefined chat_id="chat-1",completion_tokens=189i,deployment_price=0,number_request_messages=2i,price=0,prompt_tokens=22i,user_hash="undefined" 1692214959997000000',
+        'analytics,core_parent_span_id=undefined,core_span_id=undefined,deployment=gpt-4,execution_path=undefined,language=undefined,model=gpt-4,parent_deployment=undefined,project_id=PROJECT-KEY,response_id=chatcmpl-1,title=undefined,topic=TestTopic,trace_id=undefined,upstream=undefined chat_id="chat-1",completion_tokens=189i,deployment_price=0,number_request_messages=4i,price=0,prompt_tokens=22i,user_hash="undefined" 1692214959997000000',
     ]
 
 

@@ -291,8 +291,6 @@ async def on_log_messages(
     data = await request.json()
 
     statuses = []
-    any_errors = False
-
     for idx, item in enumerate(data):
         try:
             await on_log_message(
@@ -303,14 +301,13 @@ async def on_log_messages(
             )
         except Exception as e:
             logging.exception(f"Error processing message #{idx}")
-            any_errors = True
             statuses.append({"status": "error", "error": str(e)})
         else:
             statuses.append({"status": "success"})
 
-    status_code = 500 if any_errors else 200
-
-    return JSONResponse(content=statuses, status_code=status_code)
+    # Returning 200 code even if processing of some messages has failed,
+    # since the log broker that sends the messages may decide to retry the failed requests.
+    return JSONResponse(content=statuses, status_code=200)
 
 
 @app.get("/health")

@@ -49,9 +49,6 @@ ENV PATH="/opt/venv/bin:$PATH"
 
 USER appuser
 
-HEALTHCHECK  --interval=10s --timeout=5s --start-period=30s --retries=6 \
-  CMD wget --no-verbose --tries=1 --spider http://localhost:5000/health || exit 1
-
 # During debugging, this entry point will be overridden. For more information, please refer to https://aka.ms/vscode-docker-python-debug
 EXPOSE 5000
 CMD ["uvicorn", "aidial_analytics_realtime.app:app", "--host", "0.0.0.0", "--port", "5000"]

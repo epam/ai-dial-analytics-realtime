@@ -105,16 +105,18 @@ def make_point(
             response_content = "\n".join(response_contents)
 
             if chat_id:
-                topic = topic_model.get_topic_by_text(
-                    "\n\n".join(request_contents + response_contents)
+                topic = to_string(
+                    topic_model.get_topic_by_text(
+                        "\n\n".join(request_contents + response_contents)
+                    )
                 )
         case RequestType.EMBEDDING:
             request_contents = get_embeddings_request_contents(logger, request)
 
             request_content = "\n".join(request_contents)
             if chat_id:
-                topic = topic_model.get_topic_by_text(
-                    "\n\n".join(request_contents)
+                topic = to_string(
+                    topic_model.get_topic_by_text("\n\n".join(request_contents))
                 )
         case _:
             assert_never(request_type)

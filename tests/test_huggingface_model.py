@@ -4,7 +4,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 import aidial_analytics_realtime.app as app
-from tests.influx_writer_mock import InfluxWriterMock
+from tests.mocks import InfluxWriterMock
 
 
 @pytest.mark.with_external

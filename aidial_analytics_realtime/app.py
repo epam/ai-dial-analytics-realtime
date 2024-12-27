@@ -1,9 +1,12 @@
+import asyncio
 import contextlib
 import json
 import logging
 import re
 from datetime import datetime
 
+import aiohttp
+import starlette.requests
 import uvicorn
 from fastapi import Depends, FastAPI, Request
 from fastapi.responses import JSONResponse
@@ -21,7 +24,12 @@ from aidial_analytics_realtime.rates import RatesCalculator
 from aidial_analytics_realtime.time import parse_time
 from aidial_analytics_realtime.topic_model import TopicModel
 from aidial_analytics_realtime.universal_api_utils import merge
-from aidial_analytics_realtime.utils.log_config import configure_loggers, logger
+from aidial_analytics_realtime.utils.log_config import (
+    app_logger,
+    configure_loggers,
+    with_prefix,
+)
+from aidial_analytics_realtime.utils.timer import Timer
 
 RATE_PATTERN = r"/v1/(.+?)/rate"
 CHAT_COMPLETION_PATTERN = r"/openai/deployments/(.+?)/chat/completions"
@@ -49,6 +57,7 @@ configure_loggers()
 
 
 async def on_rate_message(
+    logger: logging.Logger,
     deployment: str,
     project_id: str,
     chat_id: str,
@@ -59,7 +68,7 @@ async def on_rate_message(
     response: dict,
     influx_writer: InfluxWriterAsync,
 ):
-    logger.info(f"Rate message length {len(request) + len(response)}")
+    app_logger.info(f"Rate message length {len(request) + len(response)}")
     request_body = json.loads(request["body"])
     point = make_rate_point(
         deployment,
@@ -70,10 +79,11 @@ async def on_rate_message(
         timestamp,
         request_body,
     )
-    await influx_writer(point)
+    await influx_writer(logger, point)
 
 
 async def on_chat_completion_message(
+    logger: logging.Logger,
     deployment: str,
     project_id: str,
     chat_id: str,
@@ -149,6 +159,7 @@ async def on_chat_completion_message(
 
 
 async def on_embedding_message(
+    logger: logging.Logger,
     deployment: str,
     project_id: str,
     chat_id: str,
@@ -193,6 +204,7 @@ async def on_embedding_message(
 
 
 async def on_log_message(
+    logger: logging.Logger,
     message: dict,
     influx_writer: InfluxWriterAsync,
     topic_model: TopicModel,
@@ -219,6 +231,7 @@ async def on_log_message(
 
     if re.search(RATE_PATTERN, uri):
         await on_rate_message(
+            logger,
             deployment,
             project_id,
             chat_id,
@@ -232,6 +245,7 @@ async def on_log_message(
 
     elif re.search(CHAT_COMPLETION_PATTERN, uri):
         await on_chat_completion_message(
+            logger,
             deployment,
             project_id,
             chat_id,
@@ -252,6 +266,7 @@ async def on_log_message(
 
     elif re.search(EMBEDDING_PATTERN, uri):
         await on_embedding_message(
+            logger,
             deployment,
             project_id,
             chat_id,
@@ -271,7 +286,7 @@ async def on_log_message(
         )
 
     else:
-        logger.warning(f"Unsupported message type: {uri!r}")
+        app_logger.warning(f"Unsupported message type: {uri!r}")
 
 
 @app.post("/data")
@@ -281,26 +296,79 @@ async def on_log_messages(
     topic_model: TopicModel = Depends(),
     rates_calculator: RatesCalculator = Depends(),
 ):
+    request_logger = app_logger
+
     data = await request.json()
 
-    statuses = []
-    for idx, item in enumerate(data):
-        try:
-            await on_log_message(
-                json.loads(item["message"]),
-                influx_writer,
-                topic_model,
-                rates_calculator,
-            )
-        except Exception as e:
-            logging.exception(f"Error processing message #{idx}")
-            statuses.append({"status": "error", "error": str(e)})
-        else:
-            statuses.append({"status": "success"})
+    n = len(data)
+    request_logger.info(f"number of messages: {n}")
+
+    statuses: list[dict] = []
+
+    async with Timer(request_logger.info):
+        for i, item in enumerate(data, start=1):
+            message_logger = with_prefix(request_logger, f"[{i}/{n}]")
+
+            async with Timer(message_logger.info):
+                status = await process_message(
+                    message_logger,
+                    json.loads(item["message"]),
+                    influx_writer,
+                    topic_model,
+                    rates_calculator,
+                )
+
+                statuses.append(status)
+
+    if request_logger.isEnabledFor(logging.DEBUG):
+        request_logger.debug(f"response: {json.dumps(statuses)}")
 
     # Returning 200 code even if processing of some messages has failed,
     # since the log broker that sends the messages may decide to retry the failed requests.
     return JSONResponse(content=statuses, status_code=200)
+
+
+async def process_message(
+    logger: logging.Logger,
+    message: dict,
+    influx_writer: InfluxWriterAsync,
+    topic_model: TopicModel,
+    rates_calculator: RatesCalculator,
+) -> dict:
+    try:
+        await on_log_message(
+            logger,
+            message,
+            influx_writer,
+            topic_model,
+            rates_calculator,
+        )
+        logger.info("success")
+        return {"status": "success"}
+    except starlette.requests.ClientDisconnect as e:
+        logger.error("client disconnect")
+        return {
+            "status": "error",
+            "error": str(e),
+            "reason": "client disconnect",
+        }
+    except aiohttp.ClientConnectionError as e:
+        logger.error("connection error")
+        return {
+            "status": "error",
+            "error": str(e),
+            "reason": "connection error",
+        }
+    except asyncio.TimeoutError as e:
+        logger.error("timeout")
+        return {
+            "status": "error",
+            "error": str(e),
+            "reason": "timeout",
+        }
+    except Exception as e:
+        logger.exception("caught exception")
+        return {"status": "error", "error": str(e)}
 
 
 @app.get("/health")

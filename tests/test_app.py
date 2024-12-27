@@ -8,7 +8,7 @@ from tests.influx_writer_mock import InfluxWriterMock
 
 
 class TestTopicModel:
-    def get_topic_by_text(self, text):
+    def get_topic_by_text(self, logger, text):
         return "TestTopic"
 
 

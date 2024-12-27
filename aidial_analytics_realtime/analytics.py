@@ -1,8 +1,8 @@
+import logging
 from datetime import datetime
 from decimal import Decimal
 from enum import Enum
 from logging import Logger
-from typing import Awaitable, Callable
 from uuid import uuid4
 
 from influxdb_client import Point
@@ -14,8 +14,11 @@ from aidial_analytics_realtime.dial import (
     get_chat_completion_response_contents,
     get_embeddings_request_contents,
 )
+from aidial_analytics_realtime.influx_writer import InfluxWriterAsync
 from aidial_analytics_realtime.rates import RatesCalculator
 from aidial_analytics_realtime.topic_model import TopicModel
+from aidial_analytics_realtime.utils.log_config import with_prefix
+from aidial_analytics_realtime.utils.timer import Timer
 
 identifier = LanguageIdentifier.from_modelstring(model, norm_probs=True)
 
@@ -42,20 +45,25 @@ def detect_lang(
         case _:
             assert_never(request_type)
 
-    return to_string(detect_lang_by_text(text))
+    return to_string(detect_lang_by_text(logger, text))
 
 
-def detect_lang_by_text(text: str) -> str | None:
+def detect_lang_by_text(logger: logging.Logger, text: str) -> str | None:
     text = text.strip()
 
     if not text:
         return None
 
+    logger = with_prefix(logger, "[langid]")
+
     try:
-        lang, prob = identifier.classify(text)
+        with Timer(logger.info):
+            lang, prob = identifier.classify(text)
+
         if prob > 0.998:
             return lang
-    except Exception:
+    except Exception as e:
+        logger.error(f"error: {str(e)}")
         pass
 
     return None
@@ -106,7 +114,7 @@ def make_point(
 
             if chat_id:
                 topic = topic_model.get_topic_by_text(
-                    "\n\n".join(request_contents + response_contents)
+                    logger, "\n\n".join(request_contents + response_contents)
                 )
         case RequestType.EMBEDDING:
             request_contents = get_embeddings_request_contents(logger, request)
@@ -114,7 +122,7 @@ def make_point(
             request_content = "\n".join(request_contents)
             if chat_id:
                 topic = topic_model.get_topic_by_text(
-                    "\n\n".join(request_contents)
+                    logger, "\n\n".join(request_contents)
                 )
         case _:
             assert_never(request_type)
@@ -249,7 +257,7 @@ async def parse_usage_per_model(response: dict):
 
 async def on_message(
     logger: Logger,
-    influx_writer: Callable[[Point], Awaitable[None]],
+    influx_writer: InfluxWriterAsync,
     deployment: str,
     model: str,
     project_id: str,
@@ -268,8 +276,6 @@ async def on_message(
     trace: dict | None,
     execution_path: list | None,
 ):
-    logger.info(f"Chat completion response length {len(response)}")
-
     usage_per_model = await parse_usage_per_model(response)
     if token_usage is not None:
         point = make_point(
@@ -292,7 +298,7 @@ async def on_message(
             trace,
             execution_path,
         )
-        await influx_writer(point)
+        await influx_writer(logger, point)
     elif len(usage_per_model) == 0:
         point = make_point(
             logger,
@@ -314,7 +320,7 @@ async def on_message(
             trace,
             execution_path,
         )
-        await influx_writer(point)
+        await influx_writer(logger, point)
     else:
         point = make_point(
             logger,
@@ -336,7 +342,7 @@ async def on_message(
             trace,
             execution_path,
         )
-        await influx_writer(point)
+        await influx_writer(logger, point)
 
         for usage in usage_per_model:
             point = make_point(
@@ -359,4 +365,4 @@ async def on_message(
                 trace,
                 execution_path,
             )
-            await influx_writer(point)
+            await influx_writer(logger, point)

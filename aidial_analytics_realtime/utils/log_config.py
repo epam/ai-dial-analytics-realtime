@@ -1,9 +1,13 @@
 import logging
+import os
 import sys
+from typing import Callable
 
+from typing_extensions import override
 from uvicorn.logging import DefaultFormatter
 
-logger = logging.getLogger("app")
+app_logger = logging.getLogger("app")
+LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
 
 
 def configure_loggers():
@@ -14,8 +18,8 @@ def configure_loggers():
             log.handlers = []
             log.propagate = True
 
-    # Setting up log levels
-    logger.setLevel(logging.DEBUG)
+    # Setting log levels for the analytics application
+    app_logger.setLevel(LOG_LEVEL)
 
     # Configuring the root logger
     root = logging.getLogger()
@@ -31,9 +35,34 @@ def configure_loggers():
     # if they are already configured
     if not root_has_stderr_handler:
         formatter = DefaultFormatter(
-            fmt="%(asctime)s [%(levelname)s] - %(message)s"
+            fmt="%(levelprefix)s | %(asctime)s | %(process)d | %(name)s | %(message)s",
+            datefmt="%Y-%m-%d %H:%M:%S",
+            use_colors=True,
         )
 
         handler = logging.StreamHandler(sys.stderr)
         handler.setFormatter(formatter)
         root.addHandler(handler)
+
+
+class _MessageHookLogger(logging.LoggerAdapter):
+    _on_message: Callable[[str], str]
+
+    def __init__(
+        self, logger: logging.Logger, on_message: Callable[[str], str]
+    ):
+        super().__init__(logger)
+        self._on_message = on_message
+
+    @override
+    def process(self, msg, kwargs):
+        return self._on_message(msg), kwargs
+
+
+def with_prefix(logger: logging.Logger, prefix: str) -> logging.Logger:
+    def on_message(msg: str) -> str:
+        if msg and msg[0].isalnum():
+            return f"{prefix} {msg}"
+        return f"{prefix}{msg}"
+
+    return _MessageHookLogger(logger, on_message)  # type: ignore

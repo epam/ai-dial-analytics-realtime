@@ -1,5 +1,5 @@
-PORT = 5001
-IMAGE_NAME = ai-dial-analytics-realtime
+PORT ?= 5001
+IMAGE_NAME ?= ai-dial-analytics-realtime
 ARGS =
 
 
@@ -15,7 +15,7 @@ build:
 
 serve:
 	poetry install --only main
-	poetry run uvicorn aidial_analytics_realtime.app:app --port=$(PORT) --env-file .env
+	poetry run uvicorn aidial_analytics_realtime.app:app --reload --port=$(PORT) --env-file .env
 
 
 docker_build:

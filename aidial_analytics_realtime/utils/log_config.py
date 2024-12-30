@@ -36,7 +36,6 @@ def configure_loggers():
     if not root_has_stderr_handler:
         formatter = DefaultFormatter(
             fmt="%(levelprefix)s | %(asctime)s | %(process)d | %(name)s | %(message)s",
-            datefmt="%Y-%m-%d %H:%M:%S",
             use_colors=True,
         )
 

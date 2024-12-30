@@ -6,9 +6,9 @@ ENV PYTHONUNBUFFERED 1
 
 RUN apt-get update && \
     apt-get install -y python3 \
-                       python3-venv \
-                       python3-dev \
-                       python3-pip && \
+                    python3-venv \
+                    python3-dev \
+                    python3-pip && \
     pip install "poetry==1.6.1" && \
     python3 -m venv /opt/venv
 
@@ -48,6 +48,9 @@ COPY --chown=appuser ./aidial_analytics_realtime /aidial_analytics_realtime
 ENV PATH="/opt/venv/bin:$PATH"
 
 USER appuser
+
+HEALTHCHECK  --interval=10s --timeout=5s --start-period=30s --retries=6 \
+    CMD wget --no-verbose --tries=1 --spider http://localhost:5000/health || exit 1
 
 # During debugging, this entry point will be overridden. For more information, please refer to https://aka.ms/vscode-docker-python-debug
 EXPOSE 5000

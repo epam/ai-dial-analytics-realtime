@@ -57,7 +57,7 @@ def detect_lang_by_text(logger: logging.Logger, text: str) -> str | None:
     logger = with_prefix(logger, "[langid]")
 
     try:
-        with Timer(logger.info):
+        with Timer(logger.debug):
             lang, prob = identifier.classify(text)
 
         if prob > 0.998:

@@ -305,11 +305,11 @@ async def on_log_messages(
 
     statuses: list[dict] = []
 
-    async with Timer(request_logger.info):
+    async with Timer(request_logger.debug):
         for i, item in enumerate(data, start=1):
             message_logger = with_prefix(request_logger, f"[{i}/{n}]")
 
-            async with Timer(message_logger.info):
+            async with Timer(message_logger.debug):
                 status = await process_message(
                     message_logger,
                     json.loads(item["message"]),

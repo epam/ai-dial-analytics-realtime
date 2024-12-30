@@ -30,7 +30,7 @@ class TopicModel:
         self.model.transform(["test"])
 
     def get_topic_by_text(self, logger: logging.Logger, text):
-        with Timer(with_prefix(logger, "[topic]").info):
+        with Timer(with_prefix(logger, "[topic]").debug):
             topics, _ = self.model.transform([text])
             topic = self.model.get_topic_info(topics[0])
 

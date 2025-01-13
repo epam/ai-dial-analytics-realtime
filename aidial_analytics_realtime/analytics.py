@@ -16,7 +16,9 @@ from aidial_analytics_realtime.dial import (
 )
 from aidial_analytics_realtime.rates import RatesCalculator
 from aidial_analytics_realtime.topic_model import TopicModel
-from aidial_analytics_realtime.utils.concurrency import make_async
+from aidial_analytics_realtime.utils.concurrency import (
+    run_in_cpu_tasks_executor,
+)
 
 identifier = LanguageIdentifier.from_modelstring(model, norm_probs=True)
 
@@ -53,7 +55,7 @@ async def detect_lang_by_text(text: str) -> str | None:
         return None
 
     try:
-        lang, prob = await make_async(identifier.classify, text)
+        lang, prob = await run_in_cpu_tasks_executor(identifier.classify, text)
         if prob > 0.998:
             return lang
     except Exception:

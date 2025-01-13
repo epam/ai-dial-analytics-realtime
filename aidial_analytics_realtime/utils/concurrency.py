@@ -8,7 +8,7 @@ _P = ParamSpec("_P")
 cpu_task_executor = ThreadPoolExecutor()
 
 
-async def make_async(
+async def run_in_cpu_tasks_executor(
     func: Callable[_P, _T], *args: _P.args, **kwargs: _P.kwargs
 ) -> _T:
     loop = asyncio.get_event_loop()

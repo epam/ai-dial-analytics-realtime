@@ -2,7 +2,9 @@ import os
 
 from bertopic import BERTopic
 
-from aidial_analytics_realtime.utils.concurrency import make_async
+from aidial_analytics_realtime.utils.concurrency import (
+    run_in_cpu_tasks_executor,
+)
 
 
 class TopicModel:
@@ -25,7 +27,7 @@ class TopicModel:
         self._get_topic_by_text("test")
 
     async def get_topic_by_text(self, text: str) -> str:
-        return await make_async(self._get_topic_by_text, text)
+        return await run_in_cpu_tasks_executor(self._get_topic_by_text, text)
 
     def _get_topic_by_text(self, text: str) -> str:
         topics, _ = self.model.transform([text])

@@ -67,6 +67,5 @@ def _chat_completion_message_contents(
 
 
 def _non_empty_string(value: str) -> Iterator[str]:
-    value = value.strip()
-    if value:
-        yield value
+    if non_empty := value.strip():
+        yield non_empty

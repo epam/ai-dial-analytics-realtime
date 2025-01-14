@@ -21,6 +21,7 @@ from aidial_analytics_realtime.rates import RatesCalculator
 from aidial_analytics_realtime.time import parse_time
 from aidial_analytics_realtime.topic_model import TopicModel
 from aidial_analytics_realtime.universal_api_utils import merge
+from aidial_analytics_realtime.utils.concurrency import cpu_task_executor
 from aidial_analytics_realtime.utils.log_config import configure_loggers, logger
 
 RATE_PATTERN = r"/v1/(.+?)/rate"
@@ -31,16 +32,17 @@ EMBEDDING_PATTERN = r"/openai/deployments/(.+?)/embeddings"
 @contextlib.asynccontextmanager
 async def lifespan(app: FastAPI):
     influx_client, influx_writer = create_influx_writer()
-    async with influx_client:
-        app.dependency_overrides[InfluxWriterAsync] = lambda: influx_writer
+    with cpu_task_executor:
+        async with influx_client:
+            app.dependency_overrides[InfluxWriterAsync] = lambda: influx_writer
 
-        topic_model = TopicModel()
-        app.dependency_overrides[TopicModel] = lambda: topic_model
+            topic_model = TopicModel()
+            app.dependency_overrides[TopicModel] = lambda: topic_model
 
-        rates_calculator = RatesCalculator()
-        app.dependency_overrides[RatesCalculator] = lambda: rates_calculator
+            rates_calculator = RatesCalculator()
+            app.dependency_overrides[RatesCalculator] = lambda: rates_calculator
 
-        yield
+            yield
 
 
 app = FastAPI(lifespan=lifespan)

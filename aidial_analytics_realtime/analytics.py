@@ -16,6 +16,9 @@ from aidial_analytics_realtime.dial import (
 )
 from aidial_analytics_realtime.rates import RatesCalculator
 from aidial_analytics_realtime.topic_model import TopicModel
+from aidial_analytics_realtime.utils.concurrency import (
+    run_in_cpu_tasks_executor,
+)
 
 identifier = LanguageIdentifier.from_modelstring(model, norm_probs=True)
 
@@ -25,7 +28,7 @@ class RequestType(Enum):
     EMBEDDING = 2
 
 
-def detect_lang(
+async def detect_lang(
     logger: Logger, request: dict, response: dict, request_type: RequestType
 ) -> str:
     match request_type:
@@ -42,17 +45,17 @@ def detect_lang(
         case _:
             assert_never(request_type)
 
-    return to_string(detect_lang_by_text(text))
+    return to_string(await detect_lang_by_text(text))
 
 
-def detect_lang_by_text(text: str) -> str | None:
+async def detect_lang_by_text(text: str) -> str | None:
     text = text.strip()
 
     if not text:
         return None
 
     try:
-        lang, prob = identifier.classify(text)
+        lang, prob = await run_in_cpu_tasks_executor(identifier.classify, text)
         if prob > 0.998:
             return lang
     except Exception:
@@ -69,7 +72,7 @@ def build_execution_path(path: list | None):
     return "undefined" if not path else "/".join(map(to_string, path))
 
 
-def make_point(
+async def make_point(
     logger: Logger,
     deployment: str,
     model: str,
@@ -106,7 +109,7 @@ def make_point(
 
             if chat_id:
                 topic = to_string(
-                    topic_model.get_topic_by_text(
+                    await topic_model.get_topic_by_text(
                         "\n\n".join(request_contents + response_contents)
                     )
                 )
@@ -116,7 +119,9 @@ def make_point(
             request_content = "\n".join(request_contents)
             if chat_id:
                 topic = to_string(
-                    topic_model.get_topic_by_text("\n\n".join(request_contents))
+                    await topic_model.get_topic_by_text(
+                        "\n\n".join(request_contents)
+                    )
                 )
         case _:
             assert_never(request_type)
@@ -158,7 +163,7 @@ def make_point(
             (
                 "undefined"
                 if not chat_id
-                else detect_lang(logger, request, response, request_type)
+                else await detect_lang(logger, request, response, request_type)
             ),
         )
         .tag("upstream", to_string(upstream_url))
@@ -274,7 +279,7 @@ async def on_message(
 
     usage_per_model = await parse_usage_per_model(response)
     if token_usage is not None:
-        point = make_point(
+        point = await make_point(
             logger,
             deployment,
             model,
@@ -296,7 +301,7 @@ async def on_message(
         )
         await influx_writer(point)
     elif len(usage_per_model) == 0:
-        point = make_point(
+        point = await make_point(
             logger,
             deployment,
             model,
@@ -318,7 +323,7 @@ async def on_message(
         )
         await influx_writer(point)
     else:
-        point = make_point(
+        point = await make_point(
             logger,
             deployment,
             model,
@@ -341,7 +346,7 @@ async def on_message(
         await influx_writer(point)
 
         for usage in usage_per_model:
-            point = make_point(
+            point = await make_point(
                 logger,
                 deployment,
                 usage["model"],

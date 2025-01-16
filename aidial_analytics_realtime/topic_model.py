@@ -26,10 +26,14 @@ class TopicModel:
         # Make sure the model is loaded
         self._get_topic_by_text("test")
 
-    async def get_topic_by_text(self, text: str) -> str:
+    async def get_topic_by_text(self, text: str) -> str | None:
         return await run_in_cpu_tasks_executor(self._get_topic_by_text, text)
 
-    def _get_topic_by_text(self, text: str) -> str:
+    def _get_topic_by_text(self, text: str) -> str | None:
+        text = text.strip()
+        if not text:
+            return None
+
         topics, _ = self.model.transform([text])
         topic = self.model.get_topic_info(topics[0])
 

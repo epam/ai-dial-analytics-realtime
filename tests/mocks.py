@@ -4,3 +4,8 @@ class InfluxWriterMock:
 
     async def __call__(self, logger, record):
         self.points.append(str(record))
+
+
+class TestTopicModel:
+    async def get_topic_by_text(self, logger, text: str) -> str | None:
+        return text or None

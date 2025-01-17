@@ -1,21 +1,29 @@
-PORT = 5001
-IMAGE_NAME = ai-dial-analytics-realtime
+PORT ?= 5001
+IMAGE_NAME ?= ai-dial-analytics-realtime
+VENV_DIR ?= .venv
+POETRY ?= $(VENV_DIR)/bin/poetry
+POETRY_VERSION ?= 1.6.1
 ARGS =
 
 
-.PHONY: all build serve docker_build docker_serve lint format test test_all docs clean help
+.PHONY: all init_env build serve docker_build docker_serve lint format test test_all docs clean help
 
 
 all: build
 
 
-build:
-	poetry build
+init_env:
+	python -m venv $(VENV_DIR)
+	$(VENV_DIR)/bin/pip install poetry==$(POETRY_VERSION) --quiet
 
 
-serve:
-	poetry install --only main
-	poetry run uvicorn aidial_analytics_realtime.app:app --port=$(PORT) --env-file .env
+build: init_env
+	$(POETRY) build
+
+
+serve: init_env
+	$(POETRY) install --only main
+	$(POETRY) run uvicorn aidial_analytics_realtime.app:app --reload --port=$(PORT) --env-file .env
 
 
 docker_build:
@@ -26,24 +34,24 @@ docker_serve: docker_build
 	docker run --platform linux/amd64 --env-file ./.env --rm -p $(PORT):5000 $(IMAGE_NAME):dev
 
 
-lint:
-	poetry install --only nox
-	poetry run nox -s lint
+lint: init_env
+	$(POETRY) install --only nox
+	$(POETRY) run nox -s lint
 
 
-format:
-	poetry install --only nox
-	poetry run nox -s format
+format: init_env
+	$(POETRY) install --only nox
+	$(POETRY) run nox -s format
 
 
-test:
-	poetry install --only nox
-	poetry run -- nox -s tests -- -m "not with_external" $(ARGS)
+test: init_env
+	$(POETRY) install --only nox
+	$(POETRY) run -- nox -s tests -- -m "not with_external" $(ARGS)
 
 
-test_all:
-	poetry install --only nox
-	poetry run -- nox -s tests -- $(ARGS)
+test_all: init_env
+	$(POETRY) install --only nox
+	$(POETRY) run -- nox -s tests -- $(ARGS)
 
 
 docs:

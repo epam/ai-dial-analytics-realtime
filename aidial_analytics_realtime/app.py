@@ -24,6 +24,7 @@ from aidial_analytics_realtime.rates import RatesCalculator
 from aidial_analytics_realtime.time import parse_time
 from aidial_analytics_realtime.topic_model import TopicModel
 from aidial_analytics_realtime.universal_api_utils import merge
+from aidial_analytics_realtime.utils.concurrency import cpu_task_executor
 from aidial_analytics_realtime.utils.log_config import (
     app_logger,
     configure_loggers,
@@ -39,16 +40,17 @@ EMBEDDING_PATTERN = r"/openai/deployments/(.+?)/embeddings"
 @contextlib.asynccontextmanager
 async def lifespan(app: FastAPI):
     influx_client, influx_writer = create_influx_writer()
-    async with influx_client:
-        app.dependency_overrides[InfluxWriterAsync] = lambda: influx_writer
+    with cpu_task_executor:
+        async with influx_client:
+            app.dependency_overrides[InfluxWriterAsync] = lambda: influx_writer
 
-        topic_model = TopicModel()
-        app.dependency_overrides[TopicModel] = lambda: topic_model
+            topic_model = TopicModel()
+            app.dependency_overrides[TopicModel] = lambda: topic_model
 
-        rates_calculator = RatesCalculator()
-        app.dependency_overrides[RatesCalculator] = lambda: rates_calculator
+            rates_calculator = RatesCalculator()
+            app.dependency_overrides[RatesCalculator] = lambda: rates_calculator
 
-        yield
+            yield
 
 
 app = FastAPI(lifespan=lifespan)
@@ -104,42 +106,47 @@ async def on_chat_completion_message(
     if response["status"] != "200":
         return
 
-    request_body = json.loads(request["body"])
-    stream = request_body.get("stream", False)
-    model = request_body.get("model", deployment)
-
     response_body = None
-    if stream:
-        body = response["body"]
-        chunks = body.split("\n\ndata: ")
+    request_body = None
+    model: str | None = None
 
-        chunks = [chunk.strip() for chunk in chunks]
+    if (request_body_str := request.get("body")) is not None:
 
-        chunks[0] = chunks[0][chunks[0].find("data: ") + 6 :]
-        if chunks[-1] == "[DONE]":
-            chunks.pop(len(chunks) - 1)
+        request_body = json.loads(request_body_str)
+        stream = request_body.get("stream", False)
+        model = request_body.get("model", deployment)
 
-        response_body = json.loads(chunks[-1])
-        for chunk in chunks[0 : len(chunks) - 1]:
-            chunk = json.loads(chunk)
+        if stream:
+            body = response["body"]
+            chunks = body.split("\n\ndata: ")
 
-            response_body["choices"] = merge(
-                response_body["choices"], chunk["choices"]
-            )
+            chunks = [chunk.strip() for chunk in chunks]
 
-        for i in range(len(response_body["choices"])):
-            response_body["choices"][i]["message"] = response_body["choices"][
-                i
-            ]["delta"]
-            del response_body["choices"][i]["delta"]
-    else:
-        response_body = json.loads(response["body"])
+            chunks[0] = chunks[0][chunks[0].find("data: ") + 6 :]
+            if chunks[-1] == "[DONE]":
+                chunks.pop(len(chunks) - 1)
+
+            response_body = json.loads(chunks[-1])
+            for chunk in chunks[0 : len(chunks) - 1]:
+                chunk = json.loads(chunk)
+
+                response_body["choices"] = merge(
+                    response_body["choices"], chunk["choices"]
+                )
+
+            for i in range(len(response_body["choices"])):
+                response_body["choices"][i]["message"] = response_body[
+                    "choices"
+                ][i]["delta"]
+                del response_body["choices"][i]["delta"]
+        else:
+            response_body = json.loads(response["body"])
 
     await on_message(
         logger,
         influx_writer,
         deployment,
-        model,
+        model or deployment,
         project_id,
         chat_id,
         upstream_url,
@@ -180,6 +187,16 @@ async def on_embedding_message(
     if response["status"] != "200":
         return
 
+    request_body_str = request.get("body")
+    response_body_str = response.get("body")
+
+    request_body = (
+        None if request_body_str is None else json.loads(request_body_str)
+    )
+    response_body = (
+        None if response_body_str is None else json.loads(response_body_str)
+    )
+
     await on_message(
         logger,
         influx_writer,
@@ -191,8 +208,8 @@ async def on_embedding_message(
         user_hash,
         user_title,
         timestamp,
-        json.loads(request["body"]),
-        json.loads(response["body"]),
+        request_body,
+        response_body,
         RequestType.EMBEDDING,
         topic_model,
         rates_calculator,

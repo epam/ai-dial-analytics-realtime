@@ -3,6 +3,9 @@ import os
 
 from bertopic import BERTopic
 
+from aidial_analytics_realtime.utils.concurrency import (
+    run_in_cpu_tasks_executor,
+)
 from aidial_analytics_realtime.utils.log_config import with_prefix
 from aidial_analytics_realtime.utils.timer import Timer
 
@@ -29,13 +32,26 @@ class TopicModel:
         # Make sure the model is loaded
         self.model.transform(["test"])
 
-    def get_topic_by_text(self, logger: logging.Logger, text):
+    async def get_topic_by_text(
+        self, logger: logging.Logger, text: str
+    ) -> str | None:
+        return await run_in_cpu_tasks_executor(
+            self._get_topic_by_text, logger, text
+        )
+
+    def _get_topic_by_text(
+        self, logger: logging.Logger, text: str
+    ) -> str | None:
+        text = text.strip()
+        if not text:
+            return None
+
         with Timer(with_prefix(logger, "[topic]").debug):
             topics, _ = self.model.transform([text])
             topic = self.model.get_topic_info(topics[0])
 
             if "GeneratedName" in topic:
                 # "GeneratedName" is an expected name for the human readable topic representation
-                return topic["GeneratedName"][0][0][0]
+                return topic["GeneratedName"][0][0][0]  # type: ignore
 
-            return topic["Name"][0]
+            return topic["Name"][0]  # type: ignore

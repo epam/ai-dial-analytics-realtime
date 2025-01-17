@@ -3,6 +3,7 @@ import contextlib
 import json
 import logging
 import re
+import sys
 from datetime import datetime
 
 import aiohttp
@@ -352,40 +353,32 @@ async def process_message(
     topic_model: TopicModel,
     rates_calculator: RatesCalculator,
 ) -> dict:
+    def _error(reason: str | None = None) -> dict:
+        error = str(sys.exc_info()[1])
+        ret = {"status": "error"}
+        if error:
+            ret["error"] = error
+        if reason:
+            ret["reason"] = reason
+            logger.error(reason)
+        else:
+            logger.exception("caught exception")
+        return ret
+
     try:
         await on_log_message(
-            logger,
-            message,
-            influx_writer,
-            topic_model,
-            rates_calculator,
+            logger, message, influx_writer, topic_model, rates_calculator
         )
         logger.info("success")
         return {"status": "success"}
-    except starlette.requests.ClientDisconnect as e:
-        logger.error("client disconnect")
-        return {
-            "status": "error",
-            "error": str(e),
-            "reason": "client disconnect",
-        }
-    except aiohttp.ClientConnectionError as e:
-        logger.error("connection error")
-        return {
-            "status": "error",
-            "error": str(e),
-            "reason": "connection error",
-        }
-    except asyncio.TimeoutError as e:
-        logger.error("timeout")
-        return {
-            "status": "error",
-            "error": str(e),
-            "reason": "timeout",
-        }
-    except Exception as e:
-        logger.exception("caught exception")
-        return {"status": "error", "error": str(e)}
+    except starlette.requests.ClientDisconnect:
+        return _error("client disconnect")
+    except aiohttp.ClientConnectionError:
+        return _error("connection error")
+    except asyncio.TimeoutError:
+        return _error("timeout")
+    except Exception:
+        return _error()
 
 
 @app.get("/health")

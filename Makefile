@@ -1,7 +1,7 @@
 PORT ?= 5001
 IMAGE_NAME ?= ai-dial-analytics-realtime
-VENV ?= .venv
-POETRY ?= $(VENV)/bin/poetry
+VENV_DIR ?= .venv
+POETRY ?= $(VENV_DIR)/bin/poetry
 POETRY_VERSION ?= 1.6.1
 ARGS =
 
@@ -13,8 +13,8 @@ all: build
 
 
 init_env:
-	python -m venv $(VENV)
-	$(VENV)/bin/pip install poetry==$(POETRY_VERSION) --quiet
+	python -m venv $(VENV_DIR)
+	$(VENV_DIR)/bin/pip install poetry==$(POETRY_VERSION) --quiet
 
 
 build: init_env

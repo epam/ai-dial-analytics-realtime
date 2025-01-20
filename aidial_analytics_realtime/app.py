@@ -17,6 +17,7 @@ from aidial_analytics_realtime.influx_writer import (
     InfluxWriterAsync,
     create_influx_writer,
 )
+from aidial_analytics_realtime.log_request.message import get_assembled_response
 from aidial_analytics_realtime.rates import RatesCalculator
 from aidial_analytics_realtime.time import parse_time
 from aidial_analytics_realtime.topic_model import TopicModel
@@ -84,7 +85,7 @@ async def on_chat_completion_message(
     timestamp: datetime,
     request: dict,
     response: dict,
-    assembled_response_str: str | None,
+    response_body: dict | None,
     influx_writer: InfluxWriterAsync,
     topic_model: TopicModel,
     rates_calculator: RatesCalculator,
@@ -103,16 +104,6 @@ async def on_chat_completion_message(
         request_body = json.loads(request_body_str)
         model = request_body.get("model") or deployment
 
-    if assembled_response_str is not None:
-        assembled_response = json.loads(assembled_response_str)
-
-        # NOTE: this becomes redundant when https://github.com/epam/ai-dial-core/pull/648
-        # is merged and deployed to production
-        for choice in assembled_response.get("choices") or []:
-            if "delta" in choice:
-                choice["message"] = choice["delta"]
-                del choice["delta"]
-
     await on_message(
         logger,
         influx_writer,
@@ -125,7 +116,7 @@ async def on_chat_completion_message(
         user_title,
         timestamp,
         request_body,
-        assembled_response,
+        response_body,
         RequestType.CHAT_COMPLETION,
         topic_model,
         rates_calculator,
@@ -211,7 +202,7 @@ async def on_log_message(
     parent_deployment = message.get("parent_deployment")
     execution_path = message.get("execution_path")
     deployment = message.get("deployment") or ""
-    assembled_response_str = message.get("assembled_response")
+    response_body = get_assembled_response(message)
 
     if re.search(RATE_PATTERN, uri):
         await on_rate_message(
@@ -237,7 +228,7 @@ async def on_log_message(
             timestamp,
             request,
             response,
-            assembled_response_str,
+            response_body,
             influx_writer,
             topic_model,
             rates_calculator,

@@ -1,9 +1,8 @@
 import logging
 import os
 import sys
-from typing import Callable
+from contextvars import ContextVar
 
-from typing_extensions import override
 from uvicorn.logging import DefaultFormatter
 
 app_logger = logging.getLogger("app")
@@ -24,15 +23,19 @@ def configure_loggers():
     # Configuring the root logger
     root = logging.getLogger()
 
-    root_has_stderr_handler = any(
-        isinstance(handler, logging.StreamHandler)
-        and handler.stream == sys.stderr
-        for handler in root.handlers
+    stderr_handler = next(
+        (
+            handler
+            for handler in root.handlers
+            if isinstance(handler, logging.StreamHandler)
+            and handler.stream == sys.stderr
+        ),
+        None,
     )
 
     # Do not override the existing stderr handlers
     # if they are already configured
-    if not root_has_stderr_handler:
+    if stderr_handler is None:
         formatter = DefaultFormatter(
             fmt="%(levelprefix)s | %(asctime)s | %(process)d | %(name)s | %(message)s",
             use_colors=True,
@@ -40,27 +43,24 @@ def configure_loggers():
 
         handler = logging.StreamHandler(sys.stderr)
         handler.setFormatter(formatter)
+        handler.addFilter(_PrefixFilter())
         root.addHandler(handler)
+    else:
+        stderr_handler.addFilter(_PrefixFilter())
 
 
-class _MessageHookLogger(logging.LoggerAdapter):
-    _on_message: Callable[[str], str]
-
-    def __init__(
-        self, logger: logging.Logger, on_message: Callable[[str], str]
-    ):
-        super().__init__(logger)
-        self._on_message = on_message
-
-    @override
-    def process(self, msg, kwargs):
-        return self._on_message(msg), kwargs
+_logger_prefix: ContextVar[str] = ContextVar("_logger_prefix", default="")
 
 
-def with_prefix(logger: logging.Logger, prefix: str) -> logging.Logger:
-    def on_message(msg: str) -> str:
-        if msg and msg[0].isalnum():
-            return f"{prefix} {msg}"
-        return f"{prefix}{msg}"
+def add_logger_prefix(prefix: str) -> None:
+    _logger_prefix.set(_logger_prefix.get() + prefix)
 
-    return _MessageHookLogger(logger, on_message)  # type: ignore
+
+class _PrefixFilter(logging.Filter):
+    def __init__(self, name: str = "") -> None:
+        super().__init__(name)
+
+    def filter(self, record):
+        if prefix := _logger_prefix.get():
+            record.msg = f"{prefix} {record.msg}"
+        return True

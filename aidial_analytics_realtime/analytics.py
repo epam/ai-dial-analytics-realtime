@@ -20,7 +20,6 @@ from aidial_analytics_realtime.topic_model import TopicModel
 from aidial_analytics_realtime.utils.concurrency import (
     run_in_cpu_tasks_executor,
 )
-from aidial_analytics_realtime.utils.log_config import with_prefix
 from aidial_analytics_realtime.utils.timer import Timer
 
 identifier = LanguageIdentifier.from_modelstring(model, norm_probs=True)
@@ -57,7 +56,7 @@ async def detect_lang_by_text(logger: logging.Logger, text: str) -> str | None:
     if not text:
         return None
 
-    logger = with_prefix(logger, "[langid]")
+    logger = logging.getLogger("app.langid")
 
     try:
         with Timer(logger.debug):

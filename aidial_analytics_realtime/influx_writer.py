@@ -1,3 +1,4 @@
+import logging
 import os
 from logging import Logger
 from typing import Awaitable, Callable, Tuple
@@ -5,10 +6,11 @@ from typing import Awaitable, Callable, Tuple
 from influxdb_client import Point
 from influxdb_client.client.influxdb_client_async import InfluxDBClientAsync
 
-from aidial_analytics_realtime.utils.log_config import with_prefix
 from aidial_analytics_realtime.utils.timer import Timer
 
 InfluxWriterAsync = Callable[[Logger, Point], Awaitable[None]]
+
+_logger = logging.getLogger("app.influx")
 
 
 def create_influx_writer() -> Tuple[InfluxDBClientAsync, InfluxWriterAsync]:
@@ -23,7 +25,7 @@ def create_influx_writer() -> Tuple[InfluxDBClientAsync, InfluxWriterAsync]:
     influx_write_api = client.write_api()
 
     async def influx_writer_impl(logger: Logger, record: Point):
-        with Timer(with_prefix(logger, "[influx]").debug):
+        with Timer(_logger.debug):
             await influx_write_api.write(bucket=influx_bucket, record=record)
 
     return client, influx_writer_impl

@@ -6,8 +6,9 @@ from bertopic import BERTopic
 from aidial_analytics_realtime.utils.concurrency import (
     run_in_cpu_tasks_executor,
 )
-from aidial_analytics_realtime.utils.log_config import with_prefix
 from aidial_analytics_realtime.utils.timer import Timer
+
+logger = logging.getLogger("app.topic")
 
 
 class TopicModel:
@@ -46,7 +47,7 @@ class TopicModel:
         if not text:
             return None
 
-        with Timer(with_prefix(logger, "[topic]").debug):
+        with Timer(logger.debug):
             topics, _ = self.model.transform([text])
             topic = self.model.get_topic_info(topics[0])
 

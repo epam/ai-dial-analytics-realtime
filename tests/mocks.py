@@ -1,9 +1,13 @@
 class InfluxWriterMock:
     def __init__(self):
-        self.points = []
+        self._points = []
 
     async def __call__(self, logger, record):
-        self.points.append(str(record))
+        self._points.append(str(record))
+
+    @property
+    def points(self):
+        return sorted(self._points)
 
 
 class TestTopicModel:

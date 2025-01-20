@@ -26,10 +26,10 @@ from aidial_analytics_realtime.time import parse_time
 from aidial_analytics_realtime.topic_model import TopicModel
 from aidial_analytics_realtime.universal_api_utils import merge
 from aidial_analytics_realtime.utils.concurrency import cpu_task_executor
-from aidial_analytics_realtime.utils.log_config import (
+from aidial_analytics_realtime.utils.logging import (
+    add_logger_prefix,
     app_logger,
     configure_loggers,
-    with_prefix,
 )
 from aidial_analytics_realtime.utils.timer import Timer
 
@@ -324,19 +324,25 @@ async def on_log_messages(
     statuses: list[dict] = []
 
     async with Timer(request_logger.debug):
-        for i, item in enumerate(data, start=1):
-            message_logger = with_prefix(request_logger, f"[{i}/{n}]")
 
-            async with Timer(message_logger.debug):
-                status = await process_message(
-                    message_logger,
-                    json.loads(item["message"]),
+        async def _task(i: int, message_str: str) -> dict:
+            add_logger_prefix(f"[{i}/{n}]")
+
+            async with Timer(request_logger.debug):
+                return await process_message(
+                    request_logger,
+                    json.loads(message_str),
                     influx_writer,
                     topic_model,
                     rates_calculator,
                 )
 
-                statuses.append(status)
+        statuses = await asyncio.gather(
+            *[
+                _task(i, message["message"])
+                for i, message in enumerate(data, start=1)
+            ]
+        )
 
     if request_logger.isEnabledFor(logging.DEBUG):
         request_logger.debug(f"response: {json.dumps(statuses)}")

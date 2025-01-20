@@ -23,7 +23,6 @@ def configure_loggers():
 
     # Configuring the root logger
     root = logging.getLogger()
-    root.setLevel(logging.INFO)
 
     root_has_stderr_handler = any(
         isinstance(handler, logging.StreamHandler)

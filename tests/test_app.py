@@ -46,13 +46,13 @@ def test_chat_completion_plain_text():
                         "assembled_response": json.dumps(
                             {
                                 "id": "chatcmpl-1",
-                                "object": "chat.completion.chunk",
+                                "object": "chat.completion",
                                 "created": 1692214960,
                                 "model": "gpt-4",
                                 "choices": [
                                     {
                                         "index": 0,
-                                        "delta": {
+                                        "message": {
                                             "role": "assistant",
                                             "content": "pong",
                                         },
@@ -103,13 +103,13 @@ def test_chat_completion_plain_text():
                         "assembled_response": json.dumps(
                             {
                                 "id": "chatcmpl-2",
-                                "object": "chat.completion.chunk",
+                                "object": "chat.completion",
                                 "created": 1700828102,
                                 "model": "gpt-4",
                                 "choices": [
                                     {
                                         "index": 0,
-                                        "delta": {
+                                        "message": {
                                             "role": "assistant",
                                             "content": "pong",
                                         },
@@ -261,13 +261,13 @@ def test_chat_completion_list_content():
                         "assembled_response": json.dumps(
                             {
                                 "id": "chatcmpl-1",
-                                "object": "chat.completion.chunk",
+                                "object": "chat.completion",
                                 "created": 1692214960,
                                 "model": "gpt-4",
                                 "choices": [
                                     {
                                         "index": 0,
-                                        "delta": {
+                                        "message": {
                                             "role": "assistant",
                                             "content": "pong",
                                         },
@@ -359,13 +359,13 @@ def test_chat_completion_none_content():
                         "assembled_response": json.dumps(
                             {
                                 "id": "chatcmpl-1",
-                                "object": "chat.completion.chunk",
+                                "object": "chat.completion",
                                 "created": 1692214960,
                                 "model": "gpt-4",
                                 "choices": [
                                     {
                                         "index": 0,
-                                        "delta": {
+                                        "message": {
                                             "role": "assistant",
                                             "content": "5",
                                         },
@@ -651,13 +651,13 @@ def test_data_request_with_new_format():
                         "assembled_response": json.dumps(
                             {
                                 "id": "chatcmpl-1",
-                                "object": "chat.completion.chunk",
+                                "object": "chat.completion",
                                 "created": 1692214960,
                                 "model": "gpt-4",
                                 "choices": [
                                     {
                                         "index": 0,
-                                        "delta": {
+                                        "message": {
                                             "role": "assistant",
                                             "content": "pong",
                                         },
@@ -718,13 +718,13 @@ def test_data_request_with_new_format():
                         "assembled_response": json.dumps(
                             {
                                 "id": "chatcmpl-2",
-                                "object": "chat.completion.chunk",
+                                "object": "chat.completion",
                                 "created": 1700828102,
                                 "model": "gpt-4",
                                 "choices": [
                                     {
                                         "index": 0,
-                                        "delta": {
+                                        "message": {
                                             "role": "assistant",
                                             "content": "pong",
                                         },

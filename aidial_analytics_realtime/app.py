@@ -103,14 +103,11 @@ async def on_chat_completion_message(
         request_body = json.loads(request_body_str)
         model = request_body.get("model") or deployment
 
-    assembled_response = None
-    if assembled_response_str is not None:
-        assembled_response = json.loads(assembled_response_str)
-
-        for choice in assembled_response.get("choices") or []:
-            if (delta := choice.get("delta")) is not None:
-                choice["message"] = delta
-                del choice["delta"]
+    assembled_response = (
+        json.loads(assembled_response_str)
+        if assembled_response_str is not None
+        else None
+    )
 
     await on_message(
         logger,

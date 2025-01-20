@@ -8,7 +8,7 @@ from aidial_analytics_realtime.utils.concurrency import (
 )
 from aidial_analytics_realtime.utils.timer import Timer
 
-logger = logging.getLogger("app.topic")
+_logger = logging.getLogger("app.topic")
 
 
 class TopicModel:
@@ -33,21 +33,15 @@ class TopicModel:
         # Make sure the model is loaded
         self.model.transform(["test"])
 
-    async def get_topic_by_text(
-        self, logger: logging.Logger, text: str
-    ) -> str | None:
-        return await run_in_cpu_tasks_executor(
-            self._get_topic_by_text, logger, text
-        )
+    async def get_topic_by_text(self, text: str) -> str | None:
+        return await run_in_cpu_tasks_executor(self._get_topic_by_text, text)
 
-    def _get_topic_by_text(
-        self, logger: logging.Logger, text: str
-    ) -> str | None:
+    def _get_topic_by_text(self, text: str) -> str | None:
         text = text.strip()
         if not text:
             return None
 
-        with Timer(logger.debug):
+        with Timer(_logger.debug):
             topics, _ = self.model.transform([text])
             topic = self.model.get_topic_info(topics[0])
 

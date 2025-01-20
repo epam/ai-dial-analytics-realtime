@@ -26,11 +26,9 @@ from aidial_analytics_realtime.time import parse_time
 from aidial_analytics_realtime.topic_model import TopicModel
 from aidial_analytics_realtime.universal_api_utils import merge
 from aidial_analytics_realtime.utils.concurrency import cpu_task_executor
-from aidial_analytics_realtime.utils.logging import (
-    add_logger_prefix,
-    app_logger,
-    configure_loggers,
-)
+from aidial_analytics_realtime.utils.logging import add_logger_prefix
+from aidial_analytics_realtime.utils.logging import app_logger as logger
+from aidial_analytics_realtime.utils.logging import configure_loggers
 from aidial_analytics_realtime.utils.timer import Timer
 
 RATE_PATTERN = r"/v1/(.+?)/rate"
@@ -60,7 +58,6 @@ configure_loggers()
 
 
 async def on_rate_message(
-    logger: logging.Logger,
     deployment: str,
     project_id: str,
     chat_id: str,
@@ -71,7 +68,6 @@ async def on_rate_message(
     response: dict,
     influx_writer: InfluxWriterAsync,
 ):
-    app_logger.info(f"Rate message length {len(request) + len(response)}")
     request_body = json.loads(request["body"])
     point = make_rate_point(
         deployment,
@@ -82,11 +78,10 @@ async def on_rate_message(
         timestamp,
         request_body,
     )
-    await influx_writer(logger, point)
+    await influx_writer(point)
 
 
 async def on_chat_completion_message(
-    logger: logging.Logger,
     deployment: str,
     project_id: str,
     chat_id: str,
@@ -144,7 +139,6 @@ async def on_chat_completion_message(
             response_body = json.loads(response["body"])
 
     await on_message(
-        logger,
         influx_writer,
         deployment,
         model or deployment,
@@ -167,7 +161,6 @@ async def on_chat_completion_message(
 
 
 async def on_embedding_message(
-    logger: logging.Logger,
     deployment: str,
     project_id: str,
     chat_id: str,
@@ -199,7 +192,6 @@ async def on_embedding_message(
     )
 
     await on_message(
-        logger,
         influx_writer,
         deployment,
         deployment,
@@ -222,7 +214,6 @@ async def on_embedding_message(
 
 
 async def on_log_message(
-    logger: logging.Logger,
     message: dict,
     influx_writer: InfluxWriterAsync,
     topic_model: TopicModel,
@@ -249,7 +240,6 @@ async def on_log_message(
 
     if re.search(RATE_PATTERN, uri):
         await on_rate_message(
-            logger,
             deployment,
             project_id,
             chat_id,
@@ -263,7 +253,6 @@ async def on_log_message(
 
     elif re.search(CHAT_COMPLETION_PATTERN, uri):
         await on_chat_completion_message(
-            logger,
             deployment,
             project_id,
             chat_id,
@@ -284,7 +273,6 @@ async def on_log_message(
 
     elif re.search(EMBEDDING_PATTERN, uri):
         await on_embedding_message(
-            logger,
             deployment,
             project_id,
             chat_id,
@@ -304,7 +292,7 @@ async def on_log_message(
         )
 
     else:
-        app_logger.warning(f"Unsupported message type: {uri!r}")
+        logger.warning(f"Unsupported message type: {uri!r}")
 
 
 @app.post("/data")
@@ -314,23 +302,21 @@ async def on_log_messages(
     topic_model: TopicModel = Depends(),
     rates_calculator: RatesCalculator = Depends(),
 ):
-    request_logger = app_logger
 
     data = await request.json()
 
     n = len(data)
-    request_logger.info(f"number of messages: {n}")
+    logger.info(f"number of messages: {n}")
 
     statuses: list[dict] = []
 
-    async with Timer(request_logger.debug):
+    async with Timer(logger.debug):
 
         async def _task(i: int, message_str: str) -> dict:
             add_logger_prefix(f"[{i}/{n}]")
 
-            async with Timer(request_logger.debug):
+            async with Timer(logger.debug):
                 return await process_message(
-                    request_logger,
                     json.loads(message_str),
                     influx_writer,
                     topic_model,
@@ -344,8 +330,8 @@ async def on_log_messages(
             ]
         )
 
-    if request_logger.isEnabledFor(logging.DEBUG):
-        request_logger.debug(f"response: {json.dumps(statuses)}")
+    if logger.isEnabledFor(logging.DEBUG):
+        logger.debug(f"response: {json.dumps(statuses)}")
 
     # Returning 200 code even if processing of some messages has failed,
     # since the log broker that sends the messages may decide to retry the failed requests.
@@ -353,7 +339,6 @@ async def on_log_messages(
 
 
 async def process_message(
-    logger: logging.Logger,
     message: dict,
     influx_writer: InfluxWriterAsync,
     topic_model: TopicModel,
@@ -373,7 +358,7 @@ async def process_message(
 
     try:
         await on_log_message(
-            logger, message, influx_writer, topic_model, rates_calculator
+            message, influx_writer, topic_model, rates_calculator
         )
         logger.info("success")
         return {"status": "success"}

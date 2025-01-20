@@ -103,11 +103,15 @@ async def on_chat_completion_message(
         request_body = json.loads(request_body_str)
         model = request_body.get("model") or deployment
 
-    assembled_response = (
-        json.loads(assembled_response_str)
-        if assembled_response_str is not None
-        else None
-    )
+    if assembled_response_str is not None:
+        assembled_response = json.loads(assembled_response_str)
+
+        # NOTE: this becomes redundant when https://github.com/epam/ai-dial-core/pull/648
+        # is merged and deployed to production
+        for choice in assembled_response.get("choices") or []:
+            if "delta" in choice:
+                choice["message"] = choice["delta"]
+                del choice["delta"]
 
     await on_message(
         logger,

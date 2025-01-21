@@ -1,11 +1,9 @@
-import logging
 from datetime import datetime
 from decimal import Decimal
 from enum import Enum
 from uuid import uuid4
 
 from influxdb_client import Point
-from langid.langid import LanguageIdentifier, model
 from typing_extensions import assert_never
 
 from aidial_analytics_realtime.dial import (
@@ -14,14 +12,9 @@ from aidial_analytics_realtime.dial import (
     get_embeddings_request_contents,
 )
 from aidial_analytics_realtime.influx_writer import InfluxWriterAsync
+from aidial_analytics_realtime.langid import detect_lang_by_text
 from aidial_analytics_realtime.rates import RatesCalculator
 from aidial_analytics_realtime.topic_model import TopicModel
-from aidial_analytics_realtime.utils.concurrency import (
-    run_in_cpu_tasks_executor,
-)
-from aidial_analytics_realtime.utils.timer import Timer
-
-identifier = LanguageIdentifier.from_modelstring(model, norm_probs=True)
 
 
 class RequestType(Enum):
@@ -43,28 +36,6 @@ async def detect_lang(
             assert_never(request_type)
 
     return to_string(await detect_lang_by_text(text))
-
-
-async def detect_lang_by_text(text: str) -> str | None:
-    text = text.strip()
-
-    if not text:
-        return None
-
-    logger = logging.getLogger("app.langid")
-
-    try:
-        with Timer(logger.debug):
-            lang, prob = await run_in_cpu_tasks_executor(
-                identifier.classify, text
-            )
-
-        if prob > 0.998:
-            return lang
-    except Exception as e:
-        logger.error(f"error: {str(e)}")
-
-    return None
 
 
 def to_string(obj: str | None) -> str:

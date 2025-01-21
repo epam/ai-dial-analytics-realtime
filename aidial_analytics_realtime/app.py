@@ -1,9 +1,13 @@
+import asyncio
 import contextlib
 import json
 import logging
 import re
+import sys
 from datetime import datetime
 
+import aiohttp
+import starlette.requests
 import uvicorn
 from fastapi import Depends, FastAPI, Request
 from fastapi.responses import JSONResponse
@@ -22,7 +26,10 @@ from aidial_analytics_realtime.time import parse_time
 from aidial_analytics_realtime.topic_model import TopicModel
 from aidial_analytics_realtime.universal_api_utils import merge
 from aidial_analytics_realtime.utils.concurrency import cpu_task_executor
-from aidial_analytics_realtime.utils.log_config import configure_loggers, logger
+from aidial_analytics_realtime.utils.logging import add_logger_prefix
+from aidial_analytics_realtime.utils.logging import app_logger as logger
+from aidial_analytics_realtime.utils.logging import configure_loggers
+from aidial_analytics_realtime.utils.timer import Timer
 
 RATE_PATTERN = r"/v1/(.+?)/rate"
 CHAT_COMPLETION_PATTERN = r"/openai/deployments/(.+?)/chat/completions"
@@ -61,7 +68,6 @@ async def on_rate_message(
     response: dict,
     influx_writer: InfluxWriterAsync,
 ):
-    logger.info(f"Rate message length {len(request) + len(response)}")
     request_body = json.loads(request["body"])
     point = make_rate_point(
         deployment,
@@ -133,7 +139,6 @@ async def on_chat_completion_message(
             response_body = json.loads(response["body"])
 
     await on_message(
-        logger,
         influx_writer,
         deployment,
         model or deployment,
@@ -187,7 +192,6 @@ async def on_embedding_message(
     )
 
     await on_message(
-        logger,
         influx_writer,
         deployment,
         deployment,
@@ -298,26 +302,74 @@ async def on_log_messages(
     topic_model: TopicModel = Depends(),
     rates_calculator: RatesCalculator = Depends(),
 ):
+
     data = await request.json()
 
-    statuses = []
-    for idx, item in enumerate(data):
-        try:
-            await on_log_message(
-                json.loads(item["message"]),
-                influx_writer,
-                topic_model,
-                rates_calculator,
-            )
-        except Exception as e:
-            logging.exception(f"Error processing message #{idx}")
-            statuses.append({"status": "error", "error": str(e)})
-        else:
-            statuses.append({"status": "success"})
+    n = len(data)
+    logger.info(f"number of messages: {n}")
+
+    statuses: list[dict] = []
+
+    async with Timer(logger.debug, format="request {elapsed}"):
+
+        async def _task(i: int, message_str: str) -> dict:
+            add_logger_prefix(f"[{i}/{n}]")
+
+            async with Timer(logger.debug, format="message {elapsed}"):
+                return await process_message(
+                    json.loads(message_str),
+                    influx_writer,
+                    topic_model,
+                    rates_calculator,
+                )
+
+        statuses = await asyncio.gather(
+            *[
+                _task(i, message["message"])
+                for i, message in enumerate(data, start=1)
+            ]
+        )
+
+    if logger.isEnabledFor(logging.DEBUG):
+        logger.debug(f"response: {json.dumps(statuses)}")
 
     # Returning 200 code even if processing of some messages has failed,
     # since the log broker that sends the messages may decide to retry the failed requests.
     return JSONResponse(content=statuses, status_code=200)
+
+
+async def process_message(
+    message: dict,
+    influx_writer: InfluxWriterAsync,
+    topic_model: TopicModel,
+    rates_calculator: RatesCalculator,
+) -> dict:
+    def _error(reason: str | None = None) -> dict:
+        error = str(sys.exc_info()[1])
+        ret = {"status": "error"}
+        if error:
+            ret["error"] = error
+        if reason:
+            ret["reason"] = reason
+            logger.error(reason)
+        else:
+            logger.exception("caught exception")
+        return ret
+
+    try:
+        await on_log_message(
+            message, influx_writer, topic_model, rates_calculator
+        )
+        logger.info("success")
+        return {"status": "success"}
+    except starlette.requests.ClientDisconnect:
+        return _error("client disconnect")
+    except aiohttp.ClientConnectionError:
+        return _error("connection error")
+    except asyncio.TimeoutError:
+        return _error("timeout")
+    except Exception:
+        return _error()
 
 
 @app.get("/health")

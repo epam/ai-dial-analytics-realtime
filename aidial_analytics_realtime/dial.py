@@ -1,40 +1,31 @@
-from logging import Logger
 from typing import Iterator, List
 
-
-def get_chat_completion_request_contents(
-    logger: Logger, request: dict
-) -> List[str]:
-    return list(_chat_completion_request_contents(logger, request))
+from aidial_analytics_realtime.utils.logging import app_logger as logger
 
 
-def get_chat_completion_response_contents(
-    logger: Logger, response: dict
-) -> List[str]:
-    return list(_chat_completion_response_contents(logger, response))
+def get_chat_completion_request_contents(request: dict) -> List[str]:
+    return list(_chat_completion_request_contents(request))
 
 
-def get_embeddings_request_contents(logger: Logger, request: dict) -> List[str]:
-    return list(_embeddings_request_contents(logger, request))
+def get_chat_completion_response_contents(response: dict) -> List[str]:
+    return list(_chat_completion_response_contents(response))
 
 
-def _chat_completion_request_contents(
-    logger: Logger, request: dict
-) -> Iterator[str]:
+def get_embeddings_request_contents(request: dict) -> List[str]:
+    return list(_embeddings_request_contents(request))
+
+
+def _chat_completion_request_contents(request: dict) -> Iterator[str]:
     for message in request["messages"]:
-        yield from _chat_completion_message_contents(logger, message)
+        yield from _chat_completion_message_contents(message)
 
 
-def _chat_completion_response_contents(
-    logger: Logger, response: dict
-) -> Iterator[str]:
+def _chat_completion_response_contents(response: dict) -> Iterator[str]:
     message = response["choices"][0]["message"]
-    yield from _chat_completion_message_contents(logger, message)
+    yield from _chat_completion_message_contents(message)
 
 
-def _embeddings_request_contents(
-    logger: Logger, request: dict
-) -> Iterator[str]:
+def _embeddings_request_contents(request: dict) -> Iterator[str]:
     inp = request.get("input")
 
     if isinstance(inp, str):
@@ -47,9 +38,7 @@ def _embeddings_request_contents(
         logger.warning(f"Unexpected type of embeddings input: {type(inp)}")
 
 
-def _chat_completion_message_contents(
-    logger: Logger, message: dict
-) -> Iterator[str]:
+def _chat_completion_message_contents(message: dict) -> Iterator[str]:
     content = message.get("content")
     if content is None:
         return

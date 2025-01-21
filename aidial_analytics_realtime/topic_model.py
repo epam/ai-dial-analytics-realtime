@@ -1,4 +1,3 @@
-import logging
 import os
 
 from bertopic import BERTopic
@@ -6,9 +5,8 @@ from bertopic import BERTopic
 from aidial_analytics_realtime.utils.concurrency import (
     run_in_cpu_tasks_executor,
 )
+from aidial_analytics_realtime.utils.logging import app_logger as logger
 from aidial_analytics_realtime.utils.timer import Timer
-
-_logger = logging.getLogger("app.topic")
 
 
 class TopicModel:
@@ -41,7 +39,7 @@ class TopicModel:
         if not text:
             return None
 
-        with Timer(_logger.debug):
+        with Timer(logger.debug, format="topic {elapsed}"):
             topics, _ = self.model.transform([text])
             topic = self.model.get_topic_info(topics[0])
 

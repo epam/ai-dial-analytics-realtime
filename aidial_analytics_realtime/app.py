@@ -310,12 +310,12 @@ async def on_log_messages(
 
     statuses: list[dict] = []
 
-    async with Timer(logger.debug):
+    async with Timer(logger.debug, format="request {elapsed}"):
 
         async def _task(i: int, message_str: str) -> dict:
             add_logger_prefix(f"[{i}/{n}]")
 
-            async with Timer(logger.debug):
+            async with Timer(logger.debug, format="message {elapsed}"):
                 return await process_message(
                     json.loads(message_str),
                     influx_writer,

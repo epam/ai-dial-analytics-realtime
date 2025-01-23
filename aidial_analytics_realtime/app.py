@@ -21,10 +21,10 @@ from aidial_analytics_realtime.influx_writer import (
     InfluxWriterAsync,
     create_influx_writer,
 )
+from aidial_analytics_realtime.log_request.message import get_assembled_response
 from aidial_analytics_realtime.rates import RatesCalculator
 from aidial_analytics_realtime.time import parse_time
 from aidial_analytics_realtime.topic_model import TopicModel
-from aidial_analytics_realtime.universal_api_utils import merge
 from aidial_analytics_realtime.utils.concurrency import cpu_task_executor
 from aidial_analytics_realtime.utils.logging import add_logger_prefix
 from aidial_analytics_realtime.utils.logging import app_logger as logger
@@ -91,6 +91,7 @@ async def on_chat_completion_message(
     timestamp: datetime,
     request: dict,
     response: dict,
+    response_body: dict | None,
     influx_writer: InfluxWriterAsync,
     topic_model: TopicModel,
     rates_calculator: RatesCalculator,
@@ -102,41 +103,12 @@ async def on_chat_completion_message(
     if response["status"] != "200":
         return
 
-    response_body = None
     request_body = None
     model: str | None = None
 
     if (request_body_str := request.get("body")) is not None:
-
         request_body = json.loads(request_body_str)
-        stream = request_body.get("stream", False)
-        model = request_body.get("model", deployment)
-
-        if stream:
-            body = response["body"]
-            chunks = body.split("\n\ndata: ")
-
-            chunks = [chunk.strip() for chunk in chunks]
-
-            chunks[0] = chunks[0][chunks[0].find("data: ") + 6 :]
-            if chunks[-1] == "[DONE]":
-                chunks.pop(len(chunks) - 1)
-
-            response_body = json.loads(chunks[-1])
-            for chunk in chunks[0 : len(chunks) - 1]:
-                chunk = json.loads(chunk)
-
-                response_body["choices"] = merge(
-                    response_body["choices"], chunk["choices"]
-                )
-
-            for i in range(len(response_body["choices"])):
-                response_body["choices"][i]["message"] = response_body[
-                    "choices"
-                ][i]["delta"]
-                del response_body["choices"][i]["delta"]
-        else:
-            response_body = json.loads(response["body"])
+        model = request_body.get("model") or deployment
 
     await on_message(
         influx_writer,
@@ -226,17 +198,15 @@ async def on_log_message(
     chat_id = message["chat"]["id"]
     user_hash = message["user"]["id"]
     user_title = message["user"]["title"]
-    upstream_url = (
-        response["upstream_uri"] if "upstream_uri" in response else ""
-    )
-
     timestamp = parse_time(request["time"])
 
-    token_usage = message.get("token_usage", None)
-    trace = message.get("trace", None)
-    parent_deployment = message.get("parent_deployment", None)
-    execution_path = message.get("execution_path", None)
-    deployment = message.get("deployment", "")
+    upstream_url = response.get("upstream_uri") or ""
+    token_usage = message.get("token_usage")
+    trace = message.get("trace")
+    parent_deployment = message.get("parent_deployment")
+    execution_path = message.get("execution_path")
+    deployment = message.get("deployment") or ""
+    response_body = get_assembled_response(message)
 
     if re.search(RATE_PATTERN, uri):
         await on_rate_message(
@@ -262,6 +232,7 @@ async def on_log_message(
             timestamp,
             request,
             response,
+            response_body,
             influx_writer,
             topic_model,
             rates_calculator,

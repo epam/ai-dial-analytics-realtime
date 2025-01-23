@@ -43,6 +43,29 @@ def test_chat_completion_plain_text():
                                 }
                             ),
                         },
+                        "assembled_response": json.dumps(
+                            {
+                                "id": "chatcmpl-1",
+                                "object": "chat.completion",
+                                "created": 1692214960,
+                                "model": "gpt-4",
+                                "choices": [
+                                    {
+                                        "index": 0,
+                                        "delta": {
+                                            "role": "assistant",
+                                            "content": "pong",
+                                        },
+                                        "finish_reason": "stop",
+                                    }
+                                ],
+                                "usage": {
+                                    "completion_tokens": 189,
+                                    "prompt_tokens": 22,
+                                    "total_tokens": 211,
+                                },
+                            }
+                        ),
                         "response": {
                             "status": "200",
                             "body": 'data: {"id":"chatcmpl-1","object":"chat.completion.chunk","created":1692214960,"model":"gpt-4","choices":[{"index":0,"delta":{"role":"assistant","content":"pong"},"finish_reason":null}]}\n\ndata: {"id":"chatcmpl-1","object":"chat.completion.chunk","created":1692214960,"model":"gpt-4","choices":[{"index":0,"delta":{},"finish_reason":"stop"}],"usage":{"completion_tokens":189,"prompt_tokens":22,"total_tokens":211}}\n\ndata: [DONE]\n',
@@ -77,6 +100,29 @@ def test_chat_completion_plain_text():
                                 }
                             ),
                         },
+                        "assembled_response": json.dumps(
+                            {
+                                "id": "chatcmpl-2",
+                                "object": "chat.completion",
+                                "created": 1700828102,
+                                "model": "gpt-4",
+                                "choices": [
+                                    {
+                                        "index": 0,
+                                        "delta": {
+                                            "role": "assistant",
+                                            "content": "pong",
+                                        },
+                                        "finish_reason": "stop",
+                                    }
+                                ],
+                                "usage": {
+                                    "completion_tokens": 189,
+                                    "prompt_tokens": 22,
+                                    "total_tokens": 211,
+                                },
+                            }
+                        ),
                         "response": {
                             "status": "200",
                             "body": 'data: {"id":"chatcmpl-2","object":"chat.completion.chunk","created":1700828102,"model":"gpt-4","choices":[{"index":0,"delta":{"role":"assistant","content":"po"},"finish_reason":null}]}\n\ndata: {"id":"chatcmpl-2","object":"chat.completion.chunk","created":1700828102,"model":"gpt-4","choices":[{"index":0,"delta":{"content":"ng"},"finish_reason":null}]}\n\ndata: {"id":"chatcmpl-2","object":"chat.completion.chunk","created":1700828102,"model":"gpt-4","choices":[{"index":0,"delta":{},"finish_reason":"stop"}],"usage":{"completion_tokens":189,"prompt_tokens":22,"total_tokens":211}}\n\ndata: [DONE]\n',
@@ -212,6 +258,29 @@ def test_chat_completion_list_content():
                                 }
                             ),
                         },
+                        "assembled_response": json.dumps(
+                            {
+                                "id": "chatcmpl-1",
+                                "object": "chat.completion",
+                                "created": 1692214960,
+                                "model": "gpt-4",
+                                "choices": [
+                                    {
+                                        "index": 0,
+                                        "delta": {
+                                            "role": "assistant",
+                                            "content": "pong",
+                                        },
+                                        "finish_reason": "stop",
+                                    }
+                                ],
+                                "usage": {
+                                    "completion_tokens": 189,
+                                    "prompt_tokens": 22,
+                                    "total_tokens": 211,
+                                },
+                            }
+                        ),
                         "response": {
                             "status": "200",
                             "body": 'data: {"id":"chatcmpl-1","object":"chat.completion.chunk","created":1692214960,"model":"gpt-4","choices":[{"index":0,"delta":{"role":"assistant","content":"pong"},"finish_reason":null}]}\n\ndata: {"id":"chatcmpl-1","object":"chat.completion.chunk","created":1692214960,"model":"gpt-4","choices":[{"index":0,"delta":{},"finish_reason":"stop"}],"usage":{"completion_tokens":189,"prompt_tokens":22,"total_tokens":211}}\n\ndata: [DONE]\n',
@@ -287,6 +356,29 @@ def test_chat_completion_none_content():
                                 }
                             ),
                         },
+                        "assembled_response": json.dumps(
+                            {
+                                "id": "chatcmpl-1",
+                                "object": "chat.completion",
+                                "created": 1692214960,
+                                "model": "gpt-4",
+                                "choices": [
+                                    {
+                                        "index": 0,
+                                        "delta": {
+                                            "role": "assistant",
+                                            "content": "5",
+                                        },
+                                        "finish_reason": "stop",
+                                    }
+                                ],
+                                "usage": {
+                                    "completion_tokens": 189,
+                                    "prompt_tokens": 22,
+                                    "total_tokens": 211,
+                                },
+                            }
+                        ),
                         "response": {
                             "status": "200",
                             "body": 'data: {"id":"chatcmpl-1","object":"chat.completion.chunk","created":1692214960,"model":"gpt-4","choices":[{"index":0,"delta":{"role":"assistant","content":"5"},"finish_reason":null}]}\n\ndata: {"id":"chatcmpl-1","object":"chat.completion.chunk","created":1692214960,"model":"gpt-4","choices":[{"index":0,"delta":{},"finish_reason":"stop"}],"usage":{"completion_tokens":189,"prompt_tokens":22,"total_tokens":211}}\n\ndata: [DONE]\n',
@@ -556,6 +648,29 @@ def test_data_request_with_new_format():
                                 }
                             ),
                         },
+                        "assembled_response": json.dumps(
+                            {
+                                "id": "chatcmpl-1",
+                                "object": "chat.completion",
+                                "created": 1692214960,
+                                "model": "gpt-4",
+                                "choices": [
+                                    {
+                                        "index": 0,
+                                        "delta": {
+                                            "role": "assistant",
+                                            "content": "pong",
+                                        },
+                                        "finish_reason": "stop",
+                                    }
+                                ],
+                                "usage": {
+                                    "completion_tokens": 189,
+                                    "prompt_tokens": 22,
+                                    "total_tokens": 211,
+                                },
+                            }
+                        ),
                         "response": {
                             "status": "200",
                             "body": 'data: {"id":"chatcmpl-1","object":"chat.completion.chunk","created":1692214960,"model":"gpt-4","choices":[{"index":0,"delta":{"role":"assistant","content":"pong"},"finish_reason":null}]}\n\ndata: {"id":"chatcmpl-1","object":"chat.completion.chunk","created":1692214960,"model":"gpt-4","choices":[{"index":0,"delta":{},"finish_reason":"stop"}],"usage":{"completion_tokens":189,"prompt_tokens":22,"total_tokens":211}}\n\ndata: [DONE]\n',
@@ -600,6 +715,29 @@ def test_data_request_with_new_format():
                                 }
                             ),
                         },
+                        "assembled_response": json.dumps(
+                            {
+                                "id": "chatcmpl-2",
+                                "object": "chat.completion",
+                                "created": 1700828102,
+                                "model": "gpt-4",
+                                "choices": [
+                                    {
+                                        "index": 0,
+                                        "delta": {
+                                            "role": "assistant",
+                                            "content": "pong",
+                                        },
+                                        "finish_reason": "stop",
+                                    }
+                                ],
+                                "usage": {
+                                    "completion_tokens": 189,
+                                    "prompt_tokens": 22,
+                                    "total_tokens": 211,
+                                },
+                            }
+                        ),
                         "response": {
                             "status": "200",
                             "body": 'data: {"id":"chatcmpl-2","object":"chat.completion.chunk","created":1700828102,"model":"gpt-4","choices":[{"index":0,"delta":{"role":"assistant","content":"pong"},"finish_reason":null}]}\n\ndata: {"id":"chatcmpl-2","object":"chat.completion.chunk","created":1700828102,"model":"gpt-4","choices":[{"index":0,"delta":{},"finish_reason":"stop"}],"usage":{"completion_tokens":189,"prompt_tokens":22,"total_tokens":211}}\n\ndata: [DONE]\n',

@@ -52,7 +52,7 @@ def test_chat_completion_plain_text():
                                 "choices": [
                                     {
                                         "index": 0,
-                                        "message": {
+                                        "delta": {
                                             "role": "assistant",
                                             "content": "pong",
                                         },
@@ -109,7 +109,7 @@ def test_chat_completion_plain_text():
                                 "choices": [
                                     {
                                         "index": 0,
-                                        "message": {
+                                        "delta": {
                                             "role": "assistant",
                                             "content": "pong",
                                         },
@@ -267,7 +267,7 @@ def test_chat_completion_list_content():
                                 "choices": [
                                     {
                                         "index": 0,
-                                        "message": {
+                                        "delta": {
                                             "role": "assistant",
                                             "content": "pong",
                                         },
@@ -365,7 +365,7 @@ def test_chat_completion_none_content():
                                 "choices": [
                                     {
                                         "index": 0,
-                                        "message": {
+                                        "delta": {
                                             "role": "assistant",
                                             "content": "5",
                                         },
@@ -657,7 +657,7 @@ def test_data_request_with_new_format():
                                 "choices": [
                                     {
                                         "index": 0,
-                                        "message": {
+                                        "delta": {
                                             "role": "assistant",
                                             "content": "pong",
                                         },
@@ -724,7 +724,7 @@ def test_data_request_with_new_format():
                                 "choices": [
                                     {
                                         "index": 0,
-                                        "message": {
+                                        "delta": {
                                             "role": "assistant",
                                             "content": "pong",
                                         },

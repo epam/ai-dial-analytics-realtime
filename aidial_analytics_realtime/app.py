@@ -9,6 +9,7 @@ from datetime import datetime
 import aiohttp
 import starlette.requests
 import uvicorn
+from aidial_sdk.telemetry.init import TelemetryConfig, init_telemetry
 from fastapi import Depends, FastAPI, Request
 from fastapi.responses import JSONResponse
 
@@ -53,6 +54,8 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(lifespan=lifespan)
+
+init_telemetry(app, TelemetryConfig())
 
 configure_loggers()
 

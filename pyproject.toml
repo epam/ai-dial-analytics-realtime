@@ -24,7 +24,7 @@ langid = "1.1.6"
 bertopic = "^0.15.0"
 python-dotenv = "^1.0.0"
 python-dateutil = "^2.8.2"
-pydantic = "^1.10.14"
+pydantic = "1.10.16"
 aidial-sdk = { version = "0.16.0", extras = ["telemetry"] }
 
 # Indirect dependencies

@@ -12,13 +12,14 @@ RUN apt-get update && \
     pip install "poetry==1.6.1" && \
     python3 -m venv /opt/venv
 
-
 ENV PATH="/opt/venv/bin:$PATH"
 
 COPY pyproject.toml poetry.lock .
 RUN poetry export -f requirements.txt --without-hashes | pip install -r /dev/stdin
 
 RUN pip install --upgrade setuptools==70.0.0
+
+
 
 FROM ubuntu:24.04
 
@@ -33,8 +34,10 @@ ENV MODEL_RATES='{"gpt-4":{"unit":"token","prompt_price":"0.00003","completion_p
 ENV TOPIC_MODEL="davanstrien/chat_topics"
 ENV TOPIC_EMBEDDINGS_MODEL="all-mpnet-base-v2"
 
-# Creates a non-root user with an explicit UID
-RUN adduser -u 1001 --disabled-password --gecos "" appuser
+# Create a non-root user with an explicit UID
+RUN apt-get update && \
+    apt-get install -y adduser \
+    adduser -u 1001 --disabled-password --gecos "" appuser
 
 WORKDIR /
 

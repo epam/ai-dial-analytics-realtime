@@ -35,9 +35,7 @@ ENV TOPIC_MODEL="davanstrien/chat_topics"
 ENV TOPIC_EMBEDDINGS_MODEL="all-mpnet-base-v2"
 
 # Create a non-root user with an explicit UID
-RUN apt-get update && \
-    apt-get install -y adduser \
-    adduser -u 1001 --disabled-password --gecos "" appuser
+RUN useradd -m -u 1001 -s /bin/bash appuser
 
 WORKDIR /
 

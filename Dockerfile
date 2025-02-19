@@ -1,5 +1,5 @@
 # dep-builder: builds venv with all deps
-FROM ubuntu:22.04 AS dep-builder
+FROM ubuntu:24.04 AS dep-builder
 
 ENV PYTHONDONTWRITEBYTECODE 1
 ENV PYTHONUNBUFFERED 1
@@ -20,7 +20,7 @@ RUN poetry export -f requirements.txt --without-hashes | pip install -r /dev/std
 
 RUN pip install --upgrade setuptools==70.0.0
 
-FROM ubuntu:22.04
+FROM ubuntu:24.04
 
 # Keeps Python from generating .pyc files in the container
 ENV PYTHONDONTWRITEBYTECODE=1

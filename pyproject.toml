@@ -109,5 +109,6 @@ markers = [
     "with_external: marks tests may require external resources, like the download models (deselect with '-m \"not with_external\"')",
 ]
 filterwarnings = [
-    "ignore::DeprecationWarning:bertopic._bertopic:17"
+    "ignore::DeprecationWarning:bertopic._bertopic:17",
+    "ignore:.*datetime\\.datetime\\.utcfromtimestamp\\(\\) is deprecated and scheduled for removal in a future version*:DeprecationWarning"
 ]

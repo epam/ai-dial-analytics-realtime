@@ -783,6 +783,7 @@ def test_rate_request():
                                 }
                             ),
                         },
+                        "assembled_response": "",
                         "response": {
                             "status": "200",
                             "body": "",

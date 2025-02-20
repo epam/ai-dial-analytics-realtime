@@ -6,7 +6,7 @@ nox.options.sessions = ["lint", "tests"]
 SRC = "."
 
 
-@nox.session(python=["3.10"])
+@nox.session(python=["3.12"])
 def lint(session):
     """Runs linters and fixers"""
     session.run("poetry", "install", external=True)
@@ -17,7 +17,7 @@ def lint(session):
     session.run("pyright", SRC)
 
 
-@nox.session(python=["3.10"])
+@nox.session(python=["3.12"])
 def format(session):
     """Runs linters and fixers"""
     session.run("poetry", "install", external=True)
@@ -26,7 +26,7 @@ def format(session):
     session.run("autoflake", SRC)
 
 
-@nox.session(python=["3.10"])
+@nox.session(python=["3.12"])
 def tests(session):
     """Runs tests"""
     session.run("poetry", "install", external=True)

@@ -1,26 +1,34 @@
-# dep-builder: builds venv with all deps
-FROM ubuntu:22.04 AS dep-builder
+FROM ubuntu:24.04 AS builder
 
 ENV PYTHONDONTWRITEBYTECODE 1
 ENV PYTHONUNBUFFERED 1
+
+WORKDIR /app
 
 RUN apt-get update && \
     apt-get install -y python3 \
                     python3-venv \
                     python3-dev \
-                    python3-pip && \
-    pip install "poetry==1.6.1" && \
-    python3 -m venv /opt/venv
+                    python3-pip \
+                    python3-poetry
 
+RUN python3 -m venv .venv
 
-ENV PATH="/opt/venv/bin:$PATH"
+ENV PATH="/app/.venv/bin:$PATH"
 
-COPY pyproject.toml poetry.lock .
-RUN poetry export -f requirements.txt --without-hashes | pip install -r /dev/stdin
+# fix CVE-2024-6345
+RUN pip install setuptools==70.0.0 --quiet
 
-RUN pip install --upgrade setuptools==70.0.0
+# Install split into two steps (the dependencies and the sources)
+# in order to leverage the Docker caching
+COPY pyproject.toml poetry.lock poetry.toml README.md ./
+RUN poetry install --no-interaction --no-ansi --no-cache --only main \
+    --no-root --no-directory
 
-FROM ubuntu:22.04
+COPY aidial_analytics_realtime aidial_analytics_realtime
+RUN poetry install --no-interaction --no-ansi --no-cache --only main
+
+FROM ubuntu:24.04
 
 # Keeps Python from generating .pyc files in the container
 ENV PYTHONDONTWRITEBYTECODE=1
@@ -33,25 +41,27 @@ ENV MODEL_RATES='{"gpt-4":{"unit":"token","prompt_price":"0.00003","completion_p
 ENV TOPIC_MODEL="davanstrien/chat_topics"
 ENV TOPIC_EMBEDDINGS_MODEL="all-mpnet-base-v2"
 
-# Creates a non-root user with an explicit UID
-RUN adduser -u 1001 --disabled-password --gecos "" appuser
-
-WORKDIR /
-
 # Install ca-certificates is required for https connection to InfluxDB
 RUN apt-get update && \
     apt-get install -y python3 ca-certificates
 
-COPY --from=dep-builder --chown=appuser /opt/venv /opt/venv
-COPY --chown=appuser ./aidial_analytics_realtime /aidial_analytics_realtime
+WORKDIR /app
 
-ENV PATH="/opt/venv/bin:$PATH"
+# Create a non-root user with an explicit UID
+RUN useradd -m -u 1001 -s /bin/bash appuser
+COPY --chown=appuser --from=builder /app .
+
+ENV PATH="/app/.venv/bin:$PATH"
 
 USER appuser
+
+EXPOSE 5000
 
 HEALTHCHECK  --interval=10s --timeout=5s --start-period=30s --retries=6 \
     CMD wget --no-verbose --tries=1 --spider http://localhost:5000/health || exit 1
 
+# Disable syntax warnings in the hdbscan package.
+ENV PYTHONWARNINGS="ignore:invalid escape sequence:SyntaxWarning"
+
 # During debugging, this entry point will be overridden. For more information, please refer to https://aka.ms/vscode-docker-python-debug
-EXPOSE 5000
 CMD ["uvicorn", "aidial_analytics_realtime.app:app", "--host", "0.0.0.0", "--port", "5000"]

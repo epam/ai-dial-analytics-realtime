@@ -9,13 +9,13 @@ RUN apt-get update && \
     apt-get install -y python3 \
                     python3-venv \
                     python3-dev \
-                    python3-pip
+                    python3-pip \
+                    python3-poetry
 
 RUN python3 -m venv .venv
 
 ENV PATH="/app/.venv/bin:$PATH"
 
-RUN pip install poetry==1.6.1 --quiet
 # fix CVE-2024-6345
 RUN pip install setuptools==70.0.0 --quiet
 

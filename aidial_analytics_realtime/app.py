@@ -209,7 +209,6 @@ async def on_log_message(
     parent_deployment = message.get("parent_deployment")
     execution_path = message.get("execution_path")
     deployment = message.get("deployment") or ""
-    response_body = get_assembled_response(message)
 
     if re.search(RATE_PATTERN, uri):
         await on_rate_message(
@@ -225,6 +224,7 @@ async def on_log_message(
         )
 
     elif re.search(CHAT_COMPLETION_PATTERN, uri):
+        response_body = get_assembled_response(message)
         await on_chat_completion_message(
             deployment,
             project_id,

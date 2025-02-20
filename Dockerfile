@@ -25,7 +25,7 @@ COPY pyproject.toml poetry.lock poetry.toml README.md ./
 RUN poetry install --no-interaction --no-ansi --no-cache --only main \
     --no-root --no-directory
 
-COPY aidial_analytics_realtime .
+COPY aidial_analytics_realtime aidial_analytics_realtime
 RUN poetry install --no-interaction --no-ansi --no-cache --only main
 
 FROM ubuntu:24.04
@@ -59,6 +59,9 @@ EXPOSE 5000
 
 HEALTHCHECK  --interval=10s --timeout=5s --start-period=30s --retries=6 \
     CMD wget --no-verbose --tries=1 --spider http://localhost:5000/health || exit 1
+
+# Disable syntax warnings in the hdbscan package.
+ENV PYTHONWARNINGS="ignore:invalid escape sequence:SyntaxWarning"
 
 # During debugging, this entry point will be overridden. For more information, please refer to https://aka.ms/vscode-docker-python-debug
 CMD ["uvicorn", "aidial_analytics_realtime.app:app", "--host", "0.0.0.0", "--port", "5000"]

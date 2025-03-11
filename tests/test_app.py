@@ -1,41 +1,36 @@
 import json
 import re
+from unittest.mock import patch
 
 import httpx
 import pytest
 from fastapi.testclient import TestClient
 
 import aidial_analytics_realtime.app as app
+from aidial_analytics_realtime.time import parse_time
 from tests.mocks import InfluxWriterMock, TestTopicModel
+from tests.utils.data import create_data_request
+from tests.utils.influx import create_point
 from tests.utils.message import (
     create_chat_completion_request,
     create_chat_completion_response,
     create_message,
 )
 
-_BASELINE_MESSAGE1 = create_message(
-    chat_id="chat-1",
-    project_id="PROJECT-KEY",
-    request_uri="/openai/deployments/gpt-4/chat/completions?api-version=2023-03-15-preview",
-    request_time="2023-08-16T19:42:39.997",
-    request_body=create_chat_completion_request(),
-    response_body="whatever",
-    response_assembled=create_chat_completion_response(
-        id="chatcmpl-1", created=1692214960
-    ),
-)
 
-_BASELINE_MESSAGE2 = create_message(
-    chat_id="chat-2",
-    project_id="PROJECT-KEY-2",
-    request_uri="/openai/deployments/gpt-4/chat/completions?api-version=2023-03-15-preview",
-    request_time="2023-11-24T03:33:40.39",
-    request_body=create_chat_completion_request(),
-    response_body="whatever",
-    response_assembled=create_chat_completion_response(
-        id="chatcmpl-2", created=1700828102
-    ),
-)
+@pytest.fixture(autouse=True)
+def mock_uuid4():
+    counter = 0
+
+    def side_effect() -> str:
+        nonlocal counter
+        counter += 1
+        return f"pseudo-uuid-{counter}"
+
+    with patch(
+        "aidial_analytics_realtime.analytics.uuid4", side_effect=side_effect
+    ):
+        yield
 
 
 @pytest.fixture
@@ -53,92 +48,66 @@ def client(write_api_mock):
 def test_chat_completion_plain_text(
     client: httpx.Client, write_api_mock: InfluxWriterMock
 ):
+    message1 = create_message()
+
+    message2 = create_message(
+        chat_id="chat-2",
+        project_id="PROJECT-KEY-2",
+        request_time="2023-11-24T03:33:40.39",
+        request_body=create_chat_completion_request(),
+        response_assembled=create_chat_completion_response(
+            id="chatcmpl-2", created=1700828102
+        ),
+    )
 
     client = TestClient(app.app)
     response = client.post(
         "/data",
-        json=[
-            {"message": json.dumps(_BASELINE_MESSAGE1)},
-            {"message": json.dumps(_BASELINE_MESSAGE2)},
-        ],
+        json=create_data_request(message1, message2),
     )
     assert response.status_code == 200
-    assert write_api_mock.points == [
-        'analytics,core_parent_span_id=undefined,core_span_id=undefined,deployment=gpt-4,execution_path=undefined,language=undefined,model=gpt-4,parent_deployment=undefined,project_id=PROJECT-KEY,response_id=chatcmpl-1,title=undefined,topic=ping\\n\\npong,trace_id=undefined,upstream=undefined chat_id="chat-1",completion_tokens=189i,deployment_price=0,number_request_messages=2i,price=0,prompt_tokens=22i,user_hash="undefined" 1692214959997000000',
-        'analytics,core_parent_span_id=undefined,core_span_id=undefined,deployment=gpt-4,execution_path=undefined,language=undefined,model=gpt-4,parent_deployment=undefined,project_id=PROJECT-KEY-2,response_id=chatcmpl-2,title=undefined,topic=ping\\n\\npong,trace_id=undefined,upstream=undefined chat_id="chat-2",completion_tokens=189i,deployment_price=0,number_request_messages=2i,price=0,prompt_tokens=22i,user_hash="undefined" 1700796820390000000',
-    ]
+
+    point1 = create_point()
+
+    point2 = create_point(
+        project_id="PROJECT-KEY-2",
+        response_id="chatcmpl-2",
+        chat_id="chat-2",
+        timestamp=parse_time(message2["request"]["time"]),
+    )
+
+    assert str(write_api_mock.influx_points[0]) == str(point1)
+    assert str(write_api_mock.influx_points[1]) == str(point2)
 
 
 def test_chat_completion_plain_text_no_body(
     client: httpx.Client, write_api_mock: InfluxWriterMock
 ):
-    response = client.post(
-        "/data",
-        json=[
-            {
-                "message": json.dumps(
-                    {
-                        "apiType": "DialOpenAI",
-                        "chat": {"id": "chat-1"},
-                        "project": {"id": "PROJECT-KEY"},
-                        "user": {"id": "", "title": ""},
-                        "deployment": "gpt-4",
-                        "token_usage": {
-                            "completion_tokens": 189,
-                            "prompt_tokens": 22,
-                            "total_tokens": 211,
-                            "deployment_price": 0.001,
-                            "price": 0.001,
-                        },
-                        "request": {
-                            "protocol": "HTTP/1.1",
-                            "method": "POST",
-                            "uri": "/openai/deployments/gpt-4/chat/completions?api-version=2023-03-15-preview",
-                            "time": "2023-08-16T19:42:39.997",
-                        },
-                        "response": {"status": "200"},
-                    }
-                )
-            },
-            {
-                "message": json.dumps(
-                    {
-                        "apiType": "DialOpenAI",
-                        "chat": {"id": "chat-2"},
-                        "project": {"id": "PROJECT-KEY-2"},
-                        "user": {"id": "", "title": ""},
-                        "deployment": "gpt-4",
-                        "token_usage": {
-                            "completion_tokens": 189,
-                            "prompt_tokens": 22,
-                            "total_tokens": 211,
-                            "deployment_price": 0.001,
-                            "price": 0.001,
-                        },
-                        "request": {
-                            "protocol": "HTTP/1.1",
-                            "method": "POST",
-                            "uri": "/openai/deployments/gpt-4/chat/completions",
-                            "time": "2023-11-24T03:33:40.39",
-                        },
-                        "response": {"status": "200"},
-                    }
-                )
-            },
-        ],
+    message = create_message(
+        token_usage={
+            "completion_tokens": 189,
+            "prompt_tokens": 22,
+            "total_tokens": 211,
+            "deployment_price": 0.001,
+            "price": 0.002,
+        },
+        response_assembled=None,
     )
+
+    response = client.post("/data", json=create_data_request(message))
     assert response.status_code == 200
-    assert len(write_api_mock.points) == 2
+    assert len(write_api_mock.points) == 1
 
-    assert re.match(
-        r'analytics,core_parent_span_id=undefined,core_span_id=undefined,deployment=gpt-4,execution_path=undefined,language=undefined,model=gpt-4,parent_deployment=undefined,project_id=PROJECT-KEY,response_id=(.+?),title=undefined,trace_id=undefined,upstream=undefined chat_id="chat-1",completion_tokens=189i,deployment_price=0.001,number_request_messages=0i,price=0.001,prompt_tokens=22i,user_hash="undefined" 1692214959997000000',
-        write_api_mock.points[0],
+    point = create_point(
+        response_id="pseudo-uuid-1",
+        topic=None,
+        price=0.002,
+        deployment_price=0.001,
+        completion_tokens=189,
+        prompt_tokens=22,
     )
 
-    assert re.match(
-        r'analytics,core_parent_span_id=undefined,core_span_id=undefined,deployment=gpt-4,execution_path=undefined,language=undefined,model=gpt-4,parent_deployment=undefined,project_id=PROJECT-KEY-2,response_id=(.+?),title=undefined,trace_id=undefined,upstream=undefined chat_id="chat-2",completion_tokens=189i,deployment_price=0.001,number_request_messages=0i,price=0.001,prompt_tokens=22i,user_hash="undefined" 1700796820390000000',
-        write_api_mock.points[1],
-    )
+    assert str(write_api_mock.influx_points[0]) == str(point)
 
 
 def test_chat_completion_list_content(

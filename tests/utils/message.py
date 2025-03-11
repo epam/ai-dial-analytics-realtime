@@ -1,5 +1,11 @@
 import json
 
+from tests.utils.constants import (
+    DEFAULT_CHAT_ID,
+    DEFAULT_PROJECT_ID,
+    DEFAULT_RESPONSE_TIME,
+)
+
 
 def create_chat_completion_request():
     return {
@@ -15,7 +21,11 @@ def create_chat_completion_request():
     }
 
 
-def create_chat_completion_response(*, id: str, created: int):
+def create_chat_completion_response(
+    *,
+    id: str = "chatcmpl-1",
+    created: int = 1692214960,
+):
     return {
         "id": id,
         "object": "chat.completion.chunk",
@@ -41,13 +51,14 @@ def create_chat_completion_response(*, id: str, created: int):
 
 def create_message(
     *,
-    chat_id: str,
-    project_id: str,
-    request_uri: str,
-    request_time: str,
-    request_body: dict,
-    response_assembled: dict,
-    response_body: str,
+    chat_id: str = DEFAULT_CHAT_ID,
+    project_id: str = DEFAULT_PROJECT_ID,
+    request_uri: str = "/openai/deployments/gpt-4/chat/completions?api-version=2023-03-15-preview",
+    token_usage: dict | None = None,
+    request_time: str = DEFAULT_RESPONSE_TIME,
+    request_body: dict = create_chat_completion_request(),
+    response_body: str | None = None,
+    response_assembled: dict | None = create_chat_completion_response(),
 ):
     return {
         "apiType": "DialOpenAI",
@@ -55,6 +66,7 @@ def create_message(
         "project": {"id": project_id},
         "user": {"id": "", "title": ""},
         "deployment": "gpt-4",
+        "token_usage": token_usage,
         "request": {
             "protocol": "HTTP/1.1",
             "method": "POST",
@@ -62,6 +74,10 @@ def create_message(
             "time": request_time,
             "body": json.dumps(request_body),
         },
-        "assembled_response": json.dumps(response_assembled),
+        "assembled_response": (
+            None
+            if response_assembled is None
+            else json.dumps(response_assembled)
+        ),
         "response": {"status": "200", "body": response_body},
     }

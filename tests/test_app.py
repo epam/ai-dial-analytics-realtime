@@ -1,135 +1,65 @@
 import json
 import re
 
+import httpx
+import pytest
 from fastapi.testclient import TestClient
 
 import aidial_analytics_realtime.app as app
 from tests.mocks import InfluxWriterMock, TestTopicModel
+from tests.utils.message import (
+    create_chat_completion_request,
+    create_chat_completion_response,
+    create_message,
+)
+
+_BASELINE_MESSAGE1 = create_message(
+    chat_id="chat-1",
+    project_id="PROJECT-KEY",
+    request_uri="/openai/deployments/gpt-4/chat/completions?api-version=2023-03-15-preview",
+    request_time="2023-08-16T19:42:39.997",
+    request_body=create_chat_completion_request(),
+    response_body="whatever",
+    response_assembled=create_chat_completion_response(
+        id="chatcmpl-1", created=1692214960
+    ),
+)
+
+_BASELINE_MESSAGE2 = create_message(
+    chat_id="chat-2",
+    project_id="PROJECT-KEY-2",
+    request_uri="/openai/deployments/gpt-4/chat/completions?api-version=2023-03-15-preview",
+    request_time="2023-11-24T03:33:40.39",
+    request_body=create_chat_completion_request(),
+    response_body="whatever",
+    response_assembled=create_chat_completion_response(
+        id="chatcmpl-2", created=1700828102
+    ),
+)
 
 
-def test_chat_completion_plain_text():
-    write_api_mock = InfluxWriterMock()
-    app.app.dependency_overrides[app.InfluxWriterAsync] = lambda: write_api_mock
+@pytest.fixture
+def write_api_mock():
+    return InfluxWriterMock()
+
+
+@pytest.fixture
+def client(write_api_mock):
+    app.app.dependency_overrides[app.InfluxWriterAsync] = lambda: write_api_mock  # type: ignore
     app.app.dependency_overrides[app.TopicModel] = lambda: TestTopicModel()
+    return TestClient(app.app)
+
+
+def test_chat_completion_plain_text(
+    client: httpx.Client, write_api_mock: InfluxWriterMock
+):
 
     client = TestClient(app.app)
     response = client.post(
         "/data",
         json=[
-            {
-                "message": json.dumps(
-                    {
-                        "apiType": "DialOpenAI",
-                        "chat": {"id": "chat-1"},
-                        "project": {"id": "PROJECT-KEY"},
-                        "user": {"id": "", "title": ""},
-                        "deployment": "gpt-4",
-                        "request": {
-                            "protocol": "HTTP/1.1",
-                            "method": "POST",
-                            "uri": "/openai/deployments/gpt-4/chat/completions?api-version=2023-03-15-preview",
-                            "time": "2023-08-16T19:42:39.997",
-                            "body": json.dumps(
-                                {
-                                    "messages": [
-                                        {"role": "system", "content": ""},
-                                        {"role": "user", "content": "ping"},
-                                    ],
-                                    "model": "gpt-4",
-                                    "max_tokens": 2000,
-                                    "stream": True,
-                                    "n": 1,
-                                    "temperature": 0.0,
-                                }
-                            ),
-                        },
-                        "assembled_response": json.dumps(
-                            {
-                                "id": "chatcmpl-1",
-                                "object": "chat.completion",
-                                "created": 1692214960,
-                                "model": "gpt-4",
-                                "choices": [
-                                    {
-                                        "index": 0,
-                                        "delta": {
-                                            "role": "assistant",
-                                            "content": "pong",
-                                        },
-                                        "finish_reason": "stop",
-                                    }
-                                ],
-                                "usage": {
-                                    "completion_tokens": 189,
-                                    "prompt_tokens": 22,
-                                    "total_tokens": 211,
-                                },
-                            }
-                        ),
-                        "response": {
-                            "status": "200",
-                            "body": 'data: {"id":"chatcmpl-1","object":"chat.completion.chunk","created":1692214960,"model":"gpt-4","choices":[{"index":0,"delta":{"role":"assistant","content":"pong"},"finish_reason":null}]}\n\ndata: {"id":"chatcmpl-1","object":"chat.completion.chunk","created":1692214960,"model":"gpt-4","choices":[{"index":0,"delta":{},"finish_reason":"stop"}],"usage":{"completion_tokens":189,"prompt_tokens":22,"total_tokens":211}}\n\ndata: [DONE]\n',
-                        },
-                    }
-                )
-            },
-            {
-                "message": json.dumps(
-                    {
-                        "apiType": "DialOpenAI",
-                        "chat": {"id": "chat-2"},
-                        "project": {"id": "PROJECT-KEY-2"},
-                        "user": {"id": "", "title": ""},
-                        "deployment": "gpt-4",
-                        "request": {
-                            "protocol": "HTTP/1.1",
-                            "method": "POST",
-                            "uri": "/openai/deployments/gpt-4/chat/completions",
-                            "time": "2023-11-24T03:33:40.39",
-                            "body": json.dumps(
-                                {
-                                    "messages": [
-                                        {"role": "system", "content": ""},
-                                        {"role": "user", "content": "ping"},
-                                    ],
-                                    "model": "gpt-4",
-                                    "max_tokens": 2000,
-                                    "stream": True,
-                                    "n": 1,
-                                    "temperature": 0.0,
-                                }
-                            ),
-                        },
-                        "assembled_response": json.dumps(
-                            {
-                                "id": "chatcmpl-2",
-                                "object": "chat.completion",
-                                "created": 1700828102,
-                                "model": "gpt-4",
-                                "choices": [
-                                    {
-                                        "index": 0,
-                                        "delta": {
-                                            "role": "assistant",
-                                            "content": "pong",
-                                        },
-                                        "finish_reason": "stop",
-                                    }
-                                ],
-                                "usage": {
-                                    "completion_tokens": 189,
-                                    "prompt_tokens": 22,
-                                    "total_tokens": 211,
-                                },
-                            }
-                        ),
-                        "response": {
-                            "status": "200",
-                            "body": 'data: {"id":"chatcmpl-2","object":"chat.completion.chunk","created":1700828102,"model":"gpt-4","choices":[{"index":0,"delta":{"role":"assistant","content":"po"},"finish_reason":null}]}\n\ndata: {"id":"chatcmpl-2","object":"chat.completion.chunk","created":1700828102,"model":"gpt-4","choices":[{"index":0,"delta":{"content":"ng"},"finish_reason":null}]}\n\ndata: {"id":"chatcmpl-2","object":"chat.completion.chunk","created":1700828102,"model":"gpt-4","choices":[{"index":0,"delta":{},"finish_reason":"stop"}],"usage":{"completion_tokens":189,"prompt_tokens":22,"total_tokens":211}}\n\ndata: [DONE]\n',
-                        },
-                    }
-                )
-            },
+            {"message": json.dumps(_BASELINE_MESSAGE1)},
+            {"message": json.dumps(_BASELINE_MESSAGE2)},
         ],
     )
     assert response.status_code == 200
@@ -139,12 +69,9 @@ def test_chat_completion_plain_text():
     ]
 
 
-def test_chat_completion_plain_text_no_body():
-    write_api_mock = InfluxWriterMock()
-    app.app.dependency_overrides[app.InfluxWriterAsync] = lambda: write_api_mock
-    app.app.dependency_overrides[app.TopicModel] = lambda: TestTopicModel()
-
-    client = TestClient(app.app)
+def test_chat_completion_plain_text_no_body(
+    client: httpx.Client, write_api_mock: InfluxWriterMock
+):
     response = client.post(
         "/data",
         json=[
@@ -214,12 +141,10 @@ def test_chat_completion_plain_text_no_body():
     )
 
 
-def test_chat_completion_list_content():
-    write_api_mock = InfluxWriterMock()
-    app.app.dependency_overrides[app.InfluxWriterAsync] = lambda: write_api_mock
-    app.app.dependency_overrides[app.TopicModel] = lambda: TestTopicModel()
+def test_chat_completion_list_content(
+    client: httpx.Client, write_api_mock: InfluxWriterMock
+):
 
-    client = TestClient(app.app)
     response = client.post(
         "/data",
         json=[
@@ -296,12 +221,9 @@ def test_chat_completion_list_content():
     ]
 
 
-def test_chat_completion_none_content():
-    write_api_mock = InfluxWriterMock()
-    app.app.dependency_overrides[app.InfluxWriterAsync] = lambda: write_api_mock
-    app.app.dependency_overrides[app.TopicModel] = lambda: TestTopicModel()
-
-    client = TestClient(app.app)
+def test_chat_completion_none_content(
+    client: httpx.Client, write_api_mock: InfluxWriterMock
+):
     response = client.post(
         "/data",
         json=[
@@ -394,12 +316,9 @@ def test_chat_completion_none_content():
     ]
 
 
-def test_embeddings_plain_text():
-    write_api_mock: app.InfluxWriterAsync = InfluxWriterMock()
-    app.app.dependency_overrides[app.InfluxWriterAsync] = lambda: write_api_mock
-    app.app.dependency_overrides[app.TopicModel] = lambda: TestTopicModel()
-
-    client = TestClient(app.app)
+def test_embeddings_plain_text(
+    client: httpx.Client, write_api_mock: InfluxWriterMock
+):
     response = client.post(
         "/data",
         json=[
@@ -470,12 +389,9 @@ def test_embeddings_plain_text():
     )
 
 
-def test_embeddings_no_body():
-    write_api_mock: app.InfluxWriterAsync = InfluxWriterMock()
-    app.app.dependency_overrides[app.InfluxWriterAsync] = lambda: write_api_mock
-    app.app.dependency_overrides[app.TopicModel] = lambda: TestTopicModel()
-
-    client = TestClient(app.app)
+def test_embeddings_no_body(
+    client: httpx.Client, write_api_mock: InfluxWriterMock
+):
     response = client.post(
         "/data",
         json=[
@@ -521,12 +437,9 @@ def test_embeddings_no_body():
     )
 
 
-def test_embeddings_tokens():
-    write_api_mock: app.InfluxWriterAsync = InfluxWriterMock()
-    app.app.dependency_overrides[app.InfluxWriterAsync] = lambda: write_api_mock
-    app.app.dependency_overrides[app.TopicModel] = lambda: TestTopicModel()
-
-    client = TestClient(app.app)
+def test_embeddings_tokens(
+    client: httpx.Client, write_api_mock: InfluxWriterMock
+):
     response = client.post(
         "/data",
         json=[
@@ -599,12 +512,10 @@ def test_embeddings_tokens():
     )
 
 
-def test_data_request_with_new_format():
-    write_api_mock: app.InfluxWriterAsync = InfluxWriterMock()
-    app.app.dependency_overrides[app.InfluxWriterAsync] = lambda: write_api_mock
-    app.app.dependency_overrides[app.TopicModel] = lambda: TestTopicModel()
+def test_data_request_with_new_format(
+    client: httpx.Client, write_api_mock: InfluxWriterMock
+):
 
-    client = TestClient(app.app)
     response = client.post(
         "/data",
         json=[
@@ -754,12 +665,8 @@ def test_data_request_with_new_format():
     ]
 
 
-def test_rate_request():
-    write_api_mock = InfluxWriterMock()
-    app.app.dependency_overrides[app.InfluxWriterAsync] = lambda: write_api_mock
-    app.app.dependency_overrides[app.TopicModel] = lambda: TestTopicModel()
+def test_rate_request(client: httpx.Client, write_api_mock: InfluxWriterMock):
 
-    client = TestClient(app.app)
     response = client.post(
         "/data",
         json=[

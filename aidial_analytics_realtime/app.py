@@ -42,6 +42,7 @@ async def lifespan(app: FastAPI):
     influx_client, influx_writer = create_influx_writer()
     with cpu_task_executor:
         async with influx_client:
+            # FIXME: rewrite as a native dependency
             app.dependency_overrides[InfluxWriterAsync] = lambda: influx_writer
 
             topic_model = TopicModel()

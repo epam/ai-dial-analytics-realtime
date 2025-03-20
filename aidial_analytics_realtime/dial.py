@@ -23,7 +23,9 @@ def get_chat_completion_response_contents(response: dict | None) -> List[str]:
         return []
 
 
-def get_embeddings_request_contents(request: dict) -> List[str]:
+def get_embeddings_request_contents(request: dict | None) -> List[str]:
+    if request is None:
+        return []
     try:
         return list(_embeddings_request_contents(request))
     except Exception as e:

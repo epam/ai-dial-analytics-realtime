@@ -9,8 +9,8 @@ def get_assembled_response(message: dict) -> dict | None:
 
     try:
         assembled_response = json.loads(assembled_response_str)
-    except json.JSONDecodeError as e:
-        logger.error(f"The assembled response isn't a valid JSON")
+    except json.JSONDecodeError:
+        logger.error("The assembled response isn't a valid JSON")
         return None
 
     # NOTE: this transformation becomes redundant in ai-dial-core>=0.22.1

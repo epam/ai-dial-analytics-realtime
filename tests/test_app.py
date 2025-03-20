@@ -1,6 +1,7 @@
 import json
 import re
 
+import pytest
 from fastapi.testclient import TestClient
 
 import aidial_analytics_realtime.app as app
@@ -825,3 +826,65 @@ def test_rate_request():
         "rate_analytics,chat_id=chat-1,deployment=gpt-4,project_id=PROJECT-KEY,response_id=response_123,title=undefined,user_hash=undefined dislike_count=0i,like_count=1i 1692214959997000000",
         "rate_analytics,chat_id=chat-1,deployment=gpt-4,project_id=PROJECT-KEY,response_id=response_124,title=undefined,user_hash=undefined dislike_count=1i,like_count=0i 1700796820390000000",
     ]
+
+
+@pytest.mark.parametrize("assembled_response", [None, "{}", "", "invalid JSON"])
+def test_chat_completion_invalid_assembled_response(assembled_response):
+    write_api_mock = InfluxWriterMock()
+    app.app.dependency_overrides[app.InfluxWriterAsync] = lambda: write_api_mock
+    app.app.dependency_overrides[app.TopicModel] = lambda: TestTopicModel()
+
+    client = TestClient(app.app)
+    response = client.post(
+        "/data",
+        json=[
+            {
+                "message": json.dumps(
+                    {
+                        "apiType": "DialOpenAI",
+                        "chat": {"id": "chat-1"},
+                        "project": {"id": "PROJECT-KEY"},
+                        "user": {"id": "", "title": ""},
+                        "deployment": "gpt-4",
+                        "request": {
+                            "protocol": "HTTP/1.1",
+                            "method": "POST",
+                            "uri": "/openai/deployments/gpt-4/chat/completions?api-version=2023-03-15-preview",
+                            "time": "2023-08-16T19:42:39.997",
+                            "body": json.dumps(
+                                {
+                                    "messages": [
+                                        {"role": "system", "content": ""},
+                                        {"role": "user", "content": "ping"},
+                                    ],
+                                    "model": "gpt-4",
+                                    "max_tokens": 2000,
+                                    "stream": True,
+                                    "n": 1,
+                                    "temperature": 0.0,
+                                }
+                            ),
+                        },
+                        "token_usage": {
+                            "completion_tokens": 189,
+                            "prompt_tokens": 22,
+                            "total_tokens": 211,
+                            "deployment_price": 0.001,
+                            "price": 0.001,
+                        },
+                        "assembled_response": assembled_response,
+                        "response": {
+                            "status": "200",
+                            "body": 'data: {"id":"chatcmpl-1","object":"chat.completion.chunk","created":1692214960,"model":"gpt-4","choices":[{"index":0,"delta":{"role":"assistant","content":"pong"},"finish_reason":null}]}\n\ndata: {"id":"chatcmpl-1","object":"chat.completion.chunk","created":1692214960,"model":"gpt-4","choices":[{"index":0,"delta":{},"finish_reason":"stop"}],"usage":{"completion_tokens":189,"prompt_tokens":22,"total_tokens":211}}\n\ndata: [DONE]\n',
+                        },
+                    }
+                )
+            }
+        ],
+    )
+    assert response.status_code == 200
+    assert len(write_api_mock.points) == 1
+    assert re.match(
+        r'analytics,core_parent_span_id=undefined,core_span_id=undefined,deployment=gpt-4,execution_path=undefined,language=undefined,model=gpt-4,parent_deployment=undefined,project_id=PROJECT-KEY,response_id=(.+?),title=undefined,topic=ping,trace_id=undefined,upstream=undefined chat_id="chat-1",completion_tokens=189i,deployment_price=0.001,number_request_messages=2i,price=0.001,prompt_tokens=22i,user_hash="undefined" 1692214959997000000',
+        write_api_mock.points[0],
+    )

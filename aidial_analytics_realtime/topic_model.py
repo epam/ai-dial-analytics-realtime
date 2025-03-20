@@ -32,7 +32,13 @@ class TopicModel:
         self.model.transform(["test"])
 
     async def get_topic_by_text(self, text: str) -> str | None:
-        return await run_in_cpu_tasks_executor(self._get_topic_by_text, text)
+        try:
+            return await run_in_cpu_tasks_executor(
+                self._get_topic_by_text, text
+            )
+        except Exception as e:
+            logger.error(f"topic: failed to determine topic: {e}")
+            return None
 
     def _get_topic_by_text(self, text: str) -> str | None:
         text = text.strip()

@@ -69,35 +69,32 @@ async def make_point(
     response_content = ""
     request_content = ""
 
-    if response is not None and request is not None:
-        match request_type:
-            case RequestType.CHAT_COMPLETION:
-                response_contents = get_chat_completion_response_contents(
-                    response
+    match request_type:
+        case RequestType.CHAT_COMPLETION:
+            response_contents = get_chat_completion_response_contents(response)
+            request_contents = get_chat_completion_request_contents(request)
+
+            request_content = "\n".join(request_contents)
+            response_content = "\n".join(response_contents)
+
+            if chat_id:
+                topic = to_string(
+                    await topic_model.get_topic_by_text(
+                        "\n\n".join(request_contents + response_contents),
+                    )
                 )
-                request_contents = get_chat_completion_request_contents(request)
+        case RequestType.EMBEDDING:
+            request_contents = get_embeddings_request_contents(request)
 
-                request_content = "\n".join(request_contents)
-                response_content = "\n".join(response_contents)
-
-                if chat_id:
-                    topic = to_string(
-                        await topic_model.get_topic_by_text(
-                            "\n\n".join(request_contents + response_contents),
-                        )
+            request_content = "\n".join(request_contents)
+            if chat_id:
+                topic = to_string(
+                    await topic_model.get_topic_by_text(
+                        "\n\n".join(request_contents)
                     )
-            case RequestType.EMBEDDING:
-                request_contents = get_embeddings_request_contents(request)
-
-                request_content = "\n".join(request_contents)
-                if chat_id:
-                    topic = to_string(
-                        await topic_model.get_topic_by_text(
-                            "\n\n".join(request_contents)
-                        )
-                    )
-            case _:
-                assert_never(request_type)
+                )
+        case _:
+            assert_never(request_type)
 
     price = Decimal(0)
     deployment_price = Decimal(0)
@@ -148,6 +145,7 @@ async def make_point(
                 response["id"]
                 if request_type == RequestType.CHAT_COMPLETION
                 and response is not None
+                and "id" in response
                 else uuid4()
             ),
         )

@@ -4,7 +4,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 import aidial_analytics_realtime.app as app
-from tests.influx_writer_mock import InfluxWriterMock
+from tests.mocks import InfluxWriterMock
 
 
 @pytest.mark.with_external
@@ -46,6 +46,29 @@ def test_data_request():
                                 }
                             ),
                         },
+                        "assembled_response": json.dumps(
+                            {
+                                "id": "chatcmpl-1",
+                                "object": "chat.completion.chunk",
+                                "created": 1692214960,
+                                "model": "gpt-4",
+                                "choices": [
+                                    {
+                                        "index": 0,
+                                        "delta": {
+                                            "role": "assistant",
+                                            "content": "Hi",
+                                        },
+                                        "finish_reason": "stop",
+                                    }
+                                ],
+                                "usage": {
+                                    "completion_tokens": 189,
+                                    "prompt_tokens": 22,
+                                    "total_tokens": 211,
+                                },
+                            }
+                        ),
                         "response": {
                             "status": "200",
                             "body": 'data: {"id":"chatcmpl-1","object":"chat.completion.chunk","created":1692214960,"model":"gpt-4","choices":[{"index":0,"delta":{"role":"assistant","content":"Hi"},"finish_reason":null}]}\n\ndata: {"id":"chatcmpl-1","object":"chat.completion.chunk","created":1692214960,"model":"gpt-4","choices":[{"index":0,"delta":{},"finish_reason":"stop"}],"usage":{"completion_tokens":189,"prompt_tokens":22,"total_tokens":211}}\n\ndata: [DONE]\n',
@@ -112,6 +135,29 @@ def test_data_request_with_new_format():
                                 }
                             ),
                         },
+                        "assembled_response": json.dumps(
+                            {
+                                "id": "chatcmpl-1",
+                                "object": "chat.completion.chunk",
+                                "created": 1692214960,
+                                "model": "gpt-4",
+                                "choices": [
+                                    {
+                                        "index": 0,
+                                        "delta": {
+                                            "role": "assistant",
+                                            "content": "Hi",
+                                        },
+                                        "finish_reason": "stop",
+                                    }
+                                ],
+                                "usage": {
+                                    "completion_tokens": 189,
+                                    "prompt_tokens": 22,
+                                    "total_tokens": 211,
+                                },
+                            }
+                        ),
                         "response": {
                             "status": "200",
                             "body": 'data: {"id":"chatcmpl-1","object":"chat.completion.chunk","created":1692214960,"model":"gpt-4","choices":[{"index":0,"delta":{"role":"assistant","content":"Hi"},"finish_reason":null}]}\n\ndata: {"id":"chatcmpl-1","object":"chat.completion.chunk","created":1692214960,"model":"gpt-4","choices":[{"index":0,"delta":{},"finish_reason":"stop"}],"usage":{"completion_tokens":189,"prompt_tokens":22,"total_tokens":211}}\n\ndata: [DONE]\n',

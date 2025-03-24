@@ -1,17 +1,20 @@
 from datetime import datetime
 from decimal import Decimal
 from enum import Enum
-from logging import Logger
-from typing import Awaitable, Callable
 from uuid import uuid4
 
 from influxdb_client import Point
-from langid.langid import LanguageIdentifier, model
+from typing_extensions import assert_never
 
+from aidial_analytics_realtime.dial import (
+    get_chat_completion_request_contents,
+    get_chat_completion_response_contents,
+    get_embeddings_request_contents,
+)
+from aidial_analytics_realtime.influx_writer import InfluxWriterAsync
+from aidial_analytics_realtime.langid import detect_lang_by_text
 from aidial_analytics_realtime.rates import RatesCalculator
 from aidial_analytics_realtime.topic_model import TopicModel
-
-identifier = LanguageIdentifier.from_modelstring(model, norm_probs=True)
 
 
 class RequestType(Enum):
@@ -19,44 +22,31 @@ class RequestType(Enum):
     EMBEDDING = 2
 
 
-def detect_lang(request, response, request_type):
-    if request_type == RequestType.CHAT_COMPLETION:
-        text = (
-            request["messages"][-1]["content"]
-            + "\n\n"
-            + response["choices"][0]["message"]["content"]
-        )
-    else:
-        text = (
-            request["input"]
-            if isinstance(request["input"], str)
-            else "\n\n".join(request["input"])
-        )
+async def detect_lang(
+    request: dict, response: dict, request_type: RequestType
+) -> str:
+    match request_type:
+        case RequestType.CHAT_COMPLETION:
+            request_contents = get_chat_completion_request_contents(request)
+            response_content = get_chat_completion_response_contents(response)
+            text = "\n\n".join(request_contents[-1:] + response_content)
+        case RequestType.EMBEDDING:
+            text = "\n\n".join(get_embeddings_request_contents(request))
+        case _:
+            assert_never(request_type)
 
-    return detect_lang_by_text(text)
-
-
-def detect_lang_by_text(text):
-    try:
-        lang, prob = identifier.classify(text)
-
-        if prob > 0.998:
-            return lang
-
-        return "undefined"
-    except Exception:
-        return "undefined"
+    return to_string(await detect_lang_by_text(text))
 
 
-def to_string(obj: str | None):
-    return obj if obj else "undefined"
+def to_string(obj: str | None) -> str:
+    return obj or "undefined"
 
 
 def build_execution_path(path: list | None):
     return "undefined" if not path else "/".join(map(to_string, path))
 
 
-def make_point(
+async def make_point(
     deployment: str,
     model: str,
     project_id: str,
@@ -65,8 +55,8 @@ def make_point(
     user_hash: str,
     user_title: str,
     timestamp: datetime,
-    request: dict,
-    response: dict,
+    request: dict | None,
+    response: dict | None,
     request_type: RequestType,
     usage: dict | None,
     topic_model: TopicModel,
@@ -78,25 +68,33 @@ def make_point(
     topic = None
     response_content = ""
     request_content = ""
-    if request_type == RequestType.CHAT_COMPLETION:
-        response_content = response["choices"][0]["message"]["content"]
-        request_content = "\n".join(
-            [message["content"] for message in request["messages"]]
-        )
-        if chat_id:
-            topic = topic_model.get_topic(request["messages"], response_content)
-    else:
-        request_content = (
-            request["input"]
-            if isinstance(request["input"], str)
-            else "\n".join(request["input"])
-        )
-        if chat_id:
-            topic = topic_model.get_topic_by_text(
-                request["input"]
-                if isinstance(request["input"], str)
-                else "\n\n".join(request["input"])
-            )
+
+    match request_type:
+        case RequestType.CHAT_COMPLETION:
+            response_contents = get_chat_completion_response_contents(response)
+            request_contents = get_chat_completion_request_contents(request)
+
+            request_content = "\n".join(request_contents)
+            response_content = "\n".join(response_contents)
+
+            if chat_id:
+                topic = to_string(
+                    await topic_model.get_topic_by_text(
+                        "\n\n".join(request_contents + response_contents),
+                    )
+                )
+        case RequestType.EMBEDDING:
+            request_contents = get_embeddings_request_contents(request)
+
+            request_content = "\n".join(request_contents)
+            if chat_id:
+                topic = to_string(
+                    await topic_model.get_topic_by_text(
+                        "\n\n".join(request_contents)
+                    )
+                )
+        case _:
+            assert_never(request_type)
 
     price = Decimal(0)
     deployment_price = Decimal(0)
@@ -126,7 +124,7 @@ def make_point(
             (
                 "undefined"
                 if not trace
-                else to_string(trace.get("core_parent_span_id", None))
+                else to_string(trace.get("core_parent_span_id"))
             ),
         )
         .tag("project_id", project_id)
@@ -134,8 +132,8 @@ def make_point(
             "language",
             (
                 "undefined"
-                if not chat_id
-                else detect_lang(request, response, request_type)
+                if not chat_id or request is None or response is None
+                else await detect_lang(request, response, request_type)
             ),
         )
         .tag("upstream", to_string(upstream_url))
@@ -146,6 +144,8 @@ def make_point(
             (
                 response["id"]
                 if request_type == RequestType.CHAT_COMPLETION
+                and response is not None
+                and "id" in response
                 else uuid4()
             ),
         )
@@ -155,12 +155,16 @@ def make_point(
         .field(
             "number_request_messages",
             (
-                len(request["messages"])
-                if request_type == RequestType.CHAT_COMPLETION
+                0
+                if request is None
                 else (
-                    1
-                    if isinstance(request["input"], str)
-                    else len(request["input"])
+                    len(request["messages"])
+                    if request_type == RequestType.CHAT_COMPLETION
+                    else (
+                        1
+                        if isinstance(request["input"], str)
+                        else len(request["input"])
+                    )
                 )
             ),
         )
@@ -211,8 +215,11 @@ def make_rate_point(
     return point
 
 
-async def parse_usage_per_model(response: dict):
-    statistics = response.get("statistics", None)
+async def parse_usage_per_model(response: dict | None):
+    if response is None:
+        return []
+
+    statistics = response.get("statistics")
     if statistics is None:
         return []
 
@@ -227,8 +234,7 @@ async def parse_usage_per_model(response: dict):
 
 
 async def on_message(
-    logger: Logger,
-    influx_writer: Callable[[Point], Awaitable[None]],
+    influx_writer: InfluxWriterAsync,
     deployment: str,
     model: str,
     project_id: str,
@@ -237,8 +243,8 @@ async def on_message(
     user_hash: str,
     user_title: str,
     timestamp: datetime,
-    request: dict,
-    response: dict,
+    request: dict | None,
+    response: dict | None,
     type: RequestType,
     topic_model: TopicModel,
     rates_calculator: RatesCalculator,
@@ -247,11 +253,11 @@ async def on_message(
     trace: dict | None,
     execution_path: list | None,
 ):
-    logger.info(f"Chat completion response length {len(response)}")
-
     usage_per_model = await parse_usage_per_model(response)
+    response_usage = None if response is None else response.get("usage")
+
     if token_usage is not None:
-        point = make_point(
+        point = await make_point(
             deployment,
             model,
             project_id,
@@ -272,7 +278,7 @@ async def on_message(
         )
         await influx_writer(point)
     elif len(usage_per_model) == 0:
-        point = make_point(
+        point = await make_point(
             deployment,
             model,
             project_id,
@@ -284,7 +290,7 @@ async def on_message(
             request,
             response,
             type,
-            response.get("usage", None),
+            response_usage,
             topic_model,
             rates_calculator,
             parent_deployment,
@@ -293,7 +299,7 @@ async def on_message(
         )
         await influx_writer(point)
     else:
-        point = make_point(
+        point = await make_point(
             deployment,
             model,
             project_id,
@@ -315,7 +321,7 @@ async def on_message(
         await influx_writer(point)
 
         for usage in usage_per_model:
-            point = make_point(
+            point = await make_point(
                 deployment,
                 usage["model"],
                 project_id,

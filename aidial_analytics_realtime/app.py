@@ -1,10 +1,17 @@
+import asyncio
+import contextlib
 import json
 import logging
 import re
+import sys
 from datetime import datetime
 
+import aiohttp
+import starlette.requests
 import uvicorn
+from aidial_sdk.telemetry.init import TelemetryConfig, init_telemetry
 from fastapi import Depends, FastAPI, Request
+from fastapi.responses import JSONResponse
 
 from aidial_analytics_realtime.analytics import (
     RequestType,
@@ -15,43 +22,42 @@ from aidial_analytics_realtime.influx_writer import (
     InfluxWriterAsync,
     create_influx_writer,
 )
+from aidial_analytics_realtime.log_request.message import get_assembled_response
 from aidial_analytics_realtime.rates import RatesCalculator
 from aidial_analytics_realtime.time import parse_time
 from aidial_analytics_realtime.topic_model import TopicModel
-from aidial_analytics_realtime.universal_api_utils import merge
+from aidial_analytics_realtime.utils.concurrency import cpu_task_executor
+from aidial_analytics_realtime.utils.logging import add_logger_prefix
+from aidial_analytics_realtime.utils.logging import app_logger as logger
+from aidial_analytics_realtime.utils.logging import configure_loggers
+from aidial_analytics_realtime.utils.timer import Timer
 
 RATE_PATTERN = r"/v1/(.+?)/rate"
 CHAT_COMPLETION_PATTERN = r"/openai/deployments/(.+?)/chat/completions"
 EMBEDDING_PATTERN = r"/openai/deployments/(.+?)/embeddings"
 
 
-app = FastAPI()
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] - %(message)s",
-    handlers=[logging.StreamHandler()],
-)
-
-logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
-
-
-@app.on_event("startup")
-async def startup_event():
+@contextlib.asynccontextmanager
+async def lifespan(app: FastAPI):
     influx_client, influx_writer = create_influx_writer()
-    app.state.influx_client = influx_client
-    app.dependency_overrides[InfluxWriterAsync] = lambda: influx_writer
+    with cpu_task_executor:
+        async with influx_client:
+            app.dependency_overrides[InfluxWriterAsync] = lambda: influx_writer
 
-    topic_model = TopicModel()
-    app.dependency_overrides[TopicModel] = lambda: topic_model
+            topic_model = TopicModel()
+            app.dependency_overrides[TopicModel] = lambda: topic_model
 
-    rates_calculator = RatesCalculator()
-    app.dependency_overrides[RatesCalculator] = lambda: rates_calculator
+            rates_calculator = RatesCalculator()
+            app.dependency_overrides[RatesCalculator] = lambda: rates_calculator
+
+            yield
 
 
-@app.on_event("shutdown")
-async def shutdown_event():
-    await app.state.influx_client.close()
+app = FastAPI(lifespan=lifespan)
+
+init_telemetry(app, TelemetryConfig())
+
+configure_loggers()
 
 
 async def on_rate_message(
@@ -65,7 +71,6 @@ async def on_rate_message(
     response: dict,
     influx_writer: InfluxWriterAsync,
 ):
-    logger.info(f"Rate message length {len(request) + len(response)}")
     request_body = json.loads(request["body"])
     point = make_rate_point(
         deployment,
@@ -89,6 +94,7 @@ async def on_chat_completion_message(
     timestamp: datetime,
     request: dict,
     response: dict,
+    response_body: dict | None,
     influx_writer: InfluxWriterAsync,
     topic_model: TopicModel,
     rates_calculator: RatesCalculator,
@@ -100,42 +106,17 @@ async def on_chat_completion_message(
     if response["status"] != "200":
         return
 
-    request_body = json.loads(request["body"])
-    stream = request_body.get("stream", False)
-    model = request_body.get("model", deployment)
+    request_body = None
+    model: str | None = None
 
-    response_body = None
-    if stream:
-        body = response["body"]
-        chunks = body.split("\n\ndata: ")
-
-        chunks = [chunk.strip() for chunk in chunks]
-
-        chunks[0] = chunks[0][chunks[0].find("data: ") + 6 :]
-        if chunks[-1] == "[DONE]":
-            chunks.pop(len(chunks) - 1)
-
-        response_body = json.loads(chunks[-1])
-        for chunk in chunks[0 : len(chunks) - 1]:
-            chunk = json.loads(chunk)
-
-            response_body["choices"] = merge(
-                response_body["choices"], chunk["choices"]
-            )
-
-        for i in range(len(response_body["choices"])):
-            response_body["choices"][i]["message"] = response_body["choices"][
-                i
-            ]["delta"]
-            del response_body["choices"][i]["delta"]
-    else:
-        response_body = json.loads(response["body"])
+    if (request_body_str := request.get("body")) is not None:
+        request_body = json.loads(request_body_str)
+        model = request_body.get("model") or deployment
 
     await on_message(
-        logger,
         influx_writer,
         deployment,
-        model,
+        model or deployment,
         project_id,
         chat_id,
         upstream_url,
@@ -175,8 +156,17 @@ async def on_embedding_message(
     if response["status"] != "200":
         return
 
+    request_body_str = request.get("body")
+    response_body_str = response.get("body")
+
+    request_body = (
+        None if request_body_str is None else json.loads(request_body_str)
+    )
+    response_body = (
+        None if response_body_str is None else json.loads(response_body_str)
+    )
+
     await on_message(
-        logger,
         influx_writer,
         deployment,
         deployment,
@@ -186,8 +176,8 @@ async def on_embedding_message(
         user_hash,
         user_title,
         timestamp,
-        json.loads(request["body"]),
-        json.loads(response["body"]),
+        request_body,
+        response_body,
         RequestType.EMBEDDING,
         topic_model,
         rates_calculator,
@@ -211,20 +201,16 @@ async def on_log_message(
     chat_id = message["chat"]["id"]
     user_hash = message["user"]["id"]
     user_title = message["user"]["title"]
-    upstream_url = (
-        response["upstream_uri"] if "upstream_uri" in response else ""
-    )
-
     timestamp = parse_time(request["time"])
 
-    token_usage = message.get("token_usage", None)
-    trace = message.get("trace", None)
-    parent_deployment = message.get("parent_deployment", None)
-    execution_path = message.get("execution_path", None)
-    deployment = message.get("deployment", "")
+    upstream_url = response.get("upstream_uri") or ""
+    token_usage = message.get("token_usage")
+    trace = message.get("trace")
+    parent_deployment = message.get("parent_deployment")
+    execution_path = message.get("execution_path")
+    deployment = message.get("deployment") or ""
 
-    match = re.search(RATE_PATTERN, uri)
-    if match:
+    if re.search(RATE_PATTERN, uri):
         await on_rate_message(
             deployment,
             project_id,
@@ -237,8 +223,8 @@ async def on_log_message(
             influx_writer,
         )
 
-    match = re.search(CHAT_COMPLETION_PATTERN, uri)
-    if match:
+    elif re.search(CHAT_COMPLETION_PATTERN, uri):
+        response_body = get_assembled_response(message)
         await on_chat_completion_message(
             deployment,
             project_id,
@@ -249,6 +235,7 @@ async def on_log_message(
             timestamp,
             request,
             response,
+            response_body,
             influx_writer,
             topic_model,
             rates_calculator,
@@ -258,8 +245,7 @@ async def on_log_message(
             execution_path,
         )
 
-    match = re.search(EMBEDDING_PATTERN, uri)
-    if match:
+    elif re.search(EMBEDDING_PATTERN, uri):
         await on_embedding_message(
             deployment,
             project_id,
@@ -279,6 +265,9 @@ async def on_log_message(
             execution_path,
         )
 
+    else:
+        logger.warning(f"Unsupported message type: {uri!r}")
+
 
 @app.post("/data")
 async def on_log_messages(
@@ -287,18 +276,74 @@ async def on_log_messages(
     topic_model: TopicModel = Depends(),
     rates_calculator: RatesCalculator = Depends(),
 ):
+
     data = await request.json()
 
-    for item in data:
-        try:
-            await on_log_message(
-                json.loads(item["message"]),
-                influx_writer,
-                topic_model,
-                rates_calculator,
-            )
-        except Exception as e:
-            logging.exception(e)
+    n = len(data)
+    logger.info(f"number of messages: {n}")
+
+    statuses: list[dict] = []
+
+    async with Timer(logger.debug, format="request {elapsed}"):
+
+        async def _task(i: int, message_str: str) -> dict:
+            add_logger_prefix(f"[{i}/{n}]")
+
+            async with Timer(logger.debug, format="message {elapsed}"):
+                return await process_message(
+                    json.loads(message_str),
+                    influx_writer,
+                    topic_model,
+                    rates_calculator,
+                )
+
+        statuses = await asyncio.gather(
+            *[
+                _task(i, message["message"])
+                for i, message in enumerate(data, start=1)
+            ]
+        )
+
+    if logger.isEnabledFor(logging.DEBUG):
+        logger.debug(f"response: {json.dumps(statuses)}")
+
+    # Returning 200 code even if processing of some messages has failed,
+    # since the log broker that sends the messages may decide to retry the failed requests.
+    return JSONResponse(content=statuses, status_code=200)
+
+
+async def process_message(
+    message: dict,
+    influx_writer: InfluxWriterAsync,
+    topic_model: TopicModel,
+    rates_calculator: RatesCalculator,
+) -> dict:
+    def _error(reason: str | None = None) -> dict:
+        error = str(sys.exc_info()[1])
+        ret = {"status": "error"}
+        if error:
+            ret["error"] = error
+        if reason:
+            ret["reason"] = reason
+            logger.error(reason)
+        else:
+            logger.exception("caught exception")
+        return ret
+
+    try:
+        await on_log_message(
+            message, influx_writer, topic_model, rates_calculator
+        )
+        logger.info("success")
+        return {"status": "success"}
+    except starlette.requests.ClientDisconnect:
+        return _error("client disconnect")
+    except aiohttp.ClientConnectionError:
+        return _error("connection error")
+    except asyncio.TimeoutError:
+        return _error("timeout")
+    except Exception:
+        return _error()
 
 
 @app.get("/health")

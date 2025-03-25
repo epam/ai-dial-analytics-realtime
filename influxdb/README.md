@@ -64,10 +64,11 @@ The project provides pre-defined Flux tasks that perform automatic aggregation o
 
 ### 📦 Task Files
 
-| Task Name         | Schedule            | Description                                |
-|-------------------|---------------------|--------------------------------------------|
-| `aggregate_data`  | Every 6 hours       | Performs 6-hour rolling aggregations       |
-| `monthly_agg`     | 1st of each month   | Computes monthly summaries and KPIs        |
+| Task Name         | Schedule            | Description                                | Buckets Used                                      |
+|-------------------|---------------------|--------------------------------------------|--------------------------------------------------|
+| `aggregate_data`  | Every 6 hours       | Performs 6-hour rolling aggregations       | `default`, `default_agg_stats`, `default_agg_topic`, `default_agg_topic_2`, `default_agg_kpi`, `default_agg_chatid` |
+| `monthly_agg`     | 1st of each month   | Computes monthly summaries and KPIs        | `default_agg_stats`, `default_agg_kpi`, `default_agg_month` |
+
 
 ---
 

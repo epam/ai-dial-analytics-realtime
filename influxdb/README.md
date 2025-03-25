@@ -63,12 +63,19 @@ The project provides pre-defined Flux tasks that perform automatic aggregation o
 
 
 ### 📦 Task Files
+The following **Flux tasks** perform periodic aggregation of data from:
 
-| Task Name         | Schedule            | Description                                | Buckets Used                                      |
-|-------------------|---------------------|--------------------------------------------|--------------------------------------------------|
-| `aggregate_data`  | Every 6 hours       | Performs 6-hour rolling aggregations       | `default`, `default_agg_stats`, `default_agg_topic`, `default_agg_topic_2`, `default_agg_kpi`, `default_agg_chatid` |
-| `monthly_agg`     | 1st of each month   | Computes monthly summaries and KPIs        | `default_agg_stats`, `default_agg_kpi`, `default_agg_month` |
+- the main **`default`** bucket (containing raw analytics data), and  
+- the 6-hour aggregated buckets  
 
+into their respective **target aggregation buckets** used for Grafana dashboards.
+
+> 🔹 The **`default`** bucket serves as the **primary source of raw data** for the `aggregate_data` task.
+
+| Task Name         | Schedule            | Description                                | Source Buckets                              | Target Buckets                                                                                                          |
+|------------------|---------------------|--------------------------------------------|---------------------------------------------|-------------------------------------------------------------------------------------------------------------------------|
+| `aggregate_data` | Every 6 hours       | Performs 6-hour rolling aggregations       | `default`                                   | `default_agg_stats`, `default_agg_topic`, `default_agg_topic_2`, `default_agg_kpi`, `default_agg_chatid`              |
+| `monthly_agg`    | 1st of each month   | Computes monthly summaries and KPIs        | `default_agg_stats`, `default_agg_kpi`      | `default_agg_month`                                                                                                    |
 
 ---
 

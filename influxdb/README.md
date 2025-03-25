@@ -2,7 +2,7 @@
 
 This document explains how to manually create InfluxDB buckets and import Flux tasks to support the optional aggregated Grafana dashboards for AI DIAL Realtime Analytics.
 
-> ⚠️ These steps are **not automated by the Helm chart** and must be performed manually using the InfluxDB CLI or UI.
+> ⚠️ These steps must be performed manually using the InfluxDB CLI or UI.
 
 ---
 

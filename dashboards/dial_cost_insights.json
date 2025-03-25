@@ -18,7 +18,7 @@
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 0,
-  "id": 5,
+  "id": 8,
   "links": [],
   "liveNow": false,
   "panels": [
@@ -31,8 +31,7 @@
       "fieldConfig": {
         "defaults": {
           "color": {
-            "fixedColor": "green",
-            "mode": "fixed"
+            "mode": "thresholds"
           },
           "mappings": [],
           "thresholds": {
@@ -43,21 +42,22 @@
                 "value": null
               },
               {
-                "color": "red",
+                "color": "green",
                 "value": 80
               }
             ]
-          }
+          },
+          "unit": "short"
         },
         "overrides": []
       },
       "gridPos": {
         "h": 5,
-        "w": 2,
+        "w": 5,
         "x": 0,
         "y": 0
       },
-      "id": 16,
+      "id": 33,
       "options": {
         "colorMode": "value",
         "graphMode": "area",
@@ -65,9 +65,9 @@
         "orientation": "auto",
         "reduceOptions": {
           "calcs": [
-            "last"
+            "lastNotNull"
           ],
-          "fields": "/.*/",
+          "fields": "/^predicted_user_cost$/",
           "values": false
         },
         "showPercentChange": false,
@@ -81,11 +81,11 @@
             "type": "influxdb",
             "uid": "P3DF0C308D9792AAA"
           },
-          "query": "import \"experimental\"\r\n\r\n// Constants\r\nthreshold_duration_ns =  ${threshold_duration_ns} // 1 day-1ns in nanoseconds\r\nsix_hours_ns = ${six_hours_ns}  // 6 hours in nanoseconds\r\n\r\n// Calculate the time range duration\r\ntime_diff_ns = int(v: v.timeRangeStop) - int(v: v.timeRangeStart)\r\n\r\n// Calculate remainder for 6-hour alignment at start and end\r\nstart_remainder_ns = int(v: v.timeRangeStart) % six_hours_ns\r\nend_remainder_ns_pre = int(v: v.timeRangeStop) % six_hours_ns\r\n// Extract the hour from timeRangeStop in hours (convert nanoseconds to hours)\r\ntime_hour = int(v: int(v: v.timeRangeStop) % 86400000000000) / 3600000000000\r\n\r\n// Check if the end time is in xx:59:59 for the specified hours (05, 11, 17, 23)\r\nend_remainder_ns = ${end_reminder_calc}\r\n\r\n// Bucket selection logic based on total time range duration\r\nbucket_default_only = time_diff_ns <= threshold_duration_ns\r\n\r\n// Helper function to query bucket\r\ndefault_bucket_query = (start, stop) => from(bucket: \"${INFLUX_BUCKET}\")\r\n    |> range(start: start, stop: stop)\r\n    |> filter(fn: (r) => r._measurement == \"analytics\" and r._field == \"user_hash\" and r._value != \"undefined\")\r\n    |> group()\r\n    |> distinct()\r\n\r\nagg_bucket_query = (start, stop) => from(bucket: \"${INFLUX_BUCKET}_agg_stats\")\r\n    |> range(start: start, stop: stop)\r\n    |> filter(fn: (r) => r._measurement == \"analytics\" and r._field == \"user_hash\"and r._value != \"undefined\")\r\n    |> group()\r\n    |> distinct()\r\n\r\n// Query data for the start from the default bucket if the start time is not aligned\r\ndata_default_start = \r\n    if start_remainder_ns > 0 and not bucket_default_only then ${data_default_start} \r\n    else from(bucket: \"${INFLUX_BUCKET}\") |> limit(n: 0)\r\n\r\n// Query data for the aggregated bucket (middle part)\r\ndata_agg = \r\n    if not bucket_default_only then ${data_agg}\r\n    else from(bucket: \"${INFLUX_BUCKET}_agg_stats\") |> limit(n: 0)\r\n\r\n// Query data for the end from the default bucket if the end time is not aligned\r\ndata_default_end = \r\n        if end_remainder_ns > 0 then ${data_default_end}\r\n        else from(bucket: \"${INFLUX_BUCKET}\") |> limit(n: 0)\r\n\r\n// Combine data from all buckets (start, middle, end)\r\ncombined_data = ${combine_data}\r\n\r\n// Apply final grouping and counting to get the total unique user_hash count\r\nfinal_data = combined_data\r\n    |> group()\r\n    |> distinct()\r\n    |> count()\r\n\r\nif \"${Aggregation}\" == \"SEMI\" then final_data else ${user_cnt_agg}",
+          "query": "import \"influxdata/influxdb/schema\"\r\nimport \"date\"\r\ngetOrDefault = (f, d) => if exists f then f else d\r\n// not in use\r\ndays_observed = 60\r\ntotal_days_in_year = 365\r\nscaling_factor = float(v: total_days_in_year) / float(v: days_observed)\r\n\r\n\r\n//query previous years data\r\ndata = from(bucket: \"default_agg_kpi\")\r\n    |> range(start: -60d)\r\n  |> filter(fn: (r) =>  r._field == \"cost\")\r\n   |> group(columns: [\"_measurement\"])\r\n |> sum(column: \"_value\") // Sum cost within the groups\r\nfull_year_data = data\r\n  |> map(fn: (r) => ({\r\n    prev_user_cost: r._value ,\r\n      predicted_user_cost: r._value * 6.083333\r\n\r\n    }))\r\n    full_year_data\r\n   |> group()\r\n\r\n",
           "refId": "A"
         }
       ],
-      "title": "Unique Users",
+      "title": "Total Cost - Current Year Forecast ($)",
       "type": "stat"
     },
     {
@@ -93,48 +93,87 @@
         "type": "influxdb",
         "uid": "P3DF0C308D9792AAA"
       },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "noValue": "Forecast is not available",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "green",
+                "value": 80
+              }
+            ]
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
       "gridPos": {
-        "h": 10,
-        "w": 22,
-        "x": 2,
+        "h": 5,
+        "w": 6,
+        "x": 5,
         "y": 0
       },
-      "id": 12,
+      "id": 25,
       "options": {
-        "datasource_count_field": "_value",
-        "datasource_tags_field": "topic",
-        "series_index": 0,
-        "wordCloudOptions": {
-          "deterministic": true,
-          "enableTooltip": true,
-          "fontFamily": "arial",
-          "fontSizes": [
-            15,
-            80
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
           ],
-          "padding": 1,
-          "rotationAngles": [
-            0,
-            0
-          ],
-          "rotations": 2,
-          "scale": "sqrt",
-          "spiral": "archimedean",
-          "transitionDuration": 800
-        }
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "value",
+        "wideLayout": true
       },
+      "pluginVersion": "10.4.0",
       "targets": [
         {
           "datasource": {
             "type": "influxdb",
             "uid": "P3DF0C308D9792AAA"
           },
-          "query": "import \"experimental\"\r\n\r\n// Constants\r\nthreshold_duration_ns =  ${threshold_duration_ns} // 1 day-1ns in nanoseconds\r\nsix_hours_ns = ${six_hours_ns}  // 6 hours in nanoseconds\r\n\r\n// Calculate the time range duration\r\ntime_diff_ns = int(v: v.timeRangeStop) - int(v: v.timeRangeStart)\r\n\r\n// Calculate remainder for 6-hour alignment at start and end\r\nstart_remainder_ns = int(v: v.timeRangeStart) % six_hours_ns\r\nend_remainder_ns_pre = int(v: v.timeRangeStop) % six_hours_ns\r\n// Extract the hour from timeRangeStop in hours (convert nanoseconds to hours)\r\ntime_hour = int(v: int(v: v.timeRangeStop) % 86400000000000) / 3600000000000\r\n\r\n// Check if the end time is in xx:59:59 for the specified hours (05, 11, 17, 23)\r\nend_remainder_ns = ${end_reminder_calc}\r\n\r\n// Bucket selection logic based on total time range duration\r\nbucket_default_only = time_diff_ns <= threshold_duration_ns\r\n\r\n// Helper function to query default bucket\r\ndefault_bucket_query = (start, stop) => from(bucket: \"${INFLUX_BUCKET}\")\r\n    |> range(start: start, stop: stop)\r\n    |> filter(fn: (r) => r._measurement == \"analytics\")\r\n    |> filter(fn: (r) => r._field == \"number_request_messages\")\r\n        |> map(fn: (r) => ({r with _field: \"topic_count\"}))  // Map _field to \"topic_count\"\r\n    |> group(columns: [\"topic\"])\r\n    |> count()\r\n    \r\n\r\n// Helper function to query aggregated bucket\r\nagg_bucket_query = (start, stop) => from(bucket: \"${INFLUX_BUCKET}_agg_topic\")\r\n    |> range(start: start, stop: stop)\r\n    |> filter(fn: (r) => r._measurement == \"analytics\" and r._field == \"topic_count\")\r\n    |> group(columns: [\"topic\"])\r\n    |> sum(column: \"_value\")\r\n\r\n// Query data for the start from the default bucket if the start time is not aligned\r\ndata_default_start = \r\n    if start_remainder_ns > 0 and not bucket_default_only then ${data_default_start} \r\n    else from(bucket: \"${INFLUX_BUCKET}\") |> limit(n: 0)\r\n\r\n// Query data for the aggregated bucket (middle part)\r\ndata_agg = \r\n    if not bucket_default_only then ${data_agg}\r\n    else from(bucket: \"${INFLUX_BUCKET}_agg_stats\") |> limit(n: 0)\r\n\r\n// Query data for the end from the default bucket if the end time is not aligned\r\ndata_default_end = \r\n        if end_remainder_ns > 0 then ${data_default_end}\r\n        else from(bucket: \"${INFLUX_BUCKET}\") |> limit(n: 0)\r\n\r\n// Combine data from all buckets (start, middle, end)\r\ncombined_data = ${combine_data}\r\n\r\n// Final aggregation over the entire dataset\r\nfinal_data = combined_data\r\n\r\n    |> map(fn: (r) => ({r with topic: r.topic}))  // Explicitly preserve topic field\r\n    |> map(fn: (r) => ({r with _start: v.timeRangeStart}))  // Add static start time\r\n    |> map(fn: (r) => ({r with _stop: v.timeRangeStop}))  // Add static start time\r\n    |> group(columns: [\"_start\",\"_stop\",\"topic\"])  // Ensure were grouping by topic\r\n    |> sum(column: \"_value\")      // Sum the values by topic\r\n    |> group()\r\n\r\nif \"${Aggregation}\" == \"SEMI\" then final_data else ${topic_agg} \r\n\r\n\r\n",
+          "query": "import \"influxdata/influxdb/schema\"\r\nimport \"date\"\r\ngetOrDefault = (f, d) => if exists f then f else d\r\n// not in use\r\ndays_observed = 60\r\ntotal_days_in_year = 365\r\nscaling_factor = float(v: total_days_in_year) / float(v: days_observed)\r\n\r\n\r\n//query previous years data\r\ndata = from(bucket: \"default_agg_kpi\")\r\n    |> range(start: -60d)\r\n  |> filter(fn: (r) =>  r._field == \"cost\" and r.user_hash == \"undefined\")\r\n   |> group()\r\n |> sum(column: \"_value\") // Sum cost within the groups\r\nfull_year_data = data\r\n  |> map(fn: (r) => ({\r\n    prev_project_cost: r._value ,\r\n      predicted_project_cos: r._value * 6.083333\r\n\r\n    }))\r\n    full_year_data\r\n   |> group()\r\n\r\n",
           "refId": "A"
         }
       ],
-      "title": "Popular Topics",
-      "type": "magnesium-wordcloud-panel"
+      "title": "Project API Cost - Current Year Forecast ($)",
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "prev_project_cost": true
+            },
+            "includeByName": {},
+            "indexByName": {
+              "growth_rate_project": 1,
+              "predicted_project_cos": 2,
+              "prev_project_cost": 0
+            },
+            "renameByName": {
+              "growth_rate_project": "Expected grow rate (%)",
+              "predicted_project_cos": "Current Calendar Year's Project Cost ($)",
+              "prev_project_cost": "Last 60 day's Project Cost"
+            }
+          }
+        }
+      ],
+      "type": "stat"
     },
     {
       "datasource": {
@@ -156,31 +195,32 @@
                 "value": null
               },
               {
-                "color": "red",
+                "color": "green",
                 "value": 80
               }
             ]
-          }
+          },
+          "unit": "short"
         },
         "overrides": []
       },
       "gridPos": {
         "h": 5,
-        "w": 2,
-        "x": 0,
-        "y": 5
+        "w": 6,
+        "x": 11,
+        "y": 0
       },
-      "id": 19,
+      "id": 28,
       "options": {
         "colorMode": "value",
-        "graphMode": "area",
+        "graphMode": "none",
         "justifyMode": "auto",
         "orientation": "auto",
         "reduceOptions": {
           "calcs": [
-            "last"
+            "lastNotNull"
           ],
-          "fields": "/.*/",
+          "fields": "/^difference$/",
           "values": false
         },
         "showPercentChange": false,
@@ -194,11 +234,11 @@
             "type": "influxdb",
             "uid": "P3DF0C308D9792AAA"
           },
-          "query": "import \"experimental\"\r\nimport \"influxdata/influxdb/schema\"\r\n\r\nfrom(bucket: \"default_agg_stats\")\r\n    |> range(start: v.timeRangeStart, stop: v.timeRangeStop)  \r\n  |> filter(fn: (r) => r._field == \"prompt_tokens\" )\r\n   |> filter(fn: (r) => r.project_id != \"\")\r\n  //|> schema.fieldsAsCols()\r\n |> group(columns: [\"project_id\"])\r\n |> distinct(column: \"project_id\") // Get unique project_id values\r\n    |> group()  // Keep project_id in the result\r\n    |> count()",
+          "query": "import \"influxdata/influxdb/schema\"\r\nimport \"date\"\r\n\r\ngetOrDefault = (f, d) => if exists f then f else d\r\n\r\n// Constants\r\ndays_observed = 60\r\ntotal_days_in_year = 365\r\nscaling_factor = float(v: total_days_in_year) / float(v: days_observed)  // 6.083333\r\n\r\n// Step 1: Query Total Cost\r\ndata_total = from(bucket: \"default_agg_kpi\")\r\n  |> range(start: -60d)\r\n  |> filter(fn: (r) => r._field == \"cost\")\r\n  |> group()  // Group without specific columns to keep it simple\r\n  |> sum(column: \"_value\")\r\n  |> map(fn: (r) => ({\r\n      _key: \"combined\",  // Add a key for joining\r\n      total_predicted_cost: r._value * scaling_factor\r\n  }))\r\n\r\n// Step 2: Query Project-Specific Cost\r\ndata_project = from(bucket: \"default_agg_kpi\")\r\n  |> range(start: -60d)\r\n  |> filter(fn: (r) => r._field == \"cost\" and r.user_hash == \"undefined\")\r\n  |> group()\r\n  |> sum(column: \"_value\")\r\n  |> map(fn: (r) => ({\r\n      _key: \"combined\",  // Add the same key for joining\r\n      project_predicted_cost: r._value * scaling_factor\r\n  }))\r\n\r\n// Step 3: Join and Calculate the Difference\r\ndifference_data = join(\r\n  tables: {total: data_total, project: data_project},\r\n  on: [\"_key\"],  // Join on the common key\r\n)\r\n|> map(fn: (r) => ({\r\n    total_predicted_cost: r.total_predicted_cost,\r\n    project_predicted_cost: r.project_predicted_cost,\r\n    difference: r.total_predicted_cost - r.project_predicted_cost\r\n}))\r\n\r\n// Output the Difference\r\ndifference_data\r\n|> group()\r\n",
           "refId": "A"
         }
       ],
-      "title": "Active Projects",
+      "title": "Chat Cost - Current Year Forecast ($)",
       "type": "stat"
     },
     {
@@ -207,78 +247,517 @@
         "uid": "P3DF0C308D9792AAA"
       },
       "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "green",
+                "value": 80
+              }
+            ]
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
       "gridPos": {
-        "h": 25,
-        "w": 24,
-        "x": 0,
-        "y": 10
+        "h": 5,
+        "w": 6,
+        "x": 17,
+        "y": 0
       },
-      "id": 14,
+      "id": 34,
       "options": {
-        "config": {
-          "displayModeBar": false
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "/^_value$/",
+          "values": false
         },
-        "data": "",
-        "layout": {
-          "font": {
-            "color": "lightgrey"
-          },
-          "margin": {
-            "t": 0
-          },
-          "paper_bgcolor": "rgba(0,0,0,0)",
-          "plot_bgcolor": "rgba(0,0,0,0)",
-          "xaxis": {
-            "automargin": true,
-            "autorange": true,
-            "categoryorder": "category ascending",
-            "range": [
-              -0.5,
-              88.5
-            ],
-            "showgrid": false,
-            "showticklabels": true,
-            "type": "category"
-          },
-          "yaxis": {
-            "automargin": true,
-            "autorange": true,
-            "range": [
-              -0.5,
-              187.5
-            ],
-            "showgrid": false,
-            "type": "category"
-          }
-        },
-        "onclick": "//console.log(data)\n//window.updateVariables({query:{'var-project':'test'}, partial: true})",
-        "script": "var title = data.series[0].fields.find(x => x.name === \"title\")?.values\nvar topic = data.series[0].fields.find(x => x.name === \"topic\")?.values\nvar count = data.series[0].fields.find(x => x.name === \"_value\")?.values\n\nvar trace = {\n  x: title?.buffer || title || [\"No data\"],\n  y: topic?.buffer || topic || [\"No data\"],\n  z: count?.buffer || count || [NaN],\n  type: 'heatmap',\n  colorscale: \"YlOrRd\",\n};\n\nreturn {data:[trace]};"
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
       },
-      "pluginVersion": "9.2.4",
+      "pluginVersion": "10.4.0",
       "targets": [
         {
           "datasource": {
             "type": "influxdb",
             "uid": "P3DF0C308D9792AAA"
           },
-          "query": "import \"experimental\"\r\n\r\n// Constants\r\nthreshold_duration_ns =  ${threshold_duration_ns} // 1 day-1ns in nanoseconds\r\nsix_hours_ns = ${six_hours_ns}  // 6 hours in nanoseconds\r\n\r\n// Calculate the time range duration\r\ntime_diff_ns = int(v: v.timeRangeStop) - int(v: v.timeRangeStart)\r\n\r\n// Calculate remainder for 6-hour alignment at start and end\r\nstart_remainder_ns = int(v: v.timeRangeStart) % six_hours_ns\r\nend_remainder_ns_pre = int(v: v.timeRangeStop) % six_hours_ns\r\n// Extract the hour from timeRangeStop in hours (convert nanoseconds to hours)\r\ntime_hour = int(v: int(v: v.timeRangeStop) % 86400000000000) / 3600000000000\r\n\r\n// Check if the end time is in xx:59:59 for the specified hours (05, 11, 17, 23)\r\nend_remainder_ns = ${end_reminder_calc}\r\n\r\n// Bucket selection logic based on total time range duration\r\nbucket_default_only = time_diff_ns <= threshold_duration_ns\r\n\r\n// Helper function to query default bucket\r\ndefault_bucket_query = (start, stop) => from(bucket: \"${INFLUX_BUCKET}\")\r\n    |> range(start: start, stop: stop)\r\n    |> filter(fn: (r) => r._measurement == \"analytics\")\r\n    |> filter(fn: (r) => r._field == \"number_request_messages\")\r\n    |> filter(fn: (r) => r.title != \"undefined\")\r\n    |> group(columns: [\"topic\", \"title\"]) \r\n    |> count()  // Counting occurrences if non-aggregated\r\n    \r\n\r\n// Helper function to query aggregated bucket\r\nagg_bucket_query = (start, stop) => from(bucket: \"${INFLUX_BUCKET}_agg_topic\")\r\n    |> range(start: start, stop: stop)\r\n    |> filter(fn: (r) => r._measurement == \"analytics\")\r\n    |> filter(fn: (r) => r._field == \"topic_count\")\r\n    |> filter(fn: (r) => r.title != \"undefined\")\r\n    |> group(columns: [\"topic\", \"title\"]) \r\n    |> sum(column: \"_value\")  // Summing the values if aggregated\r\n// Query data for the start from the default bucket if the start time is not aligned\r\ndata_default_start = \r\n    if start_remainder_ns > 0 and not bucket_default_only then ${data_default_start} \r\n    else from(bucket: \"${INFLUX_BUCKET}\") |> limit(n: 0)\r\n\r\n// Query data for the aggregated bucket (middle part)\r\ndata_agg = \r\n    if not bucket_default_only then ${data_agg}\r\n    else from(bucket: \"${INFLUX_BUCKET}_agg_stats\") |> limit(n: 0)\r\n\r\n// Query data for the end from the default bucket if the end time is not aligned\r\ndata_default_end = \r\n        if end_remainder_ns > 0 then ${data_default_end}\r\n        else from(bucket: \"${INFLUX_BUCKET}\") |> limit(n: 0)\r\n\r\n// Combine data from all buckets (start, middle, end)\r\ncombined_data = ${combine_data}\r\n\r\n// Conditional logic to branch based on the time difference\r\n\r\n// Final aggregation over the entire dataset\r\nfinal_data = combined_data\r\n\r\n     |> map(fn: (r) => ({r with _start: v.timeRangeStart}))  // Add static start time\r\n      |> map(fn: (r) => ({r with _stop: v.timeRangeStop}))  // Add static start time\r\n      |> group(columns: [\"_start\",\"_stop\",\"topic\", \"title\"]) \r\n      |> sum(column: \"_value\")  // Summing the values if aggregated\r\n      |> group()\r\n      |> sort(columns: [\"_value\"], desc: true)  // Sorting in descending order\r\n      |> limit(n: 100)  // Limit to top 10\r\n\t  \r\nif \"${Aggregation}\" == \"SEMI\" then final_data else \r\nfrom(bucket: \"${INFLUX_BUCKET}_agg_topic\")\r\n|> range(start: v.timeRangeStart, stop: v.timeRangeStop)\r\n\r\n    |> filter(fn: (r) => r._measurement == \"analytics\")\r\n    |> filter(fn: (r) => r._field == \"topic_count\")\r\n    |> group(columns: [\"topic\", \"title\"]) \r\n    |> sum(column: \"_value\")  // Summing the values if aggregated\r\n|> group()\r\n|> filter(fn: (r) => r.title != \"undefined\")\r\n      |> sort(columns: [\"_value\"], desc: true)  // Sorting in descending order\r\n      |> limit(n: 1000)  // Limit to top 10\r\n",
+          "query": "import \"influxdata/influxdb/schema\"\r\nimport \"date\"\r\n\r\ngetOrDefault = (f, d) => if exists f then f else d\r\nsafeDivide = (numerator, denominator, default) => \r\n  if denominator != 0.0 then numerator / denominator else default  // Prevent division by zero\r\n\r\nnow_time = now()\r\n\r\n// Determine the start of the current month\r\ncurrent_month_start = date.truncate(t: now_time, unit: 1mo)\r\n\r\n// Calculate the range for the last two complete months\r\ntwo_months_ago_start = date.sub(d: 2mo, from: current_month_start)\r\nlast_month_end = date.sub(d: 1ns, from: current_month_start)  // End of the last complete month\r\n\r\n// Query the last two complete months of data\r\nprev_year_data = from(bucket: \"default_agg_month\")\r\n  |> range(start: two_months_ago_start, stop: last_month_end)\r\n  |> filter(fn: (r) => r._field == \"Avg_Cost_Per_User\")\r\n  |> mean(column: \"_value\")\r\n  |> group()\r\n\r\nprev_year_data\r\n",
           "refId": "A"
         }
       ],
-      "title": "Title-Topic Heatmap",
+      "title": "Avg Cost Per User Per Month - Current Year Forecast ($)",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "influxdb",
+        "uid": "P3DF0C308D9792AAA"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 3,
+        "w": 5,
+        "x": 0,
+        "y": 5
+      },
+      "id": 31,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "/^_value$/",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "pluginVersion": "10.4.0",
+      "targets": [
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "P3DF0C308D9792AAA"
+          },
+          "query": "import \"influxdata/influxdb/schema\"\r\nimport \"date\"\r\ngetOrDefault = (f, d) => if exists f then f else d\r\nsafeDivide = (numerator, denominator, default) => \r\n  if denominator != 0.0 then numerator / denominator else default  // Prevent division by zero\r\n\r\nnow_time = now()\r\ncurrent_year = date.year(t: now_time)\r\nprevious_year_start = time(v: string(v: current_year - 1) + \"-01-01T00:00:00Z\")\r\nprevious_year_end = time(v: string(v: current_year - 1) + \"-12-31T23:59:59Z\")\r\ncurrent_year_start = time(v: string(v: date.year(t: now_time)) + \"-01-01T00:00:00Z\")\r\ncurrent_year_end = time(v: string(v: date.year(t: now_time)) + \"-12-31T23:59:59Z\")\r\n\r\n//query previous years data\r\nprev_year_data = from(bucket: \"default_agg_month\")\r\n  |> range(start: previous_year_start, stop: previous_year_end)\r\n  |> filter(fn: (r) =>  r._field == \"total_user_cost\" or r._field == \"Total_Cost_Per_Api\" )\r\n  |>group(columns: [\"_measurement\"])\r\n\r\n  |> sum(column: \"_value\")\r\n  |>group()\r\n\r\nprev_year_data\r\n",
+          "refId": "A"
+        }
+      ],
+      "title": "Total Cost - Full Previous Year ($)",
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {}
+        }
+      ],
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "influxdb",
+        "uid": "P3DF0C308D9792AAA"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "noValue": "Forecast is not available",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 3,
+        "w": 6,
+        "x": 5,
+        "y": 5
+      },
+      "id": 27,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "/^Last Year's Project Cost$/",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "value",
+        "wideLayout": true
+      },
+      "pluginVersion": "10.4.0",
+      "targets": [
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "P3DF0C308D9792AAA"
+          },
+          "query": "import \"influxdata/influxdb/schema\"\r\nimport \"date\"\r\ngetOrDefault = (f, d) => if exists f then f else d\r\nsafeDivide = (numerator, denominator, default) => \r\n  if denominator != 0.0 then numerator / denominator else default  // Prevent division by zero\r\n\r\nnow_time = now()\r\ncurrent_year = date.year(t: now_time)\r\nprevious_year_start = time(v: string(v: current_year - 1) + \"-01-01T00:00:00Z\")\r\nprevious_year_end = time(v: string(v: current_year - 1) + \"-12-31T23:59:59Z\")\r\ncurrent_year_start = time(v: string(v: date.year(t: now_time)) + \"-01-01T00:00:00Z\")\r\ncurrent_year_end = time(v: string(v: date.year(t: now_time)) + \"-12-31T23:59:59Z\")\r\n\r\n//query previous years data\r\nprev_year_data = from(bucket: \"default_agg_month\")\r\n  |> range(start: previous_year_start, stop: previous_year_end)\r\n  |> filter(fn: (r) =>  r._field == \"total_user_cost\" or r._field == \"Total_Cost_Per_Api\" )\r\n  |> schema.fieldsAsCols()\r\n    |> map(fn: (r) => ({\r\n      _time_prev: r._time,\r\n      month: date.month(t: r._time),\r\n      prev_user_cost: r.total_user_cost,\r\n      prev_project_cost: r.Total_Cost_Per_Api,\r\n    }))\r\n  |>group()\r\n  |> sort(columns: [\"_time_prev\"], desc: true)  // Sort newest first\r\n\r\n//query current years data\r\ncurrent_year_data = from(bucket: \"default_agg_month\")\r\n\r\n  |> range(start: current_year_start, stop: current_year_end)\r\n  |> filter(fn: (r) =>  r._field == \"total_user_cost\" or r._field == \"Total_Cost_Per_Api\"  )\r\n  |> schema.fieldsAsCols()\r\n    |> map(fn: (r) => ({\r\n      _time_curr: r._time,\r\n      month: date.month(t: r._time),\r\n      current_user_cost: r.total_user_cost,\r\n      current_project_cost: r.Total_Cost_Per_Api\r\n    }))\r\n  |>group()\r\n  |> sort(columns: [\"_time_curr\"], desc: true)  // Sort newest first\r\n\r\n//join prev and current years data on month in order to identify the trends (hange in %)\r\njoined_data = join(\r\n  tables: {prev: prev_year_data, cur: current_year_data},\r\n  on: [\"month\"],\r\n  method: \"inner\"\r\n)\r\n |> group()\r\n    |> reduce(\r\n        fn: (r, accumulator) => ({\r\n          current_user_cost: getOrDefault(f: r.current_user_cost, d: 0.0) + accumulator.current_user_cost,\r\n          prev_user_cost: getOrDefault(f: r.prev_user_cost, d: 0.0) + accumulator.prev_user_cost,\r\n          current_project_cost: getOrDefault(f: r.current_project_cost, d: 0.0) + accumulator.current_project_cost,\r\n          prev_project_cost: getOrDefault(f: r.prev_project_cost, d: 0.0) + accumulator.prev_project_cost,\r\n   \r\n  \r\n        }),\r\n        identity: {current_user_cost: 0.0, prev_user_cost: 0.0,current_project_cost: 0.0,prev_project_cost: 0.0}\r\n    )\r\n      |> map(fn: (r) => ({\r\n      _time_prev: r._time_prev,\r\n      _time_cur: r._time_cur,\r\n      month: r.month,\r\n      prev_user_cost: r.prev_user_cost,\r\n      current_user_cost: r.current_user_cost,\r\n      prev_project_cost: r.prev_project_cost,\r\n      current_project_cost: r.current_project_cost,\r\n     growth_rate_user: safeDivide(numerator: r.current_user_cost, denominator: r.prev_user_cost, default: 1.0),  // Default growth is 1.0 if prev_user_cost is 0\r\n     growth_rate_project: safeDivide(numerator: r.current_project_cost, denominator: r.prev_project_cost, default: 1.0) \r\n    }))\r\n\r\n// Calculate Growth Rate (Safe Division)\r\ngrowth_rate_result_user = joined_data\r\n  |> map(fn: (r) => ({\r\n      growth_rate: r.growth_rate_user\r\n    }))\r\n  |> findRecord(fn: (key) => true, idx: 0)  // Extract single growth rate value\r\ngrowth_rate_result_project = joined_data\r\n  |> map(fn: (r) => ({\r\n\r\n      growth_rate: r.growth_rate_project\r\n    }))\r\n  |> findRecord(fn: (key) => true, idx: 0)  // Extract single growth rate value\r\n\r\n// Append Growth Rate as a Fixed Column in Current Year Data\r\ncurrent_year_data_with_growth_user = prev_year_data\r\n|>sum(column:\"prev_user_cost\")\r\n  |> map(fn: (r) => ({\r\n      month: r.month,\r\n      prev_user_cost: r.prev_user_cost,\r\n      growth_rate_user: growth_rate_result_user.growth_rate,  // Assign the computed fixed growth rate\r\n      predicted_user_cos: r.prev_user_cost * growth_rate_result_user.growth_rate\r\n    }))\r\n\r\ncurrent_year_data_with_growth_project = prev_year_data\r\n|>sum(column:\"prev_project_cost\")\r\n  |> map(fn: (r) => ({\r\n      month: r.month,\r\n      prev_project_cost: r.prev_project_cost,\r\n      growth_rate_project: growth_rate_result_project.growth_rate,  // Assign the computed fixed growth rate\r\n      predicted_project_cos: r.prev_project_cost * growth_rate_result_project.growth_rate\r\n    }))\r\n\r\n// Output the modified current year data\r\ncurrent_year_data_with_growth_project\r\n|> group()",
+          "refId": "A"
+        }
+      ],
+      "title": "Project API Cost - Full Previous Year ($)",
       "transformations": [
         {
           "id": "organize",
           "options": {
-            "excludeByName": {},
-            "indexByName": {},
+            "excludeByName": {
+              "growth_rate_project": true,
+              "predicted_project_cos": true
+            },
+            "includeByName": {},
+            "indexByName": {
+              "growth_rate_project": 1,
+              "predicted_project_cos": 2,
+              "prev_project_cost": 0
+            },
             "renameByName": {
-              "topic": " "
+              "growth_rate_project": "Expected grow rate (%)",
+              "predicted_project_cos": "Current Year's Project Cost (Forecast)",
+              "prev_project_cost": "Last Year's Project Cost"
             }
           }
         }
       ],
-      "type": "ae3e-plotly-panel"
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "influxdb",
+        "uid": "P3DF0C308D9792AAA"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 3,
+        "w": 6,
+        "x": 11,
+        "y": 5
+      },
+      "id": 26,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "/^prev_user_cost$/",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "pluginVersion": "10.4.0",
+      "targets": [
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "P3DF0C308D9792AAA"
+          },
+          "query": "import \"influxdata/influxdb/schema\"\r\nimport \"date\"\r\ngetOrDefault = (f, d) => if exists f then f else d\r\nsafeDivide = (numerator, denominator, default) => \r\n  if denominator != 0.0 then numerator / denominator else default  // Prevent division by zero\r\n\r\nnow_time = now()\r\ncurrent_year = date.year(t: now_time)\r\nprevious_year_start = time(v: string(v: current_year - 1) + \"-01-01T00:00:00Z\")\r\nprevious_year_end = time(v: string(v: current_year - 1) + \"-12-31T23:59:59Z\")\r\ncurrent_year_start = time(v: string(v: date.year(t: now_time)) + \"-01-01T00:00:00Z\")\r\ncurrent_year_end = time(v: string(v: date.year(t: now_time)) + \"-12-31T23:59:59Z\")\r\n\r\n//query previous years data\r\nprev_year_data = from(bucket: \"default_agg_month\")\r\n  |> range(start: previous_year_start, stop: previous_year_end)\r\n  |> filter(fn: (r) =>  r._field == \"total_user_cost\" or r._field == \"Total_Cost_Per_Api\" )\r\n  |> schema.fieldsAsCols()\r\n    |> map(fn: (r) => ({\r\n      _time_prev: r._time,\r\n      month: date.month(t: r._time),\r\n      prev_user_cost: r.total_user_cost,\r\n      prev_project_cost: r.Total_Cost_Per_Api,\r\n    }))\r\n  |>group()\r\n  |> sort(columns: [\"_time_prev\"], desc: true)  // Sort newest first\r\n\r\n//query current years data\r\ncurrent_year_data = from(bucket: \"default_agg_month\")\r\n\r\n  |> range(start: current_year_start, stop: current_year_end)\r\n  |> filter(fn: (r) =>  r._field == \"total_user_cost\" or r._field == \"Total_Cost_Per_Api\"  )\r\n  |> schema.fieldsAsCols()\r\n    |> map(fn: (r) => ({\r\n      _time_curr: r._time,\r\n      month: date.month(t: r._time),\r\n      current_user_cost: r.total_user_cost,\r\n      current_project_cost: r.Total_Cost_Per_Api\r\n    }))\r\n  |>group()\r\n  |> sort(columns: [\"_time_curr\"], desc: true)  // Sort newest first\r\n\r\n//join prev and current years data on month in order to identify the trends (hange in %)\r\njoined_data = join(\r\n  tables: {prev: prev_year_data, cur: current_year_data},\r\n  on: [\"month\"],\r\n  method: \"inner\"\r\n)\r\n |> group()\r\n    |> reduce(\r\n        fn: (r, accumulator) => ({\r\n          current_user_cost: getOrDefault(f: r.current_user_cost, d: 0.0) + accumulator.current_user_cost,\r\n          prev_user_cost: getOrDefault(f: r.prev_user_cost, d: 0.0) + accumulator.prev_user_cost,\r\n          current_project_cost: getOrDefault(f: r.current_project_cost, d: 0.0) + accumulator.current_project_cost,\r\n          prev_project_cost: getOrDefault(f: r.prev_project_cost, d: 0.0) + accumulator.prev_project_cost,\r\n   \r\n  \r\n        }),\r\n        identity: {current_user_cost: 0.0, prev_user_cost: 0.0,current_project_cost: 0.0,prev_project_cost: 0.0}\r\n    )\r\n      |> map(fn: (r) => ({\r\n      _time_prev: r._time_prev,\r\n      _time_cur: r._time_cur,\r\n      month: r.month,\r\n      prev_user_cost: r.prev_user_cost,\r\n      current_user_cost: r.current_user_cost,\r\n      prev_project_cost: r.prev_project_cost,\r\n      current_project_cost: r.current_project_cost,\r\n     growth_rate_user: safeDivide(numerator: r.current_user_cost, denominator: r.prev_user_cost, default: 1.0),  // Default growth is 1.0 if prev_user_cost is 0\r\n     growth_rate_project: safeDivide(numerator: r.current_project_cost, denominator: r.prev_project_cost, default: 1.0) \r\n    }))\r\n\r\n// Calculate Growth Rate (Safe Division)\r\ngrowth_rate_result_user = joined_data\r\n  |> map(fn: (r) => ({\r\n      growth_rate: r.growth_rate_user\r\n    }))\r\n  |> findRecord(fn: (key) => true, idx: 0)  // Extract single growth rate value\r\ngrowth_rate_result_project = joined_data\r\n  |> map(fn: (r) => ({\r\n\r\n      growth_rate: r.growth_rate_project\r\n    }))\r\n  |> findRecord(fn: (key) => true, idx: 0)  // Extract single growth rate value\r\n\r\n// Append Growth Rate as a Fixed Column in Current Year Data\r\ncurrent_year_data_with_growth_user = prev_year_data\r\n|>sum(column:\"prev_user_cost\")\r\n  |> map(fn: (r) => ({\r\n      month: r.month,\r\n      prev_user_cost: r.prev_user_cost,\r\n      growth_rate_user: growth_rate_result_user.growth_rate,  // Assign the computed fixed growth rate\r\n      predicted_user_cos: r.prev_user_cost * growth_rate_result_user.growth_rate\r\n    }))\r\n\r\ncurrent_year_data_with_growth_project = prev_year_data\r\n|>sum(column:\"prev_project_cost\")\r\n  |> map(fn: (r) => ({\r\n      month: r.month,\r\n      prev_project_cost: r.prev_project_cost,\r\n      growth_rate_project: growth_rate_result_project.growth_rate,  // Assign the computed fixed growth rate\r\n      predicted_project_cos: r.prev_project_cost * growth_rate_result_project.growth_rate\r\n    }))\r\n\r\ncurrent_year_data_with_growth_user\r\n",
+          "refId": "A"
+        }
+      ],
+      "title": "Chat Cost - Full Previous Year ($)",
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {}
+        }
+      ],
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "influxdb",
+        "uid": "P3DF0C308D9792AAA"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 0
+              }
+            ]
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 3,
+        "w": 6,
+        "x": 17,
+        "y": 5
+      },
+      "id": 32,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "/^_value$/",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "pluginVersion": "10.4.0",
+      "targets": [
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "P3DF0C308D9792AAA"
+          },
+          "query": "import \"influxdata/influxdb/schema\"\r\nimport \"date\"\r\ngetOrDefault = (f, d) => if exists f then f else d\r\nsafeDivide = (numerator, denominator, default) => \r\n  if denominator != 0.0 then numerator / denominator else default  // Prevent division by zero\r\n\r\nnow_time = now()\r\ncurrent_year = date.year(t: now_time)\r\nprevious_year_start = time(v: string(v: current_year - 1) + \"-01-01T00:00:00Z\")\r\nprevious_year_end = time(v: string(v: current_year - 1) + \"-12-31T23:59:59Z\")\r\ncurrent_year_start = time(v: string(v: date.year(t: now_time)) + \"-01-01T00:00:00Z\")\r\ncurrent_year_end = time(v: string(v: date.year(t: now_time)) + \"-12-31T23:59:59Z\")\r\n\r\n//query previous years data\r\nprev_year_data = from(bucket: \"default_agg_month\")\r\n  |> range(start: previous_year_start, stop: previous_year_end)\r\n  |> filter(fn: (r) =>   r._field == \"Avg_Cost_Per_User\" )\r\n\r\n  |> mean(column: \"_value\")\r\n  |>group()\r\n\r\nprev_year_data\r\n",
+          "refId": "A"
+        }
+      ],
+      "title": "Avg Cost Per User Per Month - Full Previous Year ($)",
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {}
+        }
+      ],
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "influxdb",
+        "uid": "P3DF0C308D9792AAA"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "inspect": false
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Avg Request count per Project"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 241
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Total Request count per Project"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 244
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "/.*[$].*/"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "currencyUSD"
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 15,
+        "w": 23,
+        "x": 0,
+        "y": 8
+      },
+      "id": 24,
+      "options": {
+        "cellHeight": "sm",
+        "footer": {
+          "countRows": false,
+          "fields": "",
+          "reducer": [
+            "sum"
+          ],
+          "show": false
+        },
+        "showHeader": true,
+        "sortBy": []
+      },
+      "pluginVersion": "10.4.0",
+      "targets": [
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "P3DF0C308D9792AAA"
+          },
+          "query": "import \"influxdata/influxdb/schema\"\r\nimport \"date\"\r\nfrom(bucket: \"default_agg_month\")\r\n  |> range(start: -1000mo)  // Get last 12 months of data\r\n  |> schema.fieldsAsCols()\r\n    |> map(fn: (r) => ({\r\n      r with \r\n      time_str: string(v: date.year(t: r._time)) + \"-\" + string(v: date.month(t: r._time))  // Convert to \"YYYY-MM\"\r\n    }))\r\n  |>group()\r\n  |> sort(columns: [\"_time\"], desc: true)  // Sort newest first",
+          "refId": "A"
+        }
+      ],
+      "title": "Monthly Stats",
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Avg_Cost_Per_Model": true,
+              "Total_Cost_Per_Model": true,
+              "_measurement": true,
+              "_start": true,
+              "_stop": true,
+              "_time": true
+            },
+            "includeByName": {},
+            "indexByName": {
+              "Active_Apis": 5,
+              "Avg_Cost_Per_Api": 7,
+              "Avg_Cost_Per_Model": 10,
+              "Avg_Cost_Per_User": 13,
+              "Avg_RC_Per_Api": 8,
+              "Total_Cost_Per_Api": 6,
+              "Total_Cost_Per_Model": 11,
+              "Total_RC_Per_Api": 9,
+              "Unique_Users": 12,
+              "_measurement": 4,
+              "_start": 1,
+              "_stop": 2,
+              "_time": 3,
+              "time_str": 0,
+              "total_user_cost": 14
+            },
+            "renameByName": {
+              "Active_Apis": "Nr of Active Projects",
+              "Avg_Cost_Per_Api": "Avg Cost per Project ($)",
+              "Avg_Cost_Per_Model": "Avg Cost per Model ($)",
+              "Avg_Cost_Per_User": "Avg Cost per User ($)",
+              "Avg_RC_Per_Api": "Avg Request count per Project",
+              "Total_Cost_Per_Api": "Total Project Cost ($)",
+              "Total_Cost_Per_Model": "Total Cost per Model ($)",
+              "Total_RC_Per_Api": "Total Request count per Project",
+              "Unique_Users": "Nr of Unique Users",
+              "time_str": "Date",
+              "total_user_cost": "Total Chat Cost ($)"
+            }
+          }
+        }
+      ],
+      "type": "table"
     },
     {
       "datasource": {
@@ -293,26 +772,26 @@
           "custom": {
             "axisBorderShow": false,
             "axisCenteredZero": false,
-            "axisColorMode": "text",
+            "axisColorMode": "series",
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
             "drawStyle": "line",
-            "fillOpacity": 30,
-            "gradientMode": "hue",
+            "fillOpacity": 0,
+            "gradientMode": "none",
             "hideFrom": {
               "legend": false,
               "tooltip": false,
               "viz": false
             },
             "insertNulls": false,
-            "lineInterpolation": "smooth",
-            "lineWidth": 1,
-            "pointSize": 5,
+            "lineInterpolation": "linear",
+            "lineWidth": 3,
+            "pointSize": 10,
             "scaleDistribution": {
               "type": "linear"
             },
-            "showPoints": "never",
+            "showPoints": "auto",
             "spanNulls": false,
             "stacking": {
               "group": "A",
@@ -322,46 +801,59 @@
               "mode": "off"
             }
           },
-          "displayName": "Requests",
           "mappings": [],
           "thresholds": {
             "mode": "absolute",
             "steps": [
               {
-                "color": "green"
+                "color": "green",
+                "value": null
               },
               {
                 "color": "red",
                 "value": 80
               }
             ]
-          }
+          },
+          "unit": "currencyUSD"
         },
         "overrides": [
           {
             "matcher": {
               "id": "byName",
-              "options": "Value"
+              "options": "Avg Cost per User ($)"
             },
             "properties": [
               {
-                "id": "color",
-                "value": {
-                  "fixedColor": "blue",
-                  "mode": "fixed"
-                }
+                "id": "custom.axisPlacement",
+                "value": "right"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Nr of Active Projects"
+            },
+            "properties": [
+              {
+                "id": "custom.axisPlacement",
+                "value": "right"
+              },
+              {
+                "id": "unit"
               }
             ]
           }
         ]
       },
       "gridPos": {
-        "h": 9,
-        "w": 24,
+        "h": 14,
+        "w": 23,
         "x": 0,
-        "y": 35
+        "y": 23
       },
-      "id": 10,
+      "id": 35,
       "options": {
         "legend": {
           "calcs": [],
@@ -374,17 +866,72 @@
           "sort": "none"
         }
       },
+      "pluginVersion": "10.4.0",
       "targets": [
         {
           "datasource": {
             "type": "influxdb",
             "uid": "P3DF0C308D9792AAA"
           },
-          "query": "import \"experimental\"\r\n\r\n\r\n// Constants\r\nthreshold_duration_ns =  ${threshold_duration_ns} // 1 day-1ns in nanoseconds\r\nsix_hours_ns = ${six_hours_ns}  // 6 hours in nanoseconds\r\n\r\n// Calculate the time range duration\r\ntime_diff_ns = int(v: v.timeRangeStop) - int(v: v.timeRangeStart)\r\n\r\n// Calculate remainder for 6-hour alignment at start and end\r\nstart_remainder_ns = int(v: v.timeRangeStart) % six_hours_ns\r\nend_remainder_ns_pre = int(v: v.timeRangeStop) % six_hours_ns\r\n\r\n// Extract the hour from timeRangeStop in hours (convert nanoseconds to hours)\r\ntime_hour = int(v: int(v: v.timeRangeStop) % 86400000000000) / 3600000000000\r\n\r\n// Check if the end time is in xx:59:59 for the specified hours (05, 11, 17, 23)\r\nend_remainder_ns = ${end_reminder_calc}\r\n\r\n// Bucket selection logic based on total time range duration\r\nbucket_default_only = time_diff_ns <= threshold_duration_ns\r\n\r\n// Helper function to query default bucket\r\ndefault_bucket_query = (start, stop) => from(bucket: \"${INFLUX_BUCKET}\")\r\n    |> range(start: start, stop: stop)\r\n    |> filter(fn: (r) => r._measurement == \"analytics\")\r\n    |> filter(fn: (r) => r._field == \"number_request_messages\")\r\n    |> group()\r\n    |> aggregateWindow(every: v.windowPeriod, fn: count)\r\n    |> keep(columns: [\"_time\", \"_value\"])\r\n\r\n// Helper function to query aggregated bucket\r\nagg_bucket_query = (start, stop) => from(bucket: \"${INFLUX_BUCKET}_agg_stats\")\r\n    |> range(start: start, stop: stop)\r\n    |> filter(fn: (r) => r._measurement == \"analytics\")\r\n    |> filter(fn: (r) => r._field == \"request_count\")\r\n    |> group()\r\n    |> aggregateWindow(every: v.windowPeriod, fn: sum, column: \"_value\")  // Sum the request_count column\r\n    |> keep(columns: [\"_time\", \"_value\"]) \r\n    |> filter(fn: (r) => r._value != 0 )\r\n\r\n// Query data for the start from the default bucket if the start time is not aligned\r\ndata_default_start = \r\n    if start_remainder_ns > 0 and not bucket_default_only then ${data_default_start} \r\n    else from(bucket: \"${INFLUX_BUCKET}\") |> limit(n: 0)\r\n\r\n// Query data for the aggregated bucket (middle part)\r\ndata_agg = \r\n    if not bucket_default_only then ${data_agg}\r\n    else from(bucket: \"${INFLUX_BUCKET}_agg_stats\") |> limit(n: 0)\r\n\r\n// Query data for the end from the default bucket if the end time is not aligned\r\ndata_default_end = \r\n        if end_remainder_ns > 0 then ${data_default_end}\r\n        else from(bucket: \"${INFLUX_BUCKET}\") |> limit(n: 0)\r\n\r\n// Combine data from all buckets (start, middle, end)\r\nfinal_data = ${combine_data}\r\n\r\nif \"${Aggregation}\" == \"SEMI\" then final_data else ${system_agg} \r\n\r\n\r\n",
+          "query": "import \"influxdata/influxdb/schema\"\r\nimport \"date\"\r\nfrom(bucket: \"default_agg_month\")\r\n  |> range(start: -1000mo)  // Get last 12 months of data\r\n  |> schema.fieldsAsCols()\r\n  |>group()\r\n  |> sort(columns: [\"_time\"], desc: true)  // Sort newest first",
           "refId": "A"
         }
       ],
-      "title": "System Usage",
+      "title": "Monthly Total User Cost and Avg Cost Per User",
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Active_Apis": true,
+              "Avg_Cost_Per_Api": true,
+              "Avg_Cost_Per_Model": true,
+              "Avg_Cost_Per_User": false,
+              "Avg_RC_Per_Api": true,
+              "Total_Cost_Per_Api": true,
+              "Total_Cost_Per_Model": true,
+              "Total_RC_Per_Api": true,
+              "Unique_Users": true,
+              "_measurement": true,
+              "_start": true,
+              "_stop": true,
+              "_time": false,
+              "total_user_cost": false
+            },
+            "includeByName": {},
+            "indexByName": {
+              "Active_Apis": 5,
+              "Avg_Cost_Per_Api": 7,
+              "Avg_Cost_Per_Model": 10,
+              "Avg_Cost_Per_User": 13,
+              "Avg_RC_Per_Api": 8,
+              "Total_Cost_Per_Api": 6,
+              "Total_Cost_Per_Model": 11,
+              "Total_RC_Per_Api": 9,
+              "Unique_Users": 12,
+              "_measurement": 4,
+              "_start": 1,
+              "_stop": 2,
+              "_time": 3,
+              "time_str": 0,
+              "total_user_cost": 14
+            },
+            "renameByName": {
+              "Active_Apis": "Nr of Active Projects",
+              "Avg_Cost_Per_Api": "Avg Cost per Project ($)",
+              "Avg_Cost_Per_Model": "Avg Cost per Model ($)",
+              "Avg_Cost_Per_User": "Avg Cost per User ($)",
+              "Avg_RC_Per_Api": "Avg Request count per Project",
+              "Total_Cost_Per_Api": "Total Project Cost ($)",
+              "Total_Cost_Per_Model": "Total Cost per Model ($)",
+              "Total_RC_Per_Api": "Total Request count per Project",
+              "Unique_Users": "Nr of Unique Users",
+              "time_str": "Date",
+              "total_user_cost": "Total User Cost ($)"
+            }
+          }
+        }
+      ],
       "type": "timeseries"
     },
     {
@@ -395,149 +942,39 @@
       "fieldConfig": {
         "defaults": {
           "color": {
-            "mode": "thresholds"
+            "mode": "continuous-RdYlGr"
           },
           "custom": {
-            "align": "auto",
-            "cellOptions": {
-              "type": "auto"
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "series",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
             },
-            "filterable": true,
-            "inspect": false
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green"
-              },
-              {
-                "color": "red",
-                "value": 80
-              }
-            ]
-          }
-        },
-        "overrides": [
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "Money"
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 3,
+            "pointSize": 10,
+            "scaleDistribution": {
+              "type": "linear"
             },
-            "properties": [
-              {
-                "id": "unit",
-                "value": "currencyUSD"
-              }
-            ]
-          }
-        ]
-      },
-      "gridPos": {
-        "h": 13,
-        "w": 24,
-        "x": 0,
-        "y": 44
-      },
-      "id": 18,
-      "options": {
-        "cellHeight": "sm",
-        "footer": {
-          "countRows": false,
-          "enablePagination": true,
-          "fields": [
-            "request_count",
-            "prompt_tokens",
-            "completion_tokens",
-            "money"
-          ],
-          "reducer": [
-            "sum"
-          ],
-          "show": true
-        },
-        "showHeader": true,
-        "sortBy": [
-          {
-            "desc": true,
-            "displayName": "Completion tokens"
-          }
-        ]
-      },
-      "pluginVersion": "10.4.0",
-      "targets": [
-        {
-          "datasource": {
-            "type": "influxdb",
-            "uid": "P3DF0C308D9792AAA"
-          },
-          "hide": false,
-          "query": "import \"influxdata/influxdb/schema\"\r\nimport \"strings\"\r\nimport \"regexp\"\r\nimport \"array\"\r\nimport \"experimental\"\r\ngetOrDefault = (f, d) => if exists f then f else d\r\n\r\n// Constants\r\nthreshold_duration_ns =  ${threshold_duration_ns} // 1 day-1ns in nanoseconds\r\nsix_hours_ns = ${six_hours_ns}  // 6 hours in nanoseconds\r\n\r\n// Calculate the time range duration\r\ntime_diff_ns = int(v: v.timeRangeStop) - int(v: v.timeRangeStart)\r\n\r\n// Calculate remainder for 6-hour alignment at start and end\r\nstart_remainder_ns = int(v: v.timeRangeStart) % six_hours_ns\r\nend_remainder_ns_pre = int(v: v.timeRangeStop) % six_hours_ns\r\n// Extract the hour from timeRangeStop in hours (convert nanoseconds to hours)\r\ntime_hour = int(v: int(v: v.timeRangeStop) % 86400000000000) / 3600000000000\r\n\r\n// Check if the end time is in xx:59:59 for the specified hours (05, 11, 17, 23)\r\nend_remainder_ns = ${end_reminder_calc}\r\n\r\n// Bucket selection logic based on total time range duration\r\nbucket_default_only = time_diff_ns <= threshold_duration_ns\r\n\r\n// Helper function to query default bucket\r\ndefault_bucket_query = (start, stop) => from(bucket: \"${INFLUX_BUCKET}\")\r\n  |> range(start: start, stop: stop)\r\n  |> filter(fn: (r) => r._measurement == \"analytics\")\r\n  |> filter(fn: (r) => r._field == \"prompt_tokens\" or r._field == \"completion_tokens\" or r._field == \"number_request_messages\" or r._field == \"user_hash\" or r._field == \"price\"or r._field == \"request_count\")\r\n  |> schema.fieldsAsCols()\r\n  |> group(columns: [\"project_id\", \"deployment\", \"model\", \"user_hash\"])\r\n  |> reduce(\r\n        fn: (r, accumulator) => ({\r\n          request_count: accumulator.request_count + 1,\r\n          prompt_tokens: getOrDefault(f: r.prompt_tokens, d: 0) + accumulator.prompt_tokens,\r\n          completion_tokens: getOrDefault(f: r.completion_tokens, d: 0) + accumulator.completion_tokens,\r\n          money: getOrDefault(f: r.price, d: 0.0) + accumulator.money,\r\n          user_count: 1\r\n        }),\r\n        identity: {request_count: 0, prompt_tokens: 0, completion_tokens: 0, money: 0.0, user_count: 0}\r\n    )\r\n\r\n\r\n  // Helper function to query aggregated bucket\r\n  agg_bucket_query = (start, stop) => from(bucket: \"${INFLUX_BUCKET}_agg_stats\")\r\n    |> range(start: start, stop: stop)\r\n    |> filter(fn: (r) => r._field == \"prompt_tokens\" or r._field == \"completion_tokens\" or r._field == \"number_request_messages\" or r._field == \"user_hash\" or r._field == \"price\"or r._field == \"request_count\")\r\n    |> schema.fieldsAsCols()\r\n    |> group(columns: [\"project_id\", \"deployment\", \"model\", \"user_hash\"])\r\n    |> reduce(\r\n        fn: (r, accumulator) => ({\r\n          request_count: getOrDefault(f: r.request_count, d: 0) + accumulator.request_count,\r\n          prompt_tokens: getOrDefault(f: r.prompt_tokens, d: 0) + accumulator.prompt_tokens,\r\n          completion_tokens: getOrDefault(f: r.completion_tokens, d: 0) + accumulator.completion_tokens,\r\n          money: getOrDefault(f: r.price, d: 0.0) + accumulator.money,\r\n          user_count: 1\r\n        }),\r\n        identity: {request_count: 0, prompt_tokens: 0, completion_tokens: 0, money: 0.0, user_count: 0}\r\n    )\r\n\r\n\r\n// Query data for the start from the default bucket if the start time is not aligned\r\ndata_default_start = \r\n    if start_remainder_ns > 0 and not bucket_default_only then ${data_default_start} \r\n    else from(bucket: \"${INFLUX_BUCKET}\") |> limit(n: 0)\r\n\r\n// Query data for the aggregated bucket (middle part)\r\ndata_agg = \r\n    if not bucket_default_only then ${data_agg}\r\n    else from(bucket: \"${INFLUX_BUCKET}_agg_stats\") |> limit(n: 0)\r\n\r\n// Query data for the end from the default bucket if the end time is not aligned\r\ndata_default_end = \r\n        if end_remainder_ns > 0 then ${data_default_end}\r\n        else from(bucket: \"${INFLUX_BUCKET}\") |> limit(n: 0)\r\n\r\n// Combine data from all buckets (start, middle, end)\r\ncombined_data = ${combine_data}\r\n// User count is slightly differently calculated for the agg and for the start/end piece\r\nuser_count_value = if bucket_default_only then 0\r\n    else -1\r\n// Combine default and agg buckets data  \r\nfinal_data = combined_data\r\n  |> group(columns: [\"project_id\", \"deployment\", \"model\",\"user_hash\"])\r\n  |> reduce(\r\n        fn: (r, accumulator) => ({\r\n         // user_count: accumulator.user_count + 1,\r\n          request_count: r.request_count + accumulator.request_count,\r\n          prompt_tokens: r.prompt_tokens + accumulator.prompt_tokens,\r\n          completion_tokens: r.completion_tokens + accumulator.completion_tokens,\r\n          money: r.money + accumulator.money\r\n        }),\r\n        identity: {request_count: 0, prompt_tokens: 0, completion_tokens: 0, money: 0.0}\r\n    )\r\n      |> group(columns: [\"project_id\", \"deployment\", \"model\"])\r\n  |> reduce(\r\n        fn: (r, accumulator) => ({\r\n          user_count: accumulator.user_count + 1,\r\n          request_count: r.request_count + accumulator.request_count,\r\n          prompt_tokens: r.prompt_tokens + accumulator.prompt_tokens,\r\n          completion_tokens: r.completion_tokens + accumulator.completion_tokens,\r\n          money: r.money + accumulator.money\r\n        }),\r\n        identity: {user_count: user_count_value, request_count: 0, prompt_tokens: 0, completion_tokens: 0, money: 0.0}\r\n    )\r\n  |> group()\r\n\r\nif \"${Aggregation}\" == \"SEMI\" then final_data else ${stats_agg} ",
-          "refId": "A"
-        }
-      ],
-      "title": "Stats Table",
-      "transformations": [
-        {
-          "id": "organize",
-          "options": {
-            "excludeByName": {},
-            "includeByName": {},
-            "indexByName": {
-              "completion_tokens": 6,
-              "deployment": 1,
-              "model": 2,
-              "money": 7,
-              "project_id": 0,
-              "prompt_tokens": 5,
-              "request_count": 4,
-              "user_count": 3
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
             },
-            "renameByName": {
-              "completion_tokens": "Completition tokens",
-              "deployment": "Deployment",
-              "model": "Model",
-              "money": "Money",
-              "project_id": "Project",
-              "prompt_tokens": "Prompt tokens",
-              "request_count": "Request count",
-              "user_count": "Users"
+            "thresholdsStyle": {
+              "mode": "off"
             }
-          }
-        },
-        {
-          "id": "sortBy",
-          "options": {
-            "fields": {},
-            "sort": [
-              {
-                "desc": true,
-                "field": "Money"
-              }
-            ]
-          }
-        }
-      ],
-      "type": "table"
-    },
-    {
-      "datasource": {
-        "type": "influxdb",
-        "uid": "P3DF0C308D9792AAA"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
-          "custom": {
-            "align": "auto",
-            "cellOptions": {
-              "type": "auto"
-            },
-            "filterable": true,
-            "inspect": false
           },
           "mappings": [],
           "thresholds": {
@@ -551,48 +988,46 @@
                 "value": 80
               }
             ]
-          }
+          },
+          "unit": "short"
         },
         "overrides": [
           {
             "matcher": {
               "id": "byName",
-              "options": "Money"
+              "options": "Nr of Active Projects"
             },
             "properties": [
               {
+                "id": "custom.axisPlacement",
+                "value": "right"
+              },
+              {
                 "id": "unit",
-                "value": "currencyUSD"
+                "value": "none"
               }
             ]
           }
         ]
       },
       "gridPos": {
-        "h": 13,
-        "w": 24,
+        "h": 14,
+        "w": 23,
         "x": 0,
-        "y": 57
+        "y": 37
       },
-      "id": 17,
+      "id": 36,
       "options": {
-        "cellHeight": "sm",
-        "footer": {
-          "countRows": false,
-          "enablePagination": true,
-          "fields": [
-            "request_count",
-            "prompt_tokens",
-            "completion_tokens",
-            "money"
-          ],
-          "reducer": [
-            "sum"
-          ],
-          "show": true
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
         },
-        "showHeader": true,
-        "sortBy": []
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
       },
       "pluginVersion": "10.4.0",
       "targets": [
@@ -601,203 +1036,71 @@
             "type": "influxdb",
             "uid": "P3DF0C308D9792AAA"
           },
-          "hide": false,
-          "query": "import \"influxdata/influxdb/schema\"\r\nimport \"strings\"\r\nimport \"regexp\"\r\nimport \"array\"\r\nimport \"experimental\"\r\ngetOrDefault = (f, d) => if exists f then f else d\r\n\r\n// Constants\r\nthreshold_duration_ns =  ${threshold_duration_ns} // 1 day-1ns in nanoseconds\r\nsix_hours_ns = ${six_hours_ns}  // 6 hours in nanoseconds\r\n\r\n// Calculate the time range duration\r\ntime_diff_ns = int(v: v.timeRangeStop) - int(v: v.timeRangeStart)\r\n\r\n// Calculate remainder for 6-hour alignment at start and end\r\nstart_remainder_ns = int(v: v.timeRangeStart) % six_hours_ns\r\nend_remainder_ns_pre = int(v: v.timeRangeStop) % six_hours_ns\r\n// Extract the hour from timeRangeStop in hours (convert nanoseconds to hours)\r\ntime_hour = int(v: int(v: v.timeRangeStop) % 86400000000000) / 3600000000000\r\n\r\n// Check if the end time is in xx:59:59 for the specified hours (05, 11, 17, 23)\r\nend_remainder_ns = ${end_reminder_calc}\r\n\r\n// Bucket selection logic based on total time range duration\r\nbucket_default_only = time_diff_ns <= threshold_duration_ns\r\n\r\n// Helper function to query default bucket\r\ndefault_bucket_query = (start, stop) => from(bucket: \"${INFLUX_BUCKET}\")\r\n  |> range(start: start, stop: stop)\r\n  |> filter(fn: (r) => r._measurement == \"analytics\")\r\n  |> filter(fn: (r) => r._field == \"prompt_tokens\" or r._field == \"completion_tokens\" or r._field == \"number_request_messages\"  or r._field == \"price\"or r._field == \"request_count\")\r\n  |> schema.fieldsAsCols()\r\n  |> group(columns: [\"project_id\"])\r\n  |> reduce(\r\n        fn: (r, accumulator) => ({\r\n          request_count: accumulator.request_count + 1,\r\n          prompt_tokens: getOrDefault(f: r.prompt_tokens, d: 0) + accumulator.prompt_tokens,\r\n          completion_tokens: getOrDefault(f: r.completion_tokens, d: 0) + accumulator.completion_tokens,\r\n          money: getOrDefault(f: r.price, d: 0.0) + accumulator.money\r\n        }),\r\n        identity: {request_count: 0, prompt_tokens: 0, completion_tokens: 0, money: 0.0}\r\n    )\r\n\r\n\r\n  // Helper function to query aggregated bucket\r\n  agg_bucket_query = (start, stop) => from(bucket: \"${INFLUX_BUCKET}_agg_stats\")\r\n    |> range(start: start, stop: stop)\r\n    |> filter(fn: (r) => r._field == \"prompt_tokens\" or r._field == \"completion_tokens\" or r._field == \"number_request_messages\" or r._field == \"price\"or r._field == \"request_count\")\r\n    |> schema.fieldsAsCols()\r\n    |> group(columns: [\"project_id\"])\r\n    |> reduce(\r\n        fn: (r, accumulator) => ({\r\n          request_count: getOrDefault(f: r.request_count, d: 0) + accumulator.request_count,\r\n          prompt_tokens: getOrDefault(f: r.prompt_tokens, d: 0) + accumulator.prompt_tokens,\r\n          completion_tokens: getOrDefault(f: r.completion_tokens, d: 0) + accumulator.completion_tokens,\r\n          money: getOrDefault(f: r.price, d: 0.0) + accumulator.money\r\n        }),\r\n        identity: {request_count: 0, prompt_tokens: 0, completion_tokens: 0, money: 0.0}\r\n    )\r\n\r\n\r\n// Query data for the start from the default bucket if the start time is not aligned\r\ndata_default_start = \r\n    if start_remainder_ns > 0 and not bucket_default_only then ${data_default_start} \r\n    else from(bucket: \"${INFLUX_BUCKET}\") |> limit(n: 0)\r\n\r\n// Query data for the aggregated bucket (middle part)\r\ndata_agg = \r\n    if not bucket_default_only then ${data_agg}\r\n    else from(bucket: \"${INFLUX_BUCKET}_agg_stats\") |> limit(n: 0)\r\n\r\n// Query data for the end from the default bucket if the end time is not aligned\r\ndata_default_end = \r\n        if end_remainder_ns > 0 then ${data_default_end}\r\n        else from(bucket: \"${INFLUX_BUCKET}\") |> limit(n: 0)\r\n\r\n// Combine data from all buckets (start, middle, end)\r\ncombined_data = ${combine_data}\r\n\r\nfinal_data = combined_data\r\n  |> group(columns: [\"project_id\"])\r\n  |> reduce(\r\n        fn: (r, accumulator) => ({\r\n          request_count: r.request_count + accumulator.request_count,\r\n          prompt_tokens: r.prompt_tokens + accumulator.prompt_tokens,\r\n          completion_tokens: r.completion_tokens + accumulator.completion_tokens,\r\n          money: r.money + accumulator.money\r\n        }),\r\n        identity: {request_count: 0, prompt_tokens: 0, completion_tokens: 0, money: 0.0}\r\n    )\r\n  |> group()\r\n\r\n\r\nif \"${Aggregation}\" == \"SEMI\" then final_data else ${stats_2_agg} \r\n",
+          "query": "import \"influxdata/influxdb/schema\"\r\nimport \"date\"\r\nfrom(bucket: \"default_agg_month\")\r\n  |> range(start: -1000mo)  // Get last 12 months of data\r\n  |> schema.fieldsAsCols()\r\n  |>group()\r\n  |> sort(columns: [\"_time\"], desc: true)  // Sort newest first",
           "refId": "A"
         }
       ],
-      "title": "Project Stats Table",
+      "title": "Monthly Active Users and Projects",
       "transformations": [
         {
           "id": "organize",
           "options": {
             "excludeByName": {
-              "_time": true
+              "Active_Apis": false,
+              "Avg_Cost_Per_Api": true,
+              "Avg_Cost_Per_Model": true,
+              "Avg_Cost_Per_User": true,
+              "Avg_RC_Per_Api": true,
+              "Total_Cost_Per_Api": true,
+              "Total_Cost_Per_Model": true,
+              "Total_RC_Per_Api": true,
+              "Unique_Users": false,
+              "_measurement": true,
+              "_start": true,
+              "_stop": true,
+              "_time": false,
+              "total_user_cost": true
             },
             "includeByName": {},
             "indexByName": {
-              "completion_tokens": 6,
-              "deployment": 1,
-              "model": 2,
-              "money": 7,
-              "project_id": 0,
-              "prompt_tokens": 5,
-              "request_count": 4,
-              "user_count": 3
+              "Active_Apis": 5,
+              "Avg_Cost_Per_Api": 7,
+              "Avg_Cost_Per_Model": 10,
+              "Avg_Cost_Per_User": 13,
+              "Avg_RC_Per_Api": 8,
+              "Total_Cost_Per_Api": 6,
+              "Total_Cost_Per_Model": 11,
+              "Total_RC_Per_Api": 9,
+              "Unique_Users": 12,
+              "_measurement": 4,
+              "_start": 1,
+              "_stop": 2,
+              "_time": 3,
+              "time_str": 0,
+              "total_user_cost": 14
             },
             "renameByName": {
-              "completion_tokens": "Completion tokens",
-              "deployment": "Deployment",
-              "model": "Model",
-              "money": "Money",
-              "number_request_messages": "",
-              "project_id": "Project",
-              "prompt_tokens": "Prompt tokens",
-              "request_count": "Request count",
-              "user_count": "Users"
+              "Active_Apis": "Nr of Active Projects",
+              "Avg_Cost_Per_Api": "Avg Cost per Project ($)",
+              "Avg_Cost_Per_Model": "Avg Cost per Model ($)",
+              "Avg_Cost_Per_User": "Avg Cost per User ($)",
+              "Avg_RC_Per_Api": "Avg Request count per Project",
+              "Total_Cost_Per_Api": "Total Project Cost ($)",
+              "Total_Cost_Per_Model": "Total Cost per Model ($)",
+              "Total_RC_Per_Api": "Total Request count per Project",
+              "Unique_Users": "Nr of Unique Users",
+              "time_str": "Date",
+              "total_user_cost": "Total User Cost ($)"
             }
           }
-        },
-        {
-          "id": "sortBy",
-          "options": {
-            "fields": {},
-            "sort": [
-              {
-                "desc": true,
-                "field": "Money"
-              }
-            ]
-          }
         }
       ],
-      "type": "table"
-    },
-    {
-      "datasource": {
-        "type": "influxdb",
-        "uid": "P3DF0C308D9792AAA"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
-          "custom": {
-            "align": "auto",
-            "cellOptions": {
-              "type": "auto"
-            },
-            "filterable": true,
-            "inspect": false
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green"
-              },
-              {
-                "color": "red",
-                "value": 80
-              }
-            ]
-          }
-        },
-        "overrides": [
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "money"
-            },
-            "properties": [
-              {
-                "id": "unit",
-                "value": "currencyUSD"
-              },
-              {
-                "id": "mappings",
-                "value": [
-                  {
-                    "options": {
-                      "NaN": {
-                        "index": 0,
-                        "text": "Not configured"
-                      }
-                    },
-                    "type": "value"
-                  }
-                ]
-              }
-            ]
-          }
-        ]
-      },
-      "gridPos": {
-        "h": 13,
-        "w": 24,
-        "x": 0,
-        "y": 70
-      },
-      "id": 8,
-      "options": {
-        "cellHeight": "sm",
-        "footer": {
-          "countRows": false,
-          "enablePagination": true,
-          "fields": "",
-          "reducer": [
-            "sum"
-          ],
-          "show": true
-        },
-        "showHeader": true,
-        "sortBy": []
-      },
-      "pluginVersion": "10.4.0",
-      "targets": [
-        {
-          "datasource": {
-            "type": "influxdb",
-            "uid": "P3DF0C308D9792AAA"
-          },
-          "hide": false,
-          "query": "import \"influxdata/influxdb/schema\"\r\nimport \"strings\"\r\nimport \"regexp\"\r\nimport \"array\"\r\nimport \"experimental\"\r\ngetOrDefault = (f, d) => if exists f then f else d\r\n\r\n// Constants\r\nthreshold_duration_ns =  ${threshold_duration_ns} // 1 day-1ns in nanoseconds\r\nsix_hours_ns = ${six_hours_ns}  // 6 hours in nanoseconds\r\n\r\n// Calculate the time range duration\r\ntime_diff_ns = int(v: v.timeRangeStop) - int(v: v.timeRangeStart)\r\n\r\n// Calculate remainder for 6-hour alignment at start and end\r\nstart_remainder_ns = int(v: v.timeRangeStart) % six_hours_ns\r\nend_remainder_ns_pre = int(v: v.timeRangeStop) % six_hours_ns\r\n// Extract the hour from timeRangeStop in hours (convert nanoseconds to hours)\r\ntime_hour = int(v: int(v: v.timeRangeStop) % 86400000000000) / 3600000000000\r\n\r\n// Check if the end time is in xx:59:59 for the specified hours (05, 11, 17, 23)\r\nend_remainder_ns = ${end_reminder_calc}\r\n\r\n// Bucket selection logic based on total time range duration\r\nbucket_default_only = time_diff_ns <= threshold_duration_ns\r\n\r\n// Helper function to query default bucket\r\ndefault_bucket_query = (start, stop) => from(bucket: \"${INFLUX_BUCKET}\")\r\n  |> range(start: start, stop: stop)\r\n  |> filter(fn: (r) => r._measurement == \"analytics\")\r\n  |> filter(fn: (r) => r._field == \"prompt_tokens\" or r._field == \"completion_tokens\" or r._field == \"number_request_messages\"  or r._field == \"price\"or r._field == \"request_count\")\r\n  |> schema.fieldsAsCols()\r\n  |> group(columns: [\"deployment\", \"model\"])\r\n  |> reduce(\r\n        fn: (r, accumulator) => ({\r\n          request_count: accumulator.request_count + 1,\r\n          prompt_tokens: getOrDefault(f: r.prompt_tokens, d: 0) + accumulator.prompt_tokens,\r\n          completion_tokens: getOrDefault(f: r.completion_tokens, d: 0) + accumulator.completion_tokens,\r\n          money: getOrDefault(f: r.price, d: 0.0) + accumulator.money\r\n        }),\r\n        identity: {request_count: 0, prompt_tokens: 0, completion_tokens: 0, money: 0.0}\r\n    )\r\n\r\n  // Helper function to query aggregated bucket\r\n  agg_bucket_query = (start, stop) => from(bucket: \"${INFLUX_BUCKET}_agg_stats\")\r\n    |> range(start: start, stop: stop)\r\n    |> filter(fn: (r) => r._field == \"prompt_tokens\" or r._field == \"completion_tokens\" or r._field == \"number_request_messages\" or r._field == \"user_hash\" or r._field == \"price\"or r._field == \"request_count\")\r\n    |> schema.fieldsAsCols()\r\n    |> group(columns: [\"deployment\", \"model\"])\r\n    |> reduce(\r\n        fn: (r, accumulator) => ({\r\n          request_count: getOrDefault(f: r.request_count, d: 0) + accumulator.request_count,\r\n          prompt_tokens: getOrDefault(f: r.prompt_tokens, d: 0) + accumulator.prompt_tokens,\r\n          completion_tokens: getOrDefault(f: r.completion_tokens, d: 0) + accumulator.completion_tokens,\r\n          money: getOrDefault(f: r.price, d: 0.0) + accumulator.money\r\n        }),\r\n        identity: {request_count: 0, prompt_tokens: 0, completion_tokens: 0, money: 0.0}\r\n    )\r\n\r\n\r\n// Query data for the start from the default bucket if the start time is not aligned\r\ndata_default_start = \r\n    if start_remainder_ns > 0 and not bucket_default_only then ${data_default_start} \r\n    else from(bucket: \"${INFLUX_BUCKET}\") |> limit(n: 0)\r\n\r\n// Query data for the aggregated bucket (middle part)\r\ndata_agg = \r\n    if not bucket_default_only then ${data_agg}\r\n    else from(bucket: \"${INFLUX_BUCKET}_agg_stats\") |> limit(n: 0)\r\n\r\n// Query data for the end from the default bucket if the end time is not aligned\r\ndata_default_end = \r\n        if end_remainder_ns > 0 then ${data_default_end}\r\n        else from(bucket: \"${INFLUX_BUCKET}\") |> limit(n: 0)\r\n\r\n// Combine data from all buckets (start, middle, end)\r\ncombined_data = ${combine_data}\r\n\r\nfinal_data = combined_data\r\n  |> group(columns: [\"deployment\", \"model\"])\r\n  |> reduce(\r\n        fn: (r, accumulator) => ({\r\n          request_count: r.request_count + accumulator.request_count,\r\n          prompt_tokens: r.prompt_tokens + accumulator.prompt_tokens,\r\n          completion_tokens: r.completion_tokens + accumulator.completion_tokens,\r\n          money: r.money + accumulator.money\r\n        }),\r\n        identity: {request_count: 0, prompt_tokens: 0, completion_tokens: 0, money: 0.0}\r\n    )\r\n  |> group()\r\nif \"${Aggregation}\" == \"SEMI\" then final_data else ${stats_3_agg}",
-          "refId": "A"
-        }
-      ],
-      "title": "Deployment/Model Stats Table",
-      "transformations": [
-        {
-          "id": "organize",
-          "options": {
-            "excludeByName": {
-              "_time": true
-            },
-            "indexByName": {
-              "completion_tokens": 4,
-              "deployment": 0,
-              "model": 1,
-              "money": 5,
-              "prompt_tokens": 3,
-              "request_count": 2
-            },
-            "renameByName": {
-              "completion_tokens": "Completion tokens",
-              "deployment": "Deployment",
-              "model": "Model",
-              "money": "Money",
-              "number_request_messages": "",
-              "project_id": "",
-              "prompt_tokens": "Prompt tokens",
-              "request_count": "Request count"
-            }
-          }
-        },
-        {
-          "id": "sortBy",
-          "options": {
-            "fields": {},
-            "sort": [
-              {
-                "desc": true,
-                "field": "Money"
-              }
-            ]
-          }
-        }
-      ],
-      "type": "table"
+      "type": "timeseries"
     }
   ],
   "refresh": "",
   "schemaVersion": 39,
-  "tags": [
-    "DIAL",
-    "ai-dial-analytics-realtime",
-    "Aggregated data"
-  ],
+  "tags": [],
   "templating": {
     "list": [
       {
@@ -989,8 +1292,8 @@
       {
         "current": {
           "selected": false,
-          "text": "from(bucket: \"default_agg_stats\") |> range(start: v.timeRangeStart, stop:v.timeRangeStop) |> filter(fn: (r) => r._measurement == \"analytics\" and r._field == \"user_hash\" and r._value!= \"undefined\")|> group() |> distinct() |> count()",
-          "value": "from(bucket: \"default_agg_stats\") |> range(start: v.timeRangeStart, stop:v.timeRangeStop) |> filter(fn: (r) => r._measurement == \"analytics\" and r._field == \"user_hash\" and r._value!= \"undefined\")|> group() |> distinct() |> count()"
+          "text": "from(bucket: \"default_agg_stats\") |> range(start: v.timeRangeStart, stop:v.timeRangeStop) |> filter(fn: (r) => r._measurement == \"analytics\" and r._field == \"user_hash\") |> group() |> distinct() |> count()",
+          "value": "from(bucket: \"default_agg_stats\") |> range(start: v.timeRangeStart, stop:v.timeRangeStop) |> filter(fn: (r) => r._measurement == \"analytics\" and r._field == \"user_hash\") |> group() |> distinct() |> count()"
         },
         "hide": 2,
         "includeAll": false,
@@ -999,11 +1302,11 @@
         "options": [
           {
             "selected": true,
-            "text": "from(bucket: \"default_agg_stats\") |> range(start: v.timeRangeStart, stop:v.timeRangeStop) |> filter(fn: (r) => r._measurement == \"analytics\" and r._field == \"user_hash\" and r._value!= \"undefined\")|> group() |> distinct() |> count()",
-            "value": "from(bucket: \"default_agg_stats\") |> range(start: v.timeRangeStart, stop:v.timeRangeStop) |> filter(fn: (r) => r._measurement == \"analytics\" and r._field == \"user_hash\" and r._value!= \"undefined\")|> group() |> distinct() |> count()"
+            "text": "from(bucket: \"default_agg_stats\") |> range(start: v.timeRangeStart, stop:v.timeRangeStop) |> filter(fn: (r) => r._measurement == \"analytics\" and r._field == \"user_hash\") |> group() |> distinct() |> count()",
+            "value": "from(bucket: \"default_agg_stats\") |> range(start: v.timeRangeStart, stop:v.timeRangeStop) |> filter(fn: (r) => r._measurement == \"analytics\" and r._field == \"user_hash\") |> group() |> distinct() |> count()"
           }
         ],
-        "query": "from(bucket: \"${INFLUX_BUCKET}_agg_stats\") |> range(start: v.timeRangeStart\\, stop:v.timeRangeStop) |> filter(fn: (r) => r._measurement == \"analytics\" and r._field == \"user_hash\" and r._value!= \"undefined\")|> group() |> distinct() |> count()",
+        "query": "from(bucket: \"${INFLUX_BUCKET}_agg_stats\") |> range(start: v.timeRangeStart\\, stop:v.timeRangeStop) |> filter(fn: (r) => r._measurement == \"analytics\" and r._field == \"user_hash\") |> group() |> distinct() |> count()",
         "skipUrlSync": false,
         "type": "custom"
       },
@@ -1031,8 +1334,8 @@
       {
         "current": {
           "selected": false,
-          "text": "from(bucket: \"default_agg_topic\")|> range(start: v.timeRangeStart, stop: v.timeRangeStop)|> filter(fn: (r) => r._measurement == \"analytics\") |> filter(fn: (r) => r._field == \"topic_count\")|> group(columns: [\"topic\"]) |> sum(column: \"_value\") |> group()",
-          "value": "from(bucket: \"default_agg_topic\")|> range(start: v.timeRangeStart, stop: v.timeRangeStop)|> filter(fn: (r) => r._measurement == \"analytics\") |> filter(fn: (r) => r._field == \"topic_count\")|> group(columns: [\"topic\"]) |> sum(column: \"_value\") |> group()"
+          "text": "from(bucket: \"default_agg_topic\")|> range(start: v.timeRangeStart, stop: v.timeRangeStop)|> filter(fn: (r) => r._measurement == \"analytics\")|> group(columns: [\"topic\"]) |> filter(fn: (r) => r._field == \"topic_count\")|> sum(column: \"_value\") |> group()",
+          "value": "from(bucket: \"default_agg_topic\")|> range(start: v.timeRangeStart, stop: v.timeRangeStop)|> filter(fn: (r) => r._measurement == \"analytics\")|> group(columns: [\"topic\"]) |> filter(fn: (r) => r._field == \"topic_count\")|> sum(column: \"_value\") |> group()"
         },
         "hide": 2,
         "includeAll": false,
@@ -1041,11 +1344,11 @@
         "options": [
           {
             "selected": true,
-            "text": "from(bucket: \"default_agg_topic\")|> range(start: v.timeRangeStart, stop: v.timeRangeStop)|> filter(fn: (r) => r._measurement == \"analytics\") |> filter(fn: (r) => r._field == \"topic_count\")|> group(columns: [\"topic\"]) |> sum(column: \"_value\") |> group()",
-            "value": "from(bucket: \"default_agg_topic\")|> range(start: v.timeRangeStart, stop: v.timeRangeStop)|> filter(fn: (r) => r._measurement == \"analytics\") |> filter(fn: (r) => r._field == \"topic_count\")|> group(columns: [\"topic\"]) |> sum(column: \"_value\") |> group()"
+            "text": "from(bucket: \"default_agg_topic\")|> range(start: v.timeRangeStart, stop: v.timeRangeStop)|> filter(fn: (r) => r._measurement == \"analytics\")|> group(columns: [\"topic\"]) |> filter(fn: (r) => r._field == \"topic_count\")|> sum(column: \"_value\") |> group()",
+            "value": "from(bucket: \"default_agg_topic\")|> range(start: v.timeRangeStart, stop: v.timeRangeStop)|> filter(fn: (r) => r._measurement == \"analytics\")|> group(columns: [\"topic\"]) |> filter(fn: (r) => r._field == \"topic_count\")|> sum(column: \"_value\") |> group()"
           }
         ],
-        "query": "from(bucket: \"${INFLUX_BUCKET}_agg_topic\")|> range(start: v.timeRangeStart\\, stop: v.timeRangeStop)|> filter(fn: (r) => r._measurement == \"analytics\") |> filter(fn: (r) => r._field == \"topic_count\")|> group(columns: [\"topic\"]) |> sum(column: \"_value\") |> group()",
+        "query": "from(bucket: \"${INFLUX_BUCKET}_agg_topic\")|> range(start: v.timeRangeStart\\, stop: v.timeRangeStop)|> filter(fn: (r) => r._measurement == \"analytics\")|> group(columns: [\"topic\"]) |> filter(fn: (r) => r._field == \"topic_count\")|> sum(column: \"_value\") |> group()",
         "skipUrlSync": false,
         "type": "custom"
       },
@@ -1157,13 +1460,13 @@
     ]
   },
   "time": {
-    "from": "now-7d",
-    "to": "now"
+    "from": "2024-01-01T00:00:00.000Z",
+    "to": "2025-01-01T00:00:00.000Z"
   },
   "timepicker": {},
   "timezone": "utc",
-  "title": "DIAL Analytics Aggregated",
-  "uid": "435858b2-4106-4d11-b6e8-9b0ff107b466fgy",
+  "title": "DIAL Cost Insights",
+  "uid": "cea90vbg2wk5ce",
   "version": 1,
   "weekStart": ""
 }

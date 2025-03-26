@@ -1,0 +1,1169 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {
+          "type": "grafana",
+          "uid": "-- Grafana --"
+        },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 0,
+  "id": 5,
+  "links": [],
+  "liveNow": false,
+  "panels": [
+    {
+      "datasource": {
+        "type": "influxdb",
+        "uid": "P3DF0C308D9792AAA"
+      },
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "fixedColor": "green",
+            "mode": "fixed"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 5,
+        "w": 2,
+        "x": 0,
+        "y": 0
+      },
+      "id": 16,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "last"
+          ],
+          "fields": "/.*/",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "pluginVersion": "10.4.0",
+      "targets": [
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "P3DF0C308D9792AAA"
+          },
+          "query": "import \"experimental\"\r\n\r\n// Constants\r\nthreshold_duration_ns =  ${threshold_duration_ns} // 1 day-1ns in nanoseconds\r\nsix_hours_ns = ${six_hours_ns}  // 6 hours in nanoseconds\r\n\r\n// Calculate the time range duration\r\ntime_diff_ns = int(v: v.timeRangeStop) - int(v: v.timeRangeStart)\r\n\r\n// Calculate remainder for 6-hour alignment at start and end\r\nstart_remainder_ns = int(v: v.timeRangeStart) % six_hours_ns\r\nend_remainder_ns_pre = int(v: v.timeRangeStop) % six_hours_ns\r\n// Extract the hour from timeRangeStop in hours (convert nanoseconds to hours)\r\ntime_hour = int(v: int(v: v.timeRangeStop) % 86400000000000) / 3600000000000\r\n\r\n// Check if the end time is in xx:59:59 for the specified hours (05, 11, 17, 23)\r\nend_remainder_ns = ${end_reminder_calc}\r\n\r\n// Bucket selection logic based on total time range duration\r\nbucket_default_only = time_diff_ns <= threshold_duration_ns\r\n\r\n// Helper function to query bucket\r\ndefault_bucket_query = (start, stop) => from(bucket: \"${INFLUX_BUCKET}\")\r\n    |> range(start: start, stop: stop)\r\n    |> filter(fn: (r) => r._measurement == \"analytics\" and r._field == \"user_hash\" and r._value != \"undefined\")\r\n    |> group()\r\n    |> distinct()\r\n\r\nagg_bucket_query = (start, stop) => from(bucket: \"${INFLUX_BUCKET}_agg_stats\")\r\n    |> range(start: start, stop: stop)\r\n    |> filter(fn: (r) => r._measurement == \"analytics\" and r._field == \"user_hash\"and r._value != \"undefined\")\r\n    |> group()\r\n    |> distinct()\r\n\r\n// Query data for the start from the default bucket if the start time is not aligned\r\ndata_default_start = \r\n    if start_remainder_ns > 0 and not bucket_default_only then ${data_default_start} \r\n    else from(bucket: \"${INFLUX_BUCKET}\") |> limit(n: 0)\r\n\r\n// Query data for the aggregated bucket (middle part)\r\ndata_agg = \r\n    if not bucket_default_only then ${data_agg}\r\n    else from(bucket: \"${INFLUX_BUCKET}_agg_stats\") |> limit(n: 0)\r\n\r\n// Query data for the end from the default bucket if the end time is not aligned\r\ndata_default_end = \r\n        if end_remainder_ns > 0 then ${data_default_end}\r\n        else from(bucket: \"${INFLUX_BUCKET}\") |> limit(n: 0)\r\n\r\n// Combine data from all buckets (start, middle, end)\r\ncombined_data = ${combine_data}\r\n\r\n// Apply final grouping and counting to get the total unique user_hash count\r\nfinal_data = combined_data\r\n    |> group()\r\n    |> distinct()\r\n    |> count()\r\n\r\nif \"${Aggregation}\" == \"SEMI\" then final_data else ${user_cnt_agg}",
+          "refId": "A"
+        }
+      ],
+      "title": "Unique Users",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "influxdb",
+        "uid": "P3DF0C308D9792AAA"
+      },
+      "gridPos": {
+        "h": 10,
+        "w": 22,
+        "x": 2,
+        "y": 0
+      },
+      "id": 12,
+      "options": {
+        "datasource_count_field": "_value",
+        "datasource_tags_field": "topic",
+        "series_index": 0,
+        "wordCloudOptions": {
+          "deterministic": true,
+          "enableTooltip": true,
+          "fontFamily": "arial",
+          "fontSizes": [
+            15,
+            80
+          ],
+          "padding": 1,
+          "rotationAngles": [
+            0,
+            0
+          ],
+          "rotations": 2,
+          "scale": "sqrt",
+          "spiral": "archimedean",
+          "transitionDuration": 800
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "P3DF0C308D9792AAA"
+          },
+          "query": "import \"experimental\"\r\n\r\n// Constants\r\nthreshold_duration_ns =  ${threshold_duration_ns} // 1 day-1ns in nanoseconds\r\nsix_hours_ns = ${six_hours_ns}  // 6 hours in nanoseconds\r\n\r\n// Calculate the time range duration\r\ntime_diff_ns = int(v: v.timeRangeStop) - int(v: v.timeRangeStart)\r\n\r\n// Calculate remainder for 6-hour alignment at start and end\r\nstart_remainder_ns = int(v: v.timeRangeStart) % six_hours_ns\r\nend_remainder_ns_pre = int(v: v.timeRangeStop) % six_hours_ns\r\n// Extract the hour from timeRangeStop in hours (convert nanoseconds to hours)\r\ntime_hour = int(v: int(v: v.timeRangeStop) % 86400000000000) / 3600000000000\r\n\r\n// Check if the end time is in xx:59:59 for the specified hours (05, 11, 17, 23)\r\nend_remainder_ns = ${end_reminder_calc}\r\n\r\n// Bucket selection logic based on total time range duration\r\nbucket_default_only = time_diff_ns <= threshold_duration_ns\r\n\r\n// Helper function to query default bucket\r\ndefault_bucket_query = (start, stop) => from(bucket: \"${INFLUX_BUCKET}\")\r\n    |> range(start: start, stop: stop)\r\n    |> filter(fn: (r) => r._measurement == \"analytics\")\r\n    |> filter(fn: (r) => r._field == \"number_request_messages\")\r\n        |> map(fn: (r) => ({r with _field: \"topic_count\"}))  // Map _field to \"topic_count\"\r\n    |> group(columns: [\"topic\"])\r\n    |> count()\r\n    \r\n\r\n// Helper function to query aggregated bucket\r\nagg_bucket_query = (start, stop) => from(bucket: \"${INFLUX_BUCKET}_agg_topic\")\r\n    |> range(start: start, stop: stop)\r\n    |> filter(fn: (r) => r._measurement == \"analytics\" and r._field == \"topic_count\")\r\n    |> group(columns: [\"topic\"])\r\n    |> sum(column: \"_value\")\r\n\r\n// Query data for the start from the default bucket if the start time is not aligned\r\ndata_default_start = \r\n    if start_remainder_ns > 0 and not bucket_default_only then ${data_default_start} \r\n    else from(bucket: \"${INFLUX_BUCKET}\") |> limit(n: 0)\r\n\r\n// Query data for the aggregated bucket (middle part)\r\ndata_agg = \r\n    if not bucket_default_only then ${data_agg}\r\n    else from(bucket: \"${INFLUX_BUCKET}_agg_stats\") |> limit(n: 0)\r\n\r\n// Query data for the end from the default bucket if the end time is not aligned\r\ndata_default_end = \r\n        if end_remainder_ns > 0 then ${data_default_end}\r\n        else from(bucket: \"${INFLUX_BUCKET}\") |> limit(n: 0)\r\n\r\n// Combine data from all buckets (start, middle, end)\r\ncombined_data = ${combine_data}\r\n\r\n// Final aggregation over the entire dataset\r\nfinal_data = combined_data\r\n\r\n    |> map(fn: (r) => ({r with topic: r.topic}))  // Explicitly preserve topic field\r\n    |> map(fn: (r) => ({r with _start: v.timeRangeStart}))  // Add static start time\r\n    |> map(fn: (r) => ({r with _stop: v.timeRangeStop}))  // Add static start time\r\n    |> group(columns: [\"_start\",\"_stop\",\"topic\"])  // Ensure were grouping by topic\r\n    |> sum(column: \"_value\")      // Sum the values by topic\r\n    |> group()\r\n\r\nif \"${Aggregation}\" == \"SEMI\" then final_data else ${topic_agg} \r\n\r\n\r\n",
+          "refId": "A"
+        }
+      ],
+      "title": "Popular Topics",
+      "type": "magnesium-wordcloud-panel"
+    },
+    {
+      "datasource": {
+        "type": "influxdb",
+        "uid": "P3DF0C308D9792AAA"
+      },
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 5,
+        "w": 2,
+        "x": 0,
+        "y": 5
+      },
+      "id": 19,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "last"
+          ],
+          "fields": "/.*/",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "pluginVersion": "10.4.0",
+      "targets": [
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "P3DF0C308D9792AAA"
+          },
+          "query": "import \"experimental\"\r\nimport \"influxdata/influxdb/schema\"\r\n\r\nfrom(bucket: \"default_agg_stats\")\r\n    |> range(start: v.timeRangeStart, stop: v.timeRangeStop)  \r\n  |> filter(fn: (r) => r._field == \"prompt_tokens\" )\r\n   |> filter(fn: (r) => r.project_id != \"\")\r\n  //|> schema.fieldsAsCols()\r\n |> group(columns: [\"project_id\"])\r\n |> distinct(column: \"project_id\") // Get unique project_id values\r\n    |> group()  // Keep project_id in the result\r\n    |> count()",
+          "refId": "A"
+        }
+      ],
+      "title": "Active Projects",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "influxdb",
+        "uid": "P3DF0C308D9792AAA"
+      },
+      "description": "",
+      "gridPos": {
+        "h": 25,
+        "w": 24,
+        "x": 0,
+        "y": 10
+      },
+      "id": 14,
+      "options": {
+        "config": {
+          "displayModeBar": false
+        },
+        "data": "",
+        "layout": {
+          "font": {
+            "color": "lightgrey"
+          },
+          "margin": {
+            "t": 0
+          },
+          "paper_bgcolor": "rgba(0,0,0,0)",
+          "plot_bgcolor": "rgba(0,0,0,0)",
+          "xaxis": {
+            "automargin": true,
+            "autorange": true,
+            "categoryorder": "category ascending",
+            "range": [
+              -0.5,
+              88.5
+            ],
+            "showgrid": false,
+            "showticklabels": true,
+            "type": "category"
+          },
+          "yaxis": {
+            "automargin": true,
+            "autorange": true,
+            "range": [
+              -0.5,
+              187.5
+            ],
+            "showgrid": false,
+            "type": "category"
+          }
+        },
+        "onclick": "//console.log(data)\n//window.updateVariables({query:{'var-project':'test'}, partial: true})",
+        "script": "var title = data.series[0].fields.find(x => x.name === \"title\")?.values\nvar topic = data.series[0].fields.find(x => x.name === \"topic\")?.values\nvar count = data.series[0].fields.find(x => x.name === \"_value\")?.values\n\nvar trace = {\n  x: title?.buffer || title || [\"No data\"],\n  y: topic?.buffer || topic || [\"No data\"],\n  z: count?.buffer || count || [NaN],\n  type: 'heatmap',\n  colorscale: \"YlOrRd\",\n};\n\nreturn {data:[trace]};"
+      },
+      "pluginVersion": "9.2.4",
+      "targets": [
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "P3DF0C308D9792AAA"
+          },
+          "query": "import \"experimental\"\r\n\r\n// Constants\r\nthreshold_duration_ns =  ${threshold_duration_ns} // 1 day-1ns in nanoseconds\r\nsix_hours_ns = ${six_hours_ns}  // 6 hours in nanoseconds\r\n\r\n// Calculate the time range duration\r\ntime_diff_ns = int(v: v.timeRangeStop) - int(v: v.timeRangeStart)\r\n\r\n// Calculate remainder for 6-hour alignment at start and end\r\nstart_remainder_ns = int(v: v.timeRangeStart) % six_hours_ns\r\nend_remainder_ns_pre = int(v: v.timeRangeStop) % six_hours_ns\r\n// Extract the hour from timeRangeStop in hours (convert nanoseconds to hours)\r\ntime_hour = int(v: int(v: v.timeRangeStop) % 86400000000000) / 3600000000000\r\n\r\n// Check if the end time is in xx:59:59 for the specified hours (05, 11, 17, 23)\r\nend_remainder_ns = ${end_reminder_calc}\r\n\r\n// Bucket selection logic based on total time range duration\r\nbucket_default_only = time_diff_ns <= threshold_duration_ns\r\n\r\n// Helper function to query default bucket\r\ndefault_bucket_query = (start, stop) => from(bucket: \"${INFLUX_BUCKET}\")\r\n    |> range(start: start, stop: stop)\r\n    |> filter(fn: (r) => r._measurement == \"analytics\")\r\n    |> filter(fn: (r) => r._field == \"number_request_messages\")\r\n    |> filter(fn: (r) => r.title != \"undefined\")\r\n    |> group(columns: [\"topic\", \"title\"]) \r\n    |> count()  // Counting occurrences if non-aggregated\r\n    \r\n\r\n// Helper function to query aggregated bucket\r\nagg_bucket_query = (start, stop) => from(bucket: \"${INFLUX_BUCKET}_agg_topic\")\r\n    |> range(start: start, stop: stop)\r\n    |> filter(fn: (r) => r._measurement == \"analytics\")\r\n    |> filter(fn: (r) => r._field == \"topic_count\")\r\n    |> filter(fn: (r) => r.title != \"undefined\")\r\n    |> group(columns: [\"topic\", \"title\"]) \r\n    |> sum(column: \"_value\")  // Summing the values if aggregated\r\n// Query data for the start from the default bucket if the start time is not aligned\r\ndata_default_start = \r\n    if start_remainder_ns > 0 and not bucket_default_only then ${data_default_start} \r\n    else from(bucket: \"${INFLUX_BUCKET}\") |> limit(n: 0)\r\n\r\n// Query data for the aggregated bucket (middle part)\r\ndata_agg = \r\n    if not bucket_default_only then ${data_agg}\r\n    else from(bucket: \"${INFLUX_BUCKET}_agg_stats\") |> limit(n: 0)\r\n\r\n// Query data for the end from the default bucket if the end time is not aligned\r\ndata_default_end = \r\n        if end_remainder_ns > 0 then ${data_default_end}\r\n        else from(bucket: \"${INFLUX_BUCKET}\") |> limit(n: 0)\r\n\r\n// Combine data from all buckets (start, middle, end)\r\ncombined_data = ${combine_data}\r\n\r\n// Conditional logic to branch based on the time difference\r\n\r\n// Final aggregation over the entire dataset\r\nfinal_data = combined_data\r\n\r\n     |> map(fn: (r) => ({r with _start: v.timeRangeStart}))  // Add static start time\r\n      |> map(fn: (r) => ({r with _stop: v.timeRangeStop}))  // Add static start time\r\n      |> group(columns: [\"_start\",\"_stop\",\"topic\", \"title\"]) \r\n      |> sum(column: \"_value\")  // Summing the values if aggregated\r\n      |> group()\r\n      |> sort(columns: [\"_value\"], desc: true)  // Sorting in descending order\r\n      |> limit(n: 100)  // Limit to top 10\r\n\t  \r\nif \"${Aggregation}\" == \"SEMI\" then final_data else \r\nfrom(bucket: \"${INFLUX_BUCKET}_agg_topic\")\r\n|> range(start: v.timeRangeStart, stop: v.timeRangeStop)\r\n\r\n    |> filter(fn: (r) => r._measurement == \"analytics\")\r\n    |> filter(fn: (r) => r._field == \"topic_count\")\r\n    |> group(columns: [\"topic\", \"title\"]) \r\n    |> sum(column: \"_value\")  // Summing the values if aggregated\r\n|> group()\r\n|> filter(fn: (r) => r.title != \"undefined\")\r\n      |> sort(columns: [\"_value\"], desc: true)  // Sorting in descending order\r\n      |> limit(n: 1000)  // Limit to top 10\r\n",
+          "refId": "A"
+        }
+      ],
+      "title": "Title-Topic Heatmap",
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {},
+            "indexByName": {},
+            "renameByName": {
+              "topic": " "
+            }
+          }
+        }
+      ],
+      "type": "ae3e-plotly-panel"
+    },
+    {
+      "datasource": {
+        "type": "influxdb",
+        "uid": "P3DF0C308D9792AAA"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 30,
+            "gradientMode": "hue",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "smooth",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "displayName": "Requests",
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green"
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Value"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "blue",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 24,
+        "x": 0,
+        "y": 35
+      },
+      "id": 10,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "P3DF0C308D9792AAA"
+          },
+          "query": "import \"experimental\"\r\n\r\n\r\n// Constants\r\nthreshold_duration_ns =  ${threshold_duration_ns} // 1 day-1ns in nanoseconds\r\nsix_hours_ns = ${six_hours_ns}  // 6 hours in nanoseconds\r\n\r\n// Calculate the time range duration\r\ntime_diff_ns = int(v: v.timeRangeStop) - int(v: v.timeRangeStart)\r\n\r\n// Calculate remainder for 6-hour alignment at start and end\r\nstart_remainder_ns = int(v: v.timeRangeStart) % six_hours_ns\r\nend_remainder_ns_pre = int(v: v.timeRangeStop) % six_hours_ns\r\n\r\n// Extract the hour from timeRangeStop in hours (convert nanoseconds to hours)\r\ntime_hour = int(v: int(v: v.timeRangeStop) % 86400000000000) / 3600000000000\r\n\r\n// Check if the end time is in xx:59:59 for the specified hours (05, 11, 17, 23)\r\nend_remainder_ns = ${end_reminder_calc}\r\n\r\n// Bucket selection logic based on total time range duration\r\nbucket_default_only = time_diff_ns <= threshold_duration_ns\r\n\r\n// Helper function to query default bucket\r\ndefault_bucket_query = (start, stop) => from(bucket: \"${INFLUX_BUCKET}\")\r\n    |> range(start: start, stop: stop)\r\n    |> filter(fn: (r) => r._measurement == \"analytics\")\r\n    |> filter(fn: (r) => r._field == \"number_request_messages\")\r\n    |> group()\r\n    |> aggregateWindow(every: v.windowPeriod, fn: count)\r\n    |> keep(columns: [\"_time\", \"_value\"])\r\n\r\n// Helper function to query aggregated bucket\r\nagg_bucket_query = (start, stop) => from(bucket: \"${INFLUX_BUCKET}_agg_stats\")\r\n    |> range(start: start, stop: stop)\r\n    |> filter(fn: (r) => r._measurement == \"analytics\")\r\n    |> filter(fn: (r) => r._field == \"request_count\")\r\n    |> group()\r\n    |> aggregateWindow(every: v.windowPeriod, fn: sum, column: \"_value\")  // Sum the request_count column\r\n    |> keep(columns: [\"_time\", \"_value\"]) \r\n    |> filter(fn: (r) => r._value != 0 )\r\n\r\n// Query data for the start from the default bucket if the start time is not aligned\r\ndata_default_start = \r\n    if start_remainder_ns > 0 and not bucket_default_only then ${data_default_start} \r\n    else from(bucket: \"${INFLUX_BUCKET}\") |> limit(n: 0)\r\n\r\n// Query data for the aggregated bucket (middle part)\r\ndata_agg = \r\n    if not bucket_default_only then ${data_agg}\r\n    else from(bucket: \"${INFLUX_BUCKET}_agg_stats\") |> limit(n: 0)\r\n\r\n// Query data for the end from the default bucket if the end time is not aligned\r\ndata_default_end = \r\n        if end_remainder_ns > 0 then ${data_default_end}\r\n        else from(bucket: \"${INFLUX_BUCKET}\") |> limit(n: 0)\r\n\r\n// Combine data from all buckets (start, middle, end)\r\nfinal_data = ${combine_data}\r\n\r\nif \"${Aggregation}\" == \"SEMI\" then final_data else ${system_agg} \r\n\r\n\r\n",
+          "refId": "A"
+        }
+      ],
+      "title": "System Usage",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "influxdb",
+        "uid": "P3DF0C308D9792AAA"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "filterable": true,
+            "inspect": false
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green"
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Money"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "currencyUSD"
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 13,
+        "w": 24,
+        "x": 0,
+        "y": 44
+      },
+      "id": 18,
+      "options": {
+        "cellHeight": "sm",
+        "footer": {
+          "countRows": false,
+          "enablePagination": true,
+          "fields": [
+            "request_count",
+            "prompt_tokens",
+            "completion_tokens",
+            "money"
+          ],
+          "reducer": [
+            "sum"
+          ],
+          "show": true
+        },
+        "showHeader": true,
+        "sortBy": [
+          {
+            "desc": true,
+            "displayName": "Completion tokens"
+          }
+        ]
+      },
+      "pluginVersion": "10.4.0",
+      "targets": [
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "P3DF0C308D9792AAA"
+          },
+          "hide": false,
+          "query": "import \"influxdata/influxdb/schema\"\r\nimport \"strings\"\r\nimport \"regexp\"\r\nimport \"array\"\r\nimport \"experimental\"\r\ngetOrDefault = (f, d) => if exists f then f else d\r\n\r\n// Constants\r\nthreshold_duration_ns =  ${threshold_duration_ns} // 1 day-1ns in nanoseconds\r\nsix_hours_ns = ${six_hours_ns}  // 6 hours in nanoseconds\r\n\r\n// Calculate the time range duration\r\ntime_diff_ns = int(v: v.timeRangeStop) - int(v: v.timeRangeStart)\r\n\r\n// Calculate remainder for 6-hour alignment at start and end\r\nstart_remainder_ns = int(v: v.timeRangeStart) % six_hours_ns\r\nend_remainder_ns_pre = int(v: v.timeRangeStop) % six_hours_ns\r\n// Extract the hour from timeRangeStop in hours (convert nanoseconds to hours)\r\ntime_hour = int(v: int(v: v.timeRangeStop) % 86400000000000) / 3600000000000\r\n\r\n// Check if the end time is in xx:59:59 for the specified hours (05, 11, 17, 23)\r\nend_remainder_ns = ${end_reminder_calc}\r\n\r\n// Bucket selection logic based on total time range duration\r\nbucket_default_only = time_diff_ns <= threshold_duration_ns\r\n\r\n// Helper function to query default bucket\r\ndefault_bucket_query = (start, stop) => from(bucket: \"${INFLUX_BUCKET}\")\r\n  |> range(start: start, stop: stop)\r\n  |> filter(fn: (r) => r._measurement == \"analytics\")\r\n  |> filter(fn: (r) => r._field == \"prompt_tokens\" or r._field == \"completion_tokens\" or r._field == \"number_request_messages\" or r._field == \"user_hash\" or r._field == \"price\"or r._field == \"request_count\")\r\n  |> schema.fieldsAsCols()\r\n  |> group(columns: [\"project_id\", \"deployment\", \"model\", \"user_hash\"])\r\n  |> reduce(\r\n        fn: (r, accumulator) => ({\r\n          request_count: accumulator.request_count + 1,\r\n          prompt_tokens: getOrDefault(f: r.prompt_tokens, d: 0) + accumulator.prompt_tokens,\r\n          completion_tokens: getOrDefault(f: r.completion_tokens, d: 0) + accumulator.completion_tokens,\r\n          money: getOrDefault(f: r.price, d: 0.0) + accumulator.money,\r\n          user_count: 1\r\n        }),\r\n        identity: {request_count: 0, prompt_tokens: 0, completion_tokens: 0, money: 0.0, user_count: 0}\r\n    )\r\n\r\n\r\n  // Helper function to query aggregated bucket\r\n  agg_bucket_query = (start, stop) => from(bucket: \"${INFLUX_BUCKET}_agg_stats\")\r\n    |> range(start: start, stop: stop)\r\n    |> filter(fn: (r) => r._field == \"prompt_tokens\" or r._field == \"completion_tokens\" or r._field == \"number_request_messages\" or r._field == \"user_hash\" or r._field == \"price\"or r._field == \"request_count\")\r\n    |> schema.fieldsAsCols()\r\n    |> group(columns: [\"project_id\", \"deployment\", \"model\", \"user_hash\"])\r\n    |> reduce(\r\n        fn: (r, accumulator) => ({\r\n          request_count: getOrDefault(f: r.request_count, d: 0) + accumulator.request_count,\r\n          prompt_tokens: getOrDefault(f: r.prompt_tokens, d: 0) + accumulator.prompt_tokens,\r\n          completion_tokens: getOrDefault(f: r.completion_tokens, d: 0) + accumulator.completion_tokens,\r\n          money: getOrDefault(f: r.price, d: 0.0) + accumulator.money,\r\n          user_count: 1\r\n        }),\r\n        identity: {request_count: 0, prompt_tokens: 0, completion_tokens: 0, money: 0.0, user_count: 0}\r\n    )\r\n\r\n\r\n// Query data for the start from the default bucket if the start time is not aligned\r\ndata_default_start = \r\n    if start_remainder_ns > 0 and not bucket_default_only then ${data_default_start} \r\n    else from(bucket: \"${INFLUX_BUCKET}\") |> limit(n: 0)\r\n\r\n// Query data for the aggregated bucket (middle part)\r\ndata_agg = \r\n    if not bucket_default_only then ${data_agg}\r\n    else from(bucket: \"${INFLUX_BUCKET}_agg_stats\") |> limit(n: 0)\r\n\r\n// Query data for the end from the default bucket if the end time is not aligned\r\ndata_default_end = \r\n        if end_remainder_ns > 0 then ${data_default_end}\r\n        else from(bucket: \"${INFLUX_BUCKET}\") |> limit(n: 0)\r\n\r\n// Combine data from all buckets (start, middle, end)\r\ncombined_data = ${combine_data}\r\n// User count is slightly differently calculated for the agg and for the start/end piece\r\nuser_count_value = if bucket_default_only then 0\r\n    else -1\r\n// Combine default and agg buckets data  \r\nfinal_data = combined_data\r\n  |> group(columns: [\"project_id\", \"deployment\", \"model\",\"user_hash\"])\r\n  |> reduce(\r\n        fn: (r, accumulator) => ({\r\n         // user_count: accumulator.user_count + 1,\r\n          request_count: r.request_count + accumulator.request_count,\r\n          prompt_tokens: r.prompt_tokens + accumulator.prompt_tokens,\r\n          completion_tokens: r.completion_tokens + accumulator.completion_tokens,\r\n          money: r.money + accumulator.money\r\n        }),\r\n        identity: {request_count: 0, prompt_tokens: 0, completion_tokens: 0, money: 0.0}\r\n    )\r\n      |> group(columns: [\"project_id\", \"deployment\", \"model\"])\r\n  |> reduce(\r\n        fn: (r, accumulator) => ({\r\n          user_count: accumulator.user_count + 1,\r\n          request_count: r.request_count + accumulator.request_count,\r\n          prompt_tokens: r.prompt_tokens + accumulator.prompt_tokens,\r\n          completion_tokens: r.completion_tokens + accumulator.completion_tokens,\r\n          money: r.money + accumulator.money\r\n        }),\r\n        identity: {user_count: user_count_value, request_count: 0, prompt_tokens: 0, completion_tokens: 0, money: 0.0}\r\n    )\r\n  |> group()\r\n\r\nif \"${Aggregation}\" == \"SEMI\" then final_data else ${stats_agg} ",
+          "refId": "A"
+        }
+      ],
+      "title": "Stats Table",
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {},
+            "includeByName": {},
+            "indexByName": {
+              "completion_tokens": 6,
+              "deployment": 1,
+              "model": 2,
+              "money": 7,
+              "project_id": 0,
+              "prompt_tokens": 5,
+              "request_count": 4,
+              "user_count": 3
+            },
+            "renameByName": {
+              "completion_tokens": "Completition tokens",
+              "deployment": "Deployment",
+              "model": "Model",
+              "money": "Money",
+              "project_id": "Project",
+              "prompt_tokens": "Prompt tokens",
+              "request_count": "Request count",
+              "user_count": "Users"
+            }
+          }
+        },
+        {
+          "id": "sortBy",
+          "options": {
+            "fields": {},
+            "sort": [
+              {
+                "desc": true,
+                "field": "Money"
+              }
+            ]
+          }
+        }
+      ],
+      "type": "table"
+    },
+    {
+      "datasource": {
+        "type": "influxdb",
+        "uid": "P3DF0C308D9792AAA"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "filterable": true,
+            "inspect": false
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green"
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Money"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "currencyUSD"
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 13,
+        "w": 24,
+        "x": 0,
+        "y": 57
+      },
+      "id": 17,
+      "options": {
+        "cellHeight": "sm",
+        "footer": {
+          "countRows": false,
+          "enablePagination": true,
+          "fields": [
+            "request_count",
+            "prompt_tokens",
+            "completion_tokens",
+            "money"
+          ],
+          "reducer": [
+            "sum"
+          ],
+          "show": true
+        },
+        "showHeader": true,
+        "sortBy": []
+      },
+      "pluginVersion": "10.4.0",
+      "targets": [
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "P3DF0C308D9792AAA"
+          },
+          "hide": false,
+          "query": "import \"influxdata/influxdb/schema\"\r\nimport \"strings\"\r\nimport \"regexp\"\r\nimport \"array\"\r\nimport \"experimental\"\r\ngetOrDefault = (f, d) => if exists f then f else d\r\n\r\n// Constants\r\nthreshold_duration_ns =  ${threshold_duration_ns} // 1 day-1ns in nanoseconds\r\nsix_hours_ns = ${six_hours_ns}  // 6 hours in nanoseconds\r\n\r\n// Calculate the time range duration\r\ntime_diff_ns = int(v: v.timeRangeStop) - int(v: v.timeRangeStart)\r\n\r\n// Calculate remainder for 6-hour alignment at start and end\r\nstart_remainder_ns = int(v: v.timeRangeStart) % six_hours_ns\r\nend_remainder_ns_pre = int(v: v.timeRangeStop) % six_hours_ns\r\n// Extract the hour from timeRangeStop in hours (convert nanoseconds to hours)\r\ntime_hour = int(v: int(v: v.timeRangeStop) % 86400000000000) / 3600000000000\r\n\r\n// Check if the end time is in xx:59:59 for the specified hours (05, 11, 17, 23)\r\nend_remainder_ns = ${end_reminder_calc}\r\n\r\n// Bucket selection logic based on total time range duration\r\nbucket_default_only = time_diff_ns <= threshold_duration_ns\r\n\r\n// Helper function to query default bucket\r\ndefault_bucket_query = (start, stop) => from(bucket: \"${INFLUX_BUCKET}\")\r\n  |> range(start: start, stop: stop)\r\n  |> filter(fn: (r) => r._measurement == \"analytics\")\r\n  |> filter(fn: (r) => r._field == \"prompt_tokens\" or r._field == \"completion_tokens\" or r._field == \"number_request_messages\"  or r._field == \"price\"or r._field == \"request_count\")\r\n  |> schema.fieldsAsCols()\r\n  |> group(columns: [\"project_id\"])\r\n  |> reduce(\r\n        fn: (r, accumulator) => ({\r\n          request_count: accumulator.request_count + 1,\r\n          prompt_tokens: getOrDefault(f: r.prompt_tokens, d: 0) + accumulator.prompt_tokens,\r\n          completion_tokens: getOrDefault(f: r.completion_tokens, d: 0) + accumulator.completion_tokens,\r\n          money: getOrDefault(f: r.price, d: 0.0) + accumulator.money\r\n        }),\r\n        identity: {request_count: 0, prompt_tokens: 0, completion_tokens: 0, money: 0.0}\r\n    )\r\n\r\n\r\n  // Helper function to query aggregated bucket\r\n  agg_bucket_query = (start, stop) => from(bucket: \"${INFLUX_BUCKET}_agg_stats\")\r\n    |> range(start: start, stop: stop)\r\n    |> filter(fn: (r) => r._field == \"prompt_tokens\" or r._field == \"completion_tokens\" or r._field == \"number_request_messages\" or r._field == \"price\"or r._field == \"request_count\")\r\n    |> schema.fieldsAsCols()\r\n    |> group(columns: [\"project_id\"])\r\n    |> reduce(\r\n        fn: (r, accumulator) => ({\r\n          request_count: getOrDefault(f: r.request_count, d: 0) + accumulator.request_count,\r\n          prompt_tokens: getOrDefault(f: r.prompt_tokens, d: 0) + accumulator.prompt_tokens,\r\n          completion_tokens: getOrDefault(f: r.completion_tokens, d: 0) + accumulator.completion_tokens,\r\n          money: getOrDefault(f: r.price, d: 0.0) + accumulator.money\r\n        }),\r\n        identity: {request_count: 0, prompt_tokens: 0, completion_tokens: 0, money: 0.0}\r\n    )\r\n\r\n\r\n// Query data for the start from the default bucket if the start time is not aligned\r\ndata_default_start = \r\n    if start_remainder_ns > 0 and not bucket_default_only then ${data_default_start} \r\n    else from(bucket: \"${INFLUX_BUCKET}\") |> limit(n: 0)\r\n\r\n// Query data for the aggregated bucket (middle part)\r\ndata_agg = \r\n    if not bucket_default_only then ${data_agg}\r\n    else from(bucket: \"${INFLUX_BUCKET}_agg_stats\") |> limit(n: 0)\r\n\r\n// Query data for the end from the default bucket if the end time is not aligned\r\ndata_default_end = \r\n        if end_remainder_ns > 0 then ${data_default_end}\r\n        else from(bucket: \"${INFLUX_BUCKET}\") |> limit(n: 0)\r\n\r\n// Combine data from all buckets (start, middle, end)\r\ncombined_data = ${combine_data}\r\n\r\nfinal_data = combined_data\r\n  |> group(columns: [\"project_id\"])\r\n  |> reduce(\r\n        fn: (r, accumulator) => ({\r\n          request_count: r.request_count + accumulator.request_count,\r\n          prompt_tokens: r.prompt_tokens + accumulator.prompt_tokens,\r\n          completion_tokens: r.completion_tokens + accumulator.completion_tokens,\r\n          money: r.money + accumulator.money\r\n        }),\r\n        identity: {request_count: 0, prompt_tokens: 0, completion_tokens: 0, money: 0.0}\r\n    )\r\n  |> group()\r\n\r\n\r\nif \"${Aggregation}\" == \"SEMI\" then final_data else ${stats_2_agg} \r\n",
+          "refId": "A"
+        }
+      ],
+      "title": "Project Stats Table",
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "_time": true
+            },
+            "includeByName": {},
+            "indexByName": {
+              "completion_tokens": 6,
+              "deployment": 1,
+              "model": 2,
+              "money": 7,
+              "project_id": 0,
+              "prompt_tokens": 5,
+              "request_count": 4,
+              "user_count": 3
+            },
+            "renameByName": {
+              "completion_tokens": "Completion tokens",
+              "deployment": "Deployment",
+              "model": "Model",
+              "money": "Money",
+              "number_request_messages": "",
+              "project_id": "Project",
+              "prompt_tokens": "Prompt tokens",
+              "request_count": "Request count",
+              "user_count": "Users"
+            }
+          }
+        },
+        {
+          "id": "sortBy",
+          "options": {
+            "fields": {},
+            "sort": [
+              {
+                "desc": true,
+                "field": "Money"
+              }
+            ]
+          }
+        }
+      ],
+      "type": "table"
+    },
+    {
+      "datasource": {
+        "type": "influxdb",
+        "uid": "P3DF0C308D9792AAA"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "filterable": true,
+            "inspect": false
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green"
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "money"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "currencyUSD"
+              },
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "options": {
+                      "NaN": {
+                        "index": 0,
+                        "text": "Not configured"
+                      }
+                    },
+                    "type": "value"
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 13,
+        "w": 24,
+        "x": 0,
+        "y": 70
+      },
+      "id": 8,
+      "options": {
+        "cellHeight": "sm",
+        "footer": {
+          "countRows": false,
+          "enablePagination": true,
+          "fields": "",
+          "reducer": [
+            "sum"
+          ],
+          "show": true
+        },
+        "showHeader": true,
+        "sortBy": []
+      },
+      "pluginVersion": "10.4.0",
+      "targets": [
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "P3DF0C308D9792AAA"
+          },
+          "hide": false,
+          "query": "import \"influxdata/influxdb/schema\"\r\nimport \"strings\"\r\nimport \"regexp\"\r\nimport \"array\"\r\nimport \"experimental\"\r\ngetOrDefault = (f, d) => if exists f then f else d\r\n\r\n// Constants\r\nthreshold_duration_ns =  ${threshold_duration_ns} // 1 day-1ns in nanoseconds\r\nsix_hours_ns = ${six_hours_ns}  // 6 hours in nanoseconds\r\n\r\n// Calculate the time range duration\r\ntime_diff_ns = int(v: v.timeRangeStop) - int(v: v.timeRangeStart)\r\n\r\n// Calculate remainder for 6-hour alignment at start and end\r\nstart_remainder_ns = int(v: v.timeRangeStart) % six_hours_ns\r\nend_remainder_ns_pre = int(v: v.timeRangeStop) % six_hours_ns\r\n// Extract the hour from timeRangeStop in hours (convert nanoseconds to hours)\r\ntime_hour = int(v: int(v: v.timeRangeStop) % 86400000000000) / 3600000000000\r\n\r\n// Check if the end time is in xx:59:59 for the specified hours (05, 11, 17, 23)\r\nend_remainder_ns = ${end_reminder_calc}\r\n\r\n// Bucket selection logic based on total time range duration\r\nbucket_default_only = time_diff_ns <= threshold_duration_ns\r\n\r\n// Helper function to query default bucket\r\ndefault_bucket_query = (start, stop) => from(bucket: \"${INFLUX_BUCKET}\")\r\n  |> range(start: start, stop: stop)\r\n  |> filter(fn: (r) => r._measurement == \"analytics\")\r\n  |> filter(fn: (r) => r._field == \"prompt_tokens\" or r._field == \"completion_tokens\" or r._field == \"number_request_messages\"  or r._field == \"price\"or r._field == \"request_count\")\r\n  |> schema.fieldsAsCols()\r\n  |> group(columns: [\"deployment\", \"model\"])\r\n  |> reduce(\r\n        fn: (r, accumulator) => ({\r\n          request_count: accumulator.request_count + 1,\r\n          prompt_tokens: getOrDefault(f: r.prompt_tokens, d: 0) + accumulator.prompt_tokens,\r\n          completion_tokens: getOrDefault(f: r.completion_tokens, d: 0) + accumulator.completion_tokens,\r\n          money: getOrDefault(f: r.price, d: 0.0) + accumulator.money\r\n        }),\r\n        identity: {request_count: 0, prompt_tokens: 0, completion_tokens: 0, money: 0.0}\r\n    )\r\n\r\n  // Helper function to query aggregated bucket\r\n  agg_bucket_query = (start, stop) => from(bucket: \"${INFLUX_BUCKET}_agg_stats\")\r\n    |> range(start: start, stop: stop)\r\n    |> filter(fn: (r) => r._field == \"prompt_tokens\" or r._field == \"completion_tokens\" or r._field == \"number_request_messages\" or r._field == \"user_hash\" or r._field == \"price\"or r._field == \"request_count\")\r\n    |> schema.fieldsAsCols()\r\n    |> group(columns: [\"deployment\", \"model\"])\r\n    |> reduce(\r\n        fn: (r, accumulator) => ({\r\n          request_count: getOrDefault(f: r.request_count, d: 0) + accumulator.request_count,\r\n          prompt_tokens: getOrDefault(f: r.prompt_tokens, d: 0) + accumulator.prompt_tokens,\r\n          completion_tokens: getOrDefault(f: r.completion_tokens, d: 0) + accumulator.completion_tokens,\r\n          money: getOrDefault(f: r.price, d: 0.0) + accumulator.money\r\n        }),\r\n        identity: {request_count: 0, prompt_tokens: 0, completion_tokens: 0, money: 0.0}\r\n    )\r\n\r\n\r\n// Query data for the start from the default bucket if the start time is not aligned\r\ndata_default_start = \r\n    if start_remainder_ns > 0 and not bucket_default_only then ${data_default_start} \r\n    else from(bucket: \"${INFLUX_BUCKET}\") |> limit(n: 0)\r\n\r\n// Query data for the aggregated bucket (middle part)\r\ndata_agg = \r\n    if not bucket_default_only then ${data_agg}\r\n    else from(bucket: \"${INFLUX_BUCKET}_agg_stats\") |> limit(n: 0)\r\n\r\n// Query data for the end from the default bucket if the end time is not aligned\r\ndata_default_end = \r\n        if end_remainder_ns > 0 then ${data_default_end}\r\n        else from(bucket: \"${INFLUX_BUCKET}\") |> limit(n: 0)\r\n\r\n// Combine data from all buckets (start, middle, end)\r\ncombined_data = ${combine_data}\r\n\r\nfinal_data = combined_data\r\n  |> group(columns: [\"deployment\", \"model\"])\r\n  |> reduce(\r\n        fn: (r, accumulator) => ({\r\n          request_count: r.request_count + accumulator.request_count,\r\n          prompt_tokens: r.prompt_tokens + accumulator.prompt_tokens,\r\n          completion_tokens: r.completion_tokens + accumulator.completion_tokens,\r\n          money: r.money + accumulator.money\r\n        }),\r\n        identity: {request_count: 0, prompt_tokens: 0, completion_tokens: 0, money: 0.0}\r\n    )\r\n  |> group()\r\nif \"${Aggregation}\" == \"SEMI\" then final_data else ${stats_3_agg}",
+          "refId": "A"
+        }
+      ],
+      "title": "Deployment/Model Stats Table",
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "_time": true
+            },
+            "indexByName": {
+              "completion_tokens": 4,
+              "deployment": 0,
+              "model": 1,
+              "money": 5,
+              "prompt_tokens": 3,
+              "request_count": 2
+            },
+            "renameByName": {
+              "completion_tokens": "Completion tokens",
+              "deployment": "Deployment",
+              "model": "Model",
+              "money": "Money",
+              "number_request_messages": "",
+              "project_id": "",
+              "prompt_tokens": "Prompt tokens",
+              "request_count": "Request count"
+            }
+          }
+        },
+        {
+          "id": "sortBy",
+          "options": {
+            "fields": {},
+            "sort": [
+              {
+                "desc": true,
+                "field": "Money"
+              }
+            ]
+          }
+        }
+      ],
+      "type": "table"
+    }
+  ],
+  "refresh": "",
+  "schemaVersion": 39,
+  "tags": [
+    "DIAL",
+    "ai-dial-analytics-realtime",
+    "Aggregated data"
+  ],
+  "templating": {
+    "list": [
+      {
+        "current": {
+          "selected": false,
+          "text": "InfluxDB_EPAM",
+          "value": "P3DF0C308D9792AAA"
+        },
+        "description": "InfluxDB datasource",
+        "hide": 0,
+        "includeAll": false,
+        "label": "Data source",
+        "multi": false,
+        "name": "datasource",
+        "options": [],
+        "query": "influxdb",
+        "queryValue": "",
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "type": "datasource"
+      },
+      {
+        "current": {
+          "selected": false,
+          "text": "default",
+          "value": "default"
+        },
+        "datasource": {
+          "type": "influxdb",
+          "uid": "P3DF0C308D9792AAA"
+        },
+        "definition": "buckets()",
+        "description": "A InfluxDB bucket name",
+        "hide": 0,
+        "includeAll": false,
+        "multi": false,
+        "name": "INFLUX_BUCKET",
+        "options": [],
+        "query": "buckets()",
+        "refresh": 1,
+        "regex": "/^(default)$/",
+        "skipUrlSync": false,
+        "sort": 0,
+        "type": "query"
+      },
+      {
+        "hide": 2,
+        "name": "combine_data",
+        "query": "if bucket_default_only then     data_default_start else if start_remainder_ns > 0 and end_remainder_ns > 0 then     union(tables: [data_default_start, data_agg, data_default_end]) else if start_remainder_ns > 0 then     union(tables: [data_default_start, data_agg]) else if end_remainder_ns > 0 then     union(tables: [data_agg, data_default_end]) else     data_agg",
+        "skipUrlSync": false,
+        "type": "constant"
+      },
+      {
+        "hide": 2,
+        "name": "data_default_end",
+        "query": "default_bucket_query(start: experimental.addDuration(d: -duration(v: end_remainder_ns), to: v.timeRangeStop), stop: v.timeRangeStop)",
+        "skipUrlSync": false,
+        "type": "constant"
+      },
+      {
+        "hide": 2,
+        "name": "data_default_start",
+        "query": "default_bucket_query(         start: v.timeRangeStart,          stop: experimental.addDuration(d: duration(v: six_hours_ns - start_remainder_ns), to: v.timeRangeStart)     )     else if bucket_default_only then     default_bucket_query(         start: v.timeRangeStart,          stop: v.timeRangeStop     )",
+        "skipUrlSync": false,
+        "type": "constant"
+      },
+      {
+        "hide": 2,
+        "name": "data_agg",
+        "query": "agg_bucket_query(         start: if start_remainder_ns > 0 then experimental.addDuration(d: duration(v: six_hours_ns - start_remainder_ns), to: v.timeRangeStart) else v.timeRangeStart,         stop: if end_remainder_ns > 0 then experimental.addDuration(d: -duration(v: end_remainder_ns), to: v.timeRangeStop) else v.timeRangeStop     )",
+        "skipUrlSync": false,
+        "type": "constant"
+      },
+      {
+        "description": "1 day -1 nanoseconds: if query is above this, data is taken partially from aggregated buckets",
+        "hide": 2,
+        "name": "threshold_duration_ns",
+        "query": "86399999999999",
+        "skipUrlSync": false,
+        "type": "constant"
+      },
+      {
+        "hide": 2,
+        "label": "",
+        "name": "six_hours_ns",
+        "query": "21600000000000",
+        "skipUrlSync": false,
+        "type": "constant"
+      },
+      {
+        "hide": 2,
+        "name": "end_reminder_calc",
+        "query": "if int(v: v.timeRangeStop) % 3600000000000 == 3599000000000 and (      time_hour == 5 or      time_hour == 11 or      time_hour == 17 or     time_hour == 23 ) then 0 else end_remainder_ns_pre",
+        "skipUrlSync": false,
+        "type": "constant"
+      },
+      {
+        "current": {
+          "selected": false,
+          "text": "combined_data |> group(columns: [\"project_id\", \"deployment\", \"model\",\"user_hash\"]) |> reduce(   fn: (r, accumulator) => ({   request_count: r.request_count + accumulator.request_count,   prompt_tokens: r.prompt_tokens + accumulator.prompt_tokens,   completion_tokens: r.completion_tokens + accumulator.completion_tokens,   money: r.money + accumulator.money   }),   identity: {request_count: 0, prompt_tokens: 0, completion_tokens: 0, money: 0.0}  )  |> group(columns: [\"project_id\", \"deployment\", \"model\"]) |> reduce(   fn: (r, accumulator) => ({   user_count: accumulator.user_count + 1,   request_count: r.request_count + accumulator.request_count,   prompt_tokens: r.prompt_tokens + accumulator.prompt_tokens,   completion_tokens: r.completion_tokens + accumulator.completion_tokens,   money: r.money + accumulator.money   }),   identity: {user_count: user_count_value, request_count: 0, prompt_tokens: 0, completion_tokens: 0, money: 0.0})|> group()",
+          "value": "combined_data |> group(columns: [\"project_id\", \"deployment\", \"model\",\"user_hash\"]) |> reduce(   fn: (r, accumulator) => ({   request_count: r.request_count + accumulator.request_count,   prompt_tokens: r.prompt_tokens + accumulator.prompt_tokens,   completion_tokens: r.completion_tokens + accumulator.completion_tokens,   money: r.money + accumulator.money   }),   identity: {request_count: 0, prompt_tokens: 0, completion_tokens: 0, money: 0.0}  )  |> group(columns: [\"project_id\", \"deployment\", \"model\"]) |> reduce(   fn: (r, accumulator) => ({   user_count: accumulator.user_count + 1,   request_count: r.request_count + accumulator.request_count,   prompt_tokens: r.prompt_tokens + accumulator.prompt_tokens,   completion_tokens: r.completion_tokens + accumulator.completion_tokens,   money: r.money + accumulator.money   }),   identity: {user_count: user_count_value, request_count: 0, prompt_tokens: 0, completion_tokens: 0, money: 0.0})|> group()"
+        },
+        "hide": 2,
+        "includeAll": false,
+        "multi": false,
+        "name": "stats_non_agg",
+        "options": [
+          {
+            "selected": true,
+            "text": "combined_data |> group(columns: [\"project_id\", \"deployment\", \"model\",\"user_hash\"]) |> reduce(   fn: (r, accumulator) => ({   request_count: r.request_count + accumulator.request_count,   prompt_tokens: r.prompt_tokens + accumulator.prompt_tokens,   completion_tokens: r.completion_tokens + accumulator.completion_tokens,   money: r.money + accumulator.money   }),   identity: {request_count: 0, prompt_tokens: 0, completion_tokens: 0, money: 0.0}  )  |> group(columns: [\"project_id\", \"deployment\", \"model\"]) |> reduce(   fn: (r, accumulator) => ({   user_count: accumulator.user_count + 1,   request_count: r.request_count + accumulator.request_count,   prompt_tokens: r.prompt_tokens + accumulator.prompt_tokens,   completion_tokens: r.completion_tokens + accumulator.completion_tokens,   money: r.money + accumulator.money   }),   identity: {user_count: user_count_value, request_count: 0, prompt_tokens: 0, completion_tokens: 0, money: 0.0})|> group()",
+            "value": "combined_data |> group(columns: [\"project_id\", \"deployment\", \"model\",\"user_hash\"]) |> reduce(   fn: (r, accumulator) => ({   request_count: r.request_count + accumulator.request_count,   prompt_tokens: r.prompt_tokens + accumulator.prompt_tokens,   completion_tokens: r.completion_tokens + accumulator.completion_tokens,   money: r.money + accumulator.money   }),   identity: {request_count: 0, prompt_tokens: 0, completion_tokens: 0, money: 0.0}  )  |> group(columns: [\"project_id\", \"deployment\", \"model\"]) |> reduce(   fn: (r, accumulator) => ({   user_count: accumulator.user_count + 1,   request_count: r.request_count + accumulator.request_count,   prompt_tokens: r.prompt_tokens + accumulator.prompt_tokens,   completion_tokens: r.completion_tokens + accumulator.completion_tokens,   money: r.money + accumulator.money   }),   identity: {user_count: user_count_value, request_count: 0, prompt_tokens: 0, completion_tokens: 0, money: 0.0})|> group()"
+          }
+        ],
+        "query": "combined_data |> group(columns: [\"project_id\"\\, \"deployment\"\\, \"model\"\\,\"user_hash\"]) |> reduce(   fn: (r\\, accumulator) => ({   request_count: r.request_count + accumulator.request_count\\,   prompt_tokens: r.prompt_tokens + accumulator.prompt_tokens\\,   completion_tokens: r.completion_tokens + accumulator.completion_tokens\\,   money: r.money + accumulator.money   })\\,   identity: {request_count: 0\\, prompt_tokens: 0\\, completion_tokens: 0\\, money: 0.0}  )  |> group(columns: [\"project_id\"\\, \"deployment\"\\, \"model\"]) |> reduce(   fn: (r\\, accumulator) => ({   user_count: accumulator.user_count + 1\\,   request_count: r.request_count + accumulator.request_count\\,   prompt_tokens: r.prompt_tokens + accumulator.prompt_tokens\\,   completion_tokens: r.completion_tokens + accumulator.completion_tokens\\,   money: r.money + accumulator.money   })\\,   identity: {user_count: user_count_value\\, request_count: 0\\, prompt_tokens: 0\\, completion_tokens: 0\\, money: 0.0})|> group()",
+        "queryValue": "",
+        "skipUrlSync": false,
+        "type": "custom"
+      },
+      {
+        "current": {
+          "selected": false,
+          "text": "from(bucket: \"default_agg_stats\")|> range(start: v.timeRangeStart, stop: v.timeRangeStop)|> filter(fn: (r) => r._field == \"prompt_tokens\" or r._field == \"completion_tokens\" or r._field == \"number_request_messages\" or r._field == \"user_hash\" or r._field == \"price\"or r._field == \"request_count\")|> schema.fieldsAsCols()|> group(columns: [\"project_id\", \"deployment\", \"model\", \"user_hash\"])|> reduce(fn: (r, accumulator) => ({request_count: getOrDefault(f: r.request_count, d: 0) + accumulator.request_count,prompt_tokens: getOrDefault(f: r.prompt_tokens, d: 0) + accumulator.prompt_tokens,completion_tokens: getOrDefault(f: r.completion_tokens, d: 0) + accumulator.completion_tokens,money: getOrDefault(f: r.price, d: 0.0) + accumulator.money,user_count: 0}),identity: {request_count: 0, prompt_tokens: 0, completion_tokens: 0, money: 0.0, user_count: -1}) |> group(columns: [\"project_id\", \"deployment\", \"model\"])|> reduce(fn: (r, accumulator) => ({ user_count: accumulator.user_count + 1,request_count: r.request_count + accumulator.request_count,prompt_tokens: r.prompt_tokens + accumulator.prompt_tokens,completion_tokens: r.completion_tokens + accumulator.completion_tokens,money: r.money + accumulator.money}),identity: {user_count:-1, request_count: 0, prompt_tokens: 0, completion_tokens: 0, money: 0.0}) |> group()",
+          "value": "from(bucket: \"default_agg_stats\")|> range(start: v.timeRangeStart, stop: v.timeRangeStop)|> filter(fn: (r) => r._field == \"prompt_tokens\" or r._field == \"completion_tokens\" or r._field == \"number_request_messages\" or r._field == \"user_hash\" or r._field == \"price\"or r._field == \"request_count\")|> schema.fieldsAsCols()|> group(columns: [\"project_id\", \"deployment\", \"model\", \"user_hash\"])|> reduce(fn: (r, accumulator) => ({request_count: getOrDefault(f: r.request_count, d: 0) + accumulator.request_count,prompt_tokens: getOrDefault(f: r.prompt_tokens, d: 0) + accumulator.prompt_tokens,completion_tokens: getOrDefault(f: r.completion_tokens, d: 0) + accumulator.completion_tokens,money: getOrDefault(f: r.price, d: 0.0) + accumulator.money,user_count: 0}),identity: {request_count: 0, prompt_tokens: 0, completion_tokens: 0, money: 0.0, user_count: -1}) |> group(columns: [\"project_id\", \"deployment\", \"model\"])|> reduce(fn: (r, accumulator) => ({ user_count: accumulator.user_count + 1,request_count: r.request_count + accumulator.request_count,prompt_tokens: r.prompt_tokens + accumulator.prompt_tokens,completion_tokens: r.completion_tokens + accumulator.completion_tokens,money: r.money + accumulator.money}),identity: {user_count:-1, request_count: 0, prompt_tokens: 0, completion_tokens: 0, money: 0.0}) |> group()"
+        },
+        "hide": 2,
+        "includeAll": false,
+        "multi": false,
+        "name": "stats_agg",
+        "options": [
+          {
+            "selected": true,
+            "text": "from(bucket: \"default_agg_stats\")|> range(start: v.timeRangeStart, stop: v.timeRangeStop)|> filter(fn: (r) => r._field == \"prompt_tokens\" or r._field == \"completion_tokens\" or r._field == \"number_request_messages\" or r._field == \"user_hash\" or r._field == \"price\"or r._field == \"request_count\")|> schema.fieldsAsCols()|> group(columns: [\"project_id\", \"deployment\", \"model\", \"user_hash\"])|> reduce(fn: (r, accumulator) => ({request_count: getOrDefault(f: r.request_count, d: 0) + accumulator.request_count,prompt_tokens: getOrDefault(f: r.prompt_tokens, d: 0) + accumulator.prompt_tokens,completion_tokens: getOrDefault(f: r.completion_tokens, d: 0) + accumulator.completion_tokens,money: getOrDefault(f: r.price, d: 0.0) + accumulator.money,user_count: 0}),identity: {request_count: 0, prompt_tokens: 0, completion_tokens: 0, money: 0.0, user_count: -1}) |> group(columns: [\"project_id\", \"deployment\", \"model\"])|> reduce(fn: (r, accumulator) => ({ user_count: accumulator.user_count + 1,request_count: r.request_count + accumulator.request_count,prompt_tokens: r.prompt_tokens + accumulator.prompt_tokens,completion_tokens: r.completion_tokens + accumulator.completion_tokens,money: r.money + accumulator.money}),identity: {user_count:-1, request_count: 0, prompt_tokens: 0, completion_tokens: 0, money: 0.0}) |> group()",
+            "value": "from(bucket: \"default_agg_stats\")|> range(start: v.timeRangeStart, stop: v.timeRangeStop)|> filter(fn: (r) => r._field == \"prompt_tokens\" or r._field == \"completion_tokens\" or r._field == \"number_request_messages\" or r._field == \"user_hash\" or r._field == \"price\"or r._field == \"request_count\")|> schema.fieldsAsCols()|> group(columns: [\"project_id\", \"deployment\", \"model\", \"user_hash\"])|> reduce(fn: (r, accumulator) => ({request_count: getOrDefault(f: r.request_count, d: 0) + accumulator.request_count,prompt_tokens: getOrDefault(f: r.prompt_tokens, d: 0) + accumulator.prompt_tokens,completion_tokens: getOrDefault(f: r.completion_tokens, d: 0) + accumulator.completion_tokens,money: getOrDefault(f: r.price, d: 0.0) + accumulator.money,user_count: 0}),identity: {request_count: 0, prompt_tokens: 0, completion_tokens: 0, money: 0.0, user_count: -1}) |> group(columns: [\"project_id\", \"deployment\", \"model\"])|> reduce(fn: (r, accumulator) => ({ user_count: accumulator.user_count + 1,request_count: r.request_count + accumulator.request_count,prompt_tokens: r.prompt_tokens + accumulator.prompt_tokens,completion_tokens: r.completion_tokens + accumulator.completion_tokens,money: r.money + accumulator.money}),identity: {user_count:-1, request_count: 0, prompt_tokens: 0, completion_tokens: 0, money: 0.0}) |> group()"
+          }
+        ],
+        "query": "from(bucket: \"${INFLUX_BUCKET}_agg_stats\")|> range(start: v.timeRangeStart\\, stop: v.timeRangeStop)|> filter(fn: (r) => r._field == \"prompt_tokens\" or r._field == \"completion_tokens\" or r._field == \"number_request_messages\" or r._field == \"user_hash\" or r._field == \"price\"or r._field == \"request_count\")|> schema.fieldsAsCols()|> group(columns: [\"project_id\"\\, \"deployment\"\\, \"model\"\\, \"user_hash\"])|> reduce(fn: (r\\, accumulator) => ({request_count: getOrDefault(f: r.request_count\\, d: 0) + accumulator.request_count\\,prompt_tokens: getOrDefault(f: r.prompt_tokens\\, d: 0) + accumulator.prompt_tokens\\,completion_tokens: getOrDefault(f: r.completion_tokens\\, d: 0) + accumulator.completion_tokens\\,money: getOrDefault(f: r.price\\, d: 0.0) + accumulator.money\\,user_count: 0})\\,identity: {request_count: 0\\, prompt_tokens: 0\\, completion_tokens: 0\\, money: 0.0\\, user_count: -1}) |> group(columns: [\"project_id\"\\, \"deployment\"\\, \"model\"])|> reduce(fn: (r\\, accumulator) => ({ user_count: accumulator.user_count + 1\\,request_count: r.request_count + accumulator.request_count\\,prompt_tokens: r.prompt_tokens + accumulator.prompt_tokens\\,completion_tokens: r.completion_tokens + accumulator.completion_tokens\\,money: r.money + accumulator.money})\\,identity: {user_count:-1\\, request_count: 0\\, prompt_tokens: 0\\, completion_tokens: 0\\, money: 0.0}) |> group()",
+        "skipUrlSync": false,
+        "type": "custom"
+      },
+      {
+        "current": {
+          "selected": false,
+          "text": "FULL",
+          "value": "FULL"
+        },
+        "hide": 0,
+        "includeAll": false,
+        "multi": false,
+        "name": "Aggregation",
+        "options": [
+          {
+            "selected": false,
+            "text": "SEMI",
+            "value": "SEMI"
+          },
+          {
+            "selected": true,
+            "text": "FULL",
+            "value": "FULL"
+          }
+        ],
+        "query": "SEMI,FULL",
+        "queryValue": "",
+        "skipUrlSync": false,
+        "type": "custom"
+      },
+      {
+        "current": {
+          "selected": false,
+          "text": "combined_data |> group() |> distinct() |> count()",
+          "value": "combined_data |> group() |> distinct() |> count()"
+        },
+        "hide": 2,
+        "includeAll": false,
+        "multi": false,
+        "name": "user_cnt_non_agg",
+        "options": [
+          {
+            "selected": true,
+            "text": "combined_data |> group() |> distinct() |> count()",
+            "value": "combined_data |> group() |> distinct() |> count()"
+          }
+        ],
+        "query": "combined_data |> group() |> distinct() |> count()\n",
+        "skipUrlSync": false,
+        "type": "custom"
+      },
+      {
+        "current": {
+          "selected": false,
+          "text": "from(bucket: \"default_agg_stats\") |> range(start: v.timeRangeStart, stop:v.timeRangeStop) |> filter(fn: (r) => r._measurement == \"analytics\" and r._field == \"user_hash\" and r._value!= \"undefined\")|> group() |> distinct() |> count()",
+          "value": "from(bucket: \"default_agg_stats\") |> range(start: v.timeRangeStart, stop:v.timeRangeStop) |> filter(fn: (r) => r._measurement == \"analytics\" and r._field == \"user_hash\" and r._value!= \"undefined\")|> group() |> distinct() |> count()"
+        },
+        "hide": 2,
+        "includeAll": false,
+        "multi": false,
+        "name": "user_cnt_agg",
+        "options": [
+          {
+            "selected": true,
+            "text": "from(bucket: \"default_agg_stats\") |> range(start: v.timeRangeStart, stop:v.timeRangeStop) |> filter(fn: (r) => r._measurement == \"analytics\" and r._field == \"user_hash\" and r._value!= \"undefined\")|> group() |> distinct() |> count()",
+            "value": "from(bucket: \"default_agg_stats\") |> range(start: v.timeRangeStart, stop:v.timeRangeStop) |> filter(fn: (r) => r._measurement == \"analytics\" and r._field == \"user_hash\" and r._value!= \"undefined\")|> group() |> distinct() |> count()"
+          }
+        ],
+        "query": "from(bucket: \"${INFLUX_BUCKET}_agg_stats\") |> range(start: v.timeRangeStart\\, stop:v.timeRangeStop) |> filter(fn: (r) => r._measurement == \"analytics\" and r._field == \"user_hash\" and r._value!= \"undefined\")|> group() |> distinct() |> count()",
+        "skipUrlSync": false,
+        "type": "custom"
+      },
+      {
+        "current": {
+          "selected": false,
+          "text": "combined_data  |> map(fn: (r) => ({r with topic: r.topic})) |> map(fn: (r) => ({r with _start: v.timeRangeStart})) |> map(fn: (r) => ({r with _stop: v.timeRangeStop}))  |> group(columns: [\"_start\",\"_stop\",\"topic\"]) |> sum(column: \"_value\") |> group()",
+          "value": "combined_data  |> map(fn: (r) => ({r with topic: r.topic})) |> map(fn: (r) => ({r with _start: v.timeRangeStart})) |> map(fn: (r) => ({r with _stop: v.timeRangeStop}))  |> group(columns: [\"_start\",\"_stop\",\"topic\"]) |> sum(column: \"_value\") |> group()"
+        },
+        "hide": 2,
+        "includeAll": false,
+        "multi": false,
+        "name": "topic_non_agg",
+        "options": [
+          {
+            "selected": true,
+            "text": "combined_data  |> map(fn: (r) => ({r with topic: r.topic})) |> map(fn: (r) => ({r with _start: v.timeRangeStart})) |> map(fn: (r) => ({r with _stop: v.timeRangeStop}))  |> group(columns: [\"_start\",\"_stop\",\"topic\"]) |> sum(column: \"_value\") |> group()",
+            "value": "combined_data  |> map(fn: (r) => ({r with topic: r.topic})) |> map(fn: (r) => ({r with _start: v.timeRangeStart})) |> map(fn: (r) => ({r with _stop: v.timeRangeStop}))  |> group(columns: [\"_start\",\"_stop\",\"topic\"]) |> sum(column: \"_value\") |> group()"
+          }
+        ],
+        "query": "combined_data  |> map(fn: (r) => ({r with topic: r.topic})) |> map(fn: (r) => ({r with _start: v.timeRangeStart})) |> map(fn: (r) => ({r with _stop: v.timeRangeStop}))  |> group(columns: [\"_start\"\\,\"_stop\"\\,\"topic\"]) |> sum(column: \"_value\") |> group()\n",
+        "skipUrlSync": false,
+        "type": "custom"
+      },
+      {
+        "current": {
+          "selected": false,
+          "text": "from(bucket: \"default_agg_topic\")|> range(start: v.timeRangeStart, stop: v.timeRangeStop)|> filter(fn: (r) => r._measurement == \"analytics\") |> filter(fn: (r) => r._field == \"topic_count\")|> group(columns: [\"topic\"]) |> sum(column: \"_value\") |> group()",
+          "value": "from(bucket: \"default_agg_topic\")|> range(start: v.timeRangeStart, stop: v.timeRangeStop)|> filter(fn: (r) => r._measurement == \"analytics\") |> filter(fn: (r) => r._field == \"topic_count\")|> group(columns: [\"topic\"]) |> sum(column: \"_value\") |> group()"
+        },
+        "hide": 2,
+        "includeAll": false,
+        "multi": false,
+        "name": "topic_agg",
+        "options": [
+          {
+            "selected": true,
+            "text": "from(bucket: \"default_agg_topic\")|> range(start: v.timeRangeStart, stop: v.timeRangeStop)|> filter(fn: (r) => r._measurement == \"analytics\") |> filter(fn: (r) => r._field == \"topic_count\")|> group(columns: [\"topic\"]) |> sum(column: \"_value\") |> group()",
+            "value": "from(bucket: \"default_agg_topic\")|> range(start: v.timeRangeStart, stop: v.timeRangeStop)|> filter(fn: (r) => r._measurement == \"analytics\") |> filter(fn: (r) => r._field == \"topic_count\")|> group(columns: [\"topic\"]) |> sum(column: \"_value\") |> group()"
+          }
+        ],
+        "query": "from(bucket: \"${INFLUX_BUCKET}_agg_topic\")|> range(start: v.timeRangeStart\\, stop: v.timeRangeStop)|> filter(fn: (r) => r._measurement == \"analytics\") |> filter(fn: (r) => r._field == \"topic_count\")|> group(columns: [\"topic\"]) |> sum(column: \"_value\") |> group()",
+        "skipUrlSync": false,
+        "type": "custom"
+      },
+      {
+        "current": {
+          "selected": false,
+          "text": "combined_data|> map(fn: (r) => ({r with _start: v.timeRangeStart}))|> map(fn: (r) => ({r with _stop: v.timeRangeStop}))|> group(columns: [\"_start\",\"_stop\",\"topic\", \"title\"])  |> sum(column: \"_value\")|> group()",
+          "value": "combined_data|> map(fn: (r) => ({r with _start: v.timeRangeStart}))|> map(fn: (r) => ({r with _stop: v.timeRangeStop}))|> group(columns: [\"_start\",\"_stop\",\"topic\", \"title\"])  |> sum(column: \"_value\")|> group()"
+        },
+        "hide": 2,
+        "includeAll": false,
+        "multi": false,
+        "name": "heatmap_non_agg",
+        "options": [
+          {
+            "selected": true,
+            "text": "combined_data|> map(fn: (r) => ({r with _start: v.timeRangeStart}))|> map(fn: (r) => ({r with _stop: v.timeRangeStop}))|> group(columns: [\"_start\",\"_stop\",\"topic\", \"title\"])  |> sum(column: \"_value\")|> group()",
+            "value": "combined_data|> map(fn: (r) => ({r with _start: v.timeRangeStart}))|> map(fn: (r) => ({r with _stop: v.timeRangeStop}))|> group(columns: [\"_start\",\"_stop\",\"topic\", \"title\"])  |> sum(column: \"_value\")|> group()"
+          }
+        ],
+        "query": "combined_data|> map(fn: (r) => ({r with _start: v.timeRangeStart}))|> map(fn: (r) => ({r with _stop: v.timeRangeStop}))|> group(columns: [\"_start\"\\,\"_stop\"\\,\"topic\"\\, \"title\"])  |> sum(column: \"_value\")|> group()\n",
+        "skipUrlSync": false,
+        "type": "custom"
+      },
+      {
+        "current": {
+          "selected": false,
+          "text": "from(bucket: \"default_agg_topic\" ) |> range(start: v.timeRangeStart, stop: v.timeRangeStop) |> filter(fn: (r) => r._measurement == \"analytics\") |> filter(fn: (r) => r._field == \"topic_count\") |> group(columns: [\"topic\", \"title\"]) |> sum(column: \"_value\") |> group()",
+          "value": "from(bucket: \"default_agg_topic\" ) |> range(start: v.timeRangeStart, stop: v.timeRangeStop) |> filter(fn: (r) => r._measurement == \"analytics\") |> filter(fn: (r) => r._field == \"topic_count\") |> group(columns: [\"topic\", \"title\"]) |> sum(column: \"_value\") |> group()"
+        },
+        "hide": 2,
+        "includeAll": false,
+        "multi": false,
+        "name": "heatmap_agg",
+        "options": [
+          {
+            "selected": true,
+            "text": "from(bucket: \"default_agg_topic\" ) |> range(start: v.timeRangeStart, stop: v.timeRangeStop) |> filter(fn: (r) => r._measurement == \"analytics\") |> filter(fn: (r) => r._field == \"topic_count\") |> group(columns: [\"topic\", \"title\"]) |> sum(column: \"_value\") |> group()",
+            "value": "from(bucket: \"default_agg_topic\" ) |> range(start: v.timeRangeStart, stop: v.timeRangeStop) |> filter(fn: (r) => r._measurement == \"analytics\") |> filter(fn: (r) => r._field == \"topic_count\") |> group(columns: [\"topic\", \"title\"]) |> sum(column: \"_value\") |> group()"
+          }
+        ],
+        "query": "from(bucket: \"${INFLUX_BUCKET}_agg_topic\" ) |> range(start: v.timeRangeStart\\, stop: v.timeRangeStop) |> filter(fn: (r) => r._measurement == \"analytics\") |> filter(fn: (r) => r._field == \"topic_count\") |> group(columns: [\"topic\"\\, \"title\"]) |> sum(column: \"_value\") |> group()",
+        "skipUrlSync": false,
+        "type": "custom"
+      },
+      {
+        "current": {
+          "selected": false,
+          "text": "from(bucket: \"default_agg_topic\")|> range(start: v.timeRangeStart, stop:v.timeRangeStop)|> filter(fn: (r) => r._measurement == \"analytics\")|> filter(fn: (r) => r._field == \"number_request_messages\")|> group()|> aggregateWindow(every: v.windowPeriod, fn: count)|> keep(columns: [\"_time\", \"_value\"])|> filter(fn: (r) => r._value != 0 )",
+          "value": "from(bucket: \"default_agg_topic\")|> range(start: v.timeRangeStart, stop:v.timeRangeStop)|> filter(fn: (r) => r._measurement == \"analytics\")|> filter(fn: (r) => r._field == \"number_request_messages\")|> group()|> aggregateWindow(every: v.windowPeriod, fn: count)|> keep(columns: [\"_time\", \"_value\"])|> filter(fn: (r) => r._value != 0 )"
+        },
+        "hide": 2,
+        "includeAll": false,
+        "multi": false,
+        "name": "system_agg",
+        "options": [
+          {
+            "selected": true,
+            "text": "from(bucket: \"default_agg_topic\")|> range(start: v.timeRangeStart, stop:v.timeRangeStop)|> filter(fn: (r) => r._measurement == \"analytics\")|> filter(fn: (r) => r._field == \"number_request_messages\")|> group()|> aggregateWindow(every: v.windowPeriod, fn: count)|> keep(columns: [\"_time\", \"_value\"])|> filter(fn: (r) => r._value != 0 )",
+            "value": "from(bucket: \"default_agg_topic\")|> range(start: v.timeRangeStart, stop:v.timeRangeStop)|> filter(fn: (r) => r._measurement == \"analytics\")|> filter(fn: (r) => r._field == \"number_request_messages\")|> group()|> aggregateWindow(every: v.windowPeriod, fn: count)|> keep(columns: [\"_time\", \"_value\"])|> filter(fn: (r) => r._value != 0 )"
+          }
+        ],
+        "query": "from(bucket: \"${INFLUX_BUCKET}_agg_topic\")|> range(start: v.timeRangeStart\\, stop:v.timeRangeStop)|> filter(fn: (r) => r._measurement == \"analytics\")|> filter(fn: (r) => r._field == \"number_request_messages\")|> group()|> aggregateWindow(every: v.windowPeriod\\, fn: count)|> keep(columns: [\"_time\"\\, \"_value\"])|> filter(fn: (r) => r._value != 0 )",
+        "skipUrlSync": false,
+        "type": "custom"
+      },
+      {
+        "current": {
+          "selected": false,
+          "text": "from(bucket: \"default_agg_stats\") |> range(start: v.timeRangeStart, stop:v.timeRangeStop) |> filter(fn: (r) => r._measurement == \"analytics\") |> filter(fn: (r) => r._field == \"prompt_tokens\" or r._field == \"completion_tokens\" or r._field == \"number_request_messages\" or r._field == \"price\"or r._field == \"request_count\") |> schema.fieldsAsCols() |> group(columns: [\"project_id\"]) |> reduce( fn: (r, accumulator) => ({ request_count: if time_diff_ns > threshold_duration_ns then getOrDefault(f: r.request_count, d: 0) + accumulator.request_count else accumulator.request_count + 1, prompt_tokens: getOrDefault(f: r.prompt_tokens, d: 0) + accumulator.prompt_tokens, completion_tokens: getOrDefault(f: r.completion_tokens, d: 0) + accumulator.completion_tokens, money: getOrDefault(f: r.price, d: 0.0) + accumulator.money }), identity: {request_count: 0, prompt_tokens: 0, completion_tokens: 0, money: 0.0} ) |> group()",
+          "value": "from(bucket: \"default_agg_stats\") |> range(start: v.timeRangeStart, stop:v.timeRangeStop) |> filter(fn: (r) => r._measurement == \"analytics\") |> filter(fn: (r) => r._field == \"prompt_tokens\" or r._field == \"completion_tokens\" or r._field == \"number_request_messages\" or r._field == \"price\"or r._field == \"request_count\") |> schema.fieldsAsCols() |> group(columns: [\"project_id\"]) |> reduce( fn: (r, accumulator) => ({ request_count: if time_diff_ns > threshold_duration_ns then getOrDefault(f: r.request_count, d: 0) + accumulator.request_count else accumulator.request_count + 1, prompt_tokens: getOrDefault(f: r.prompt_tokens, d: 0) + accumulator.prompt_tokens, completion_tokens: getOrDefault(f: r.completion_tokens, d: 0) + accumulator.completion_tokens, money: getOrDefault(f: r.price, d: 0.0) + accumulator.money }), identity: {request_count: 0, prompt_tokens: 0, completion_tokens: 0, money: 0.0} ) |> group()"
+        },
+        "hide": 2,
+        "includeAll": false,
+        "multi": false,
+        "name": "stats_2_agg",
+        "options": [
+          {
+            "selected": true,
+            "text": "from(bucket: \"default_agg_stats\") |> range(start: v.timeRangeStart, stop:v.timeRangeStop) |> filter(fn: (r) => r._measurement == \"analytics\") |> filter(fn: (r) => r._field == \"prompt_tokens\" or r._field == \"completion_tokens\" or r._field == \"number_request_messages\" or r._field == \"price\"or r._field == \"request_count\") |> schema.fieldsAsCols() |> group(columns: [\"project_id\"]) |> reduce( fn: (r, accumulator) => ({ request_count: if time_diff_ns > threshold_duration_ns then getOrDefault(f: r.request_count, d: 0) + accumulator.request_count else accumulator.request_count + 1, prompt_tokens: getOrDefault(f: r.prompt_tokens, d: 0) + accumulator.prompt_tokens, completion_tokens: getOrDefault(f: r.completion_tokens, d: 0) + accumulator.completion_tokens, money: getOrDefault(f: r.price, d: 0.0) + accumulator.money }), identity: {request_count: 0, prompt_tokens: 0, completion_tokens: 0, money: 0.0} ) |> group()",
+            "value": "from(bucket: \"default_agg_stats\") |> range(start: v.timeRangeStart, stop:v.timeRangeStop) |> filter(fn: (r) => r._measurement == \"analytics\") |> filter(fn: (r) => r._field == \"prompt_tokens\" or r._field == \"completion_tokens\" or r._field == \"number_request_messages\" or r._field == \"price\"or r._field == \"request_count\") |> schema.fieldsAsCols() |> group(columns: [\"project_id\"]) |> reduce( fn: (r, accumulator) => ({ request_count: if time_diff_ns > threshold_duration_ns then getOrDefault(f: r.request_count, d: 0) + accumulator.request_count else accumulator.request_count + 1, prompt_tokens: getOrDefault(f: r.prompt_tokens, d: 0) + accumulator.prompt_tokens, completion_tokens: getOrDefault(f: r.completion_tokens, d: 0) + accumulator.completion_tokens, money: getOrDefault(f: r.price, d: 0.0) + accumulator.money }), identity: {request_count: 0, prompt_tokens: 0, completion_tokens: 0, money: 0.0} ) |> group()"
+          }
+        ],
+        "query": "from(bucket: \"${INFLUX_BUCKET}_agg_stats\") |> range(start: v.timeRangeStart\\, stop:v.timeRangeStop) |> filter(fn: (r) => r._measurement == \"analytics\") |> filter(fn: (r) => r._field == \"prompt_tokens\" or r._field == \"completion_tokens\" or r._field == \"number_request_messages\" or r._field == \"price\"or r._field == \"request_count\") |> schema.fieldsAsCols() |> group(columns: [\"project_id\"]) |> reduce( fn: (r\\, accumulator) => ({ request_count: if time_diff_ns > threshold_duration_ns then getOrDefault(f: r.request_count\\, d: 0) + accumulator.request_count else accumulator.request_count + 1\\, prompt_tokens: getOrDefault(f: r.prompt_tokens\\, d: 0) + accumulator.prompt_tokens\\, completion_tokens: getOrDefault(f: r.completion_tokens\\, d: 0) + accumulator.completion_tokens\\, money: getOrDefault(f: r.price\\, d: 0.0) + accumulator.money })\\, identity: {request_count: 0\\, prompt_tokens: 0\\, completion_tokens: 0\\, money: 0.0} ) |> group()",
+        "skipUrlSync": false,
+        "type": "custom"
+      },
+      {
+        "current": {
+          "selected": false,
+          "text": "from(bucket: \"default_agg_stats\") |> range(start: v.timeRangeStart, stop:v.timeRangeStop) |> filter(fn: (r) => r._measurement == \"analytics\") |> filter(fn: (r) => r._field == \"prompt_tokens\" or r._field == \"completion_tokens\" or r._field == \"number_request_messages\" or r._field == \"price\" or r._field == \"request_count\") |> schema.fieldsAsCols() |> group(columns: [\"model\", \"deployment\"]) |> reduce( fn: (r, accumulator) => ({ request_count: if time_diff_ns > threshold_duration_ns then getOrDefault(f: r.request_count, d: 0) + accumulator.request_count else accumulator.request_count + 1, prompt_tokens: getOrDefault(f: r.prompt_tokens, d: 0) + accumulator.prompt_tokens, completion_tokens: getOrDefault(f: r.completion_tokens, d: 0) + accumulator.completion_tokens, money: getOrDefault(f: r.price, d: 0.0) + accumulator.money }), identity: {request_count: 0, prompt_tokens: 0, completion_tokens: 0, money: 0.0} ) |> group()",
+          "value": "from(bucket: \"default_agg_stats\") |> range(start: v.timeRangeStart, stop:v.timeRangeStop) |> filter(fn: (r) => r._measurement == \"analytics\") |> filter(fn: (r) => r._field == \"prompt_tokens\" or r._field == \"completion_tokens\" or r._field == \"number_request_messages\" or r._field == \"price\" or r._field == \"request_count\") |> schema.fieldsAsCols() |> group(columns: [\"model\", \"deployment\"]) |> reduce( fn: (r, accumulator) => ({ request_count: if time_diff_ns > threshold_duration_ns then getOrDefault(f: r.request_count, d: 0) + accumulator.request_count else accumulator.request_count + 1, prompt_tokens: getOrDefault(f: r.prompt_tokens, d: 0) + accumulator.prompt_tokens, completion_tokens: getOrDefault(f: r.completion_tokens, d: 0) + accumulator.completion_tokens, money: getOrDefault(f: r.price, d: 0.0) + accumulator.money }), identity: {request_count: 0, prompt_tokens: 0, completion_tokens: 0, money: 0.0} ) |> group()"
+        },
+        "hide": 2,
+        "includeAll": false,
+        "multi": false,
+        "name": "stats_3_agg",
+        "options": [
+          {
+            "selected": true,
+            "text": "from(bucket: \"default_agg_stats\") |> range(start: v.timeRangeStart, stop:v.timeRangeStop) |> filter(fn: (r) => r._measurement == \"analytics\") |> filter(fn: (r) => r._field == \"prompt_tokens\" or r._field == \"completion_tokens\" or r._field == \"number_request_messages\" or r._field == \"price\" or r._field == \"request_count\") |> schema.fieldsAsCols() |> group(columns: [\"model\", \"deployment\"]) |> reduce( fn: (r, accumulator) => ({ request_count: if time_diff_ns > threshold_duration_ns then getOrDefault(f: r.request_count, d: 0) + accumulator.request_count else accumulator.request_count + 1, prompt_tokens: getOrDefault(f: r.prompt_tokens, d: 0) + accumulator.prompt_tokens, completion_tokens: getOrDefault(f: r.completion_tokens, d: 0) + accumulator.completion_tokens, money: getOrDefault(f: r.price, d: 0.0) + accumulator.money }), identity: {request_count: 0, prompt_tokens: 0, completion_tokens: 0, money: 0.0} ) |> group()",
+            "value": "from(bucket: \"default_agg_stats\") |> range(start: v.timeRangeStart, stop:v.timeRangeStop) |> filter(fn: (r) => r._measurement == \"analytics\") |> filter(fn: (r) => r._field == \"prompt_tokens\" or r._field == \"completion_tokens\" or r._field == \"number_request_messages\" or r._field == \"price\" or r._field == \"request_count\") |> schema.fieldsAsCols() |> group(columns: [\"model\", \"deployment\"]) |> reduce( fn: (r, accumulator) => ({ request_count: if time_diff_ns > threshold_duration_ns then getOrDefault(f: r.request_count, d: 0) + accumulator.request_count else accumulator.request_count + 1, prompt_tokens: getOrDefault(f: r.prompt_tokens, d: 0) + accumulator.prompt_tokens, completion_tokens: getOrDefault(f: r.completion_tokens, d: 0) + accumulator.completion_tokens, money: getOrDefault(f: r.price, d: 0.0) + accumulator.money }), identity: {request_count: 0, prompt_tokens: 0, completion_tokens: 0, money: 0.0} ) |> group()"
+          }
+        ],
+        "query": "from(bucket: \"${INFLUX_BUCKET}_agg_stats\") |> range(start: v.timeRangeStart\\, stop:v.timeRangeStop) |> filter(fn: (r) => r._measurement == \"analytics\") |> filter(fn: (r) => r._field == \"prompt_tokens\" or r._field == \"completion_tokens\" or r._field == \"number_request_messages\" or r._field == \"price\" or r._field == \"request_count\") |> schema.fieldsAsCols() |> group(columns: [\"model\"\\, \"deployment\"]) |> reduce( fn: (r\\, accumulator) => ({ request_count: if time_diff_ns > threshold_duration_ns then getOrDefault(f: r.request_count\\, d: 0) + accumulator.request_count else accumulator.request_count + 1\\, prompt_tokens: getOrDefault(f: r.prompt_tokens\\, d: 0) + accumulator.prompt_tokens\\, completion_tokens: getOrDefault(f: r.completion_tokens\\, d: 0) + accumulator.completion_tokens\\, money: getOrDefault(f: r.price\\, d: 0.0) + accumulator.money })\\, identity: {request_count: 0\\, prompt_tokens: 0\\, completion_tokens: 0\\, money: 0.0} ) |> group()",
+        "skipUrlSync": false,
+        "type": "custom"
+      }
+    ]
+  },
+  "time": {
+    "from": "now-7d",
+    "to": "now"
+  },
+  "timepicker": {},
+  "timezone": "utc",
+  "title": "DIAL Analytics Aggregated",
+  "uid": "435858b2-4106-4d11-b6e8-9b0ff107b466fgy",
+  "version": 1,
+  "weekStart": ""
+}

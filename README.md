@@ -71,6 +71,13 @@ You need to specify the connection options to the InfluxDB instance using the en
 
 You can follow the [InfluxDB documentation](https://docs.influxdata.com/influxdb/v2/get-started/) to setup InfluxDB locally and acquire the required configuration parameters.
 
+### Aggregated Dashboards (Optional)
+
+This project includes optional **aggregated Grafana dashboards** that visualize 6-hours and monthly trends.
+
+To enable these dashboards, you must **manually create the required InfluxDB buckets and tasks**. These steps are **not automated** via Helm and must be applied manually.
+
+See [`influxdb/README.md`](influxdb/README.md) for full instructions.
 ### Other configuration
 
 Also, following environment valuables can be used to configure the service behavior:

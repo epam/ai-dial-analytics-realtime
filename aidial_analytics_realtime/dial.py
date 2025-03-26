@@ -3,16 +3,34 @@ from typing import Iterator, List
 from aidial_analytics_realtime.utils.logging import app_logger as logger
 
 
-def get_chat_completion_request_contents(request: dict) -> List[str]:
-    return list(_chat_completion_request_contents(request))
+def get_chat_completion_request_contents(request: dict | None) -> List[str]:
+    if request is None:
+        return []
+    try:
+        return list(_chat_completion_request_contents(request))
+    except Exception as e:
+        logger.error(f"Failed to get chat completion request contents: {e}")
+        return []
 
 
-def get_chat_completion_response_contents(response: dict) -> List[str]:
-    return list(_chat_completion_response_contents(response))
+def get_chat_completion_response_contents(response: dict | None) -> List[str]:
+    if response is None:
+        return []
+    try:
+        return list(_chat_completion_response_contents(response))
+    except Exception as e:
+        logger.error(f"Failed to get chat completion response contents: {e}")
+        return []
 
 
-def get_embeddings_request_contents(request: dict) -> List[str]:
-    return list(_embeddings_request_contents(request))
+def get_embeddings_request_contents(request: dict | None) -> List[str]:
+    if request is None:
+        return []
+    try:
+        return list(_embeddings_request_contents(request))
+    except Exception as e:
+        logger.error(f"Failed to get embeddings request contents: {e}")
+        return []
 
 
 def _chat_completion_request_contents(request: dict) -> Iterator[str]:

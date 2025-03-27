@@ -6,5 +6,5 @@ The [Customized](customized/) Grafana dashboards contain widgets that display ag
 
 In the case of a base DIAL installation, [Public](public/) Grafana dashboards should be used, which aggregate and display DIAL's basic metrics.
 
-1. [Customized](customized/) Grafana dashboards for the AI DIAL Realtime Analytics project with the specisific data and widgets.
 1. [Public](public/) Grafana dashboards for the AI DIAL Realtime Analytics project appplied for the general cases.
+1. [Customized](customized/) Grafana dashboards for the AI DIAL Realtime Analytics project with the specisific data and widgets.

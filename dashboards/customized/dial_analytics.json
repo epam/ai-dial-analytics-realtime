@@ -210,7 +210,7 @@
             "categoryorder": "category ascending",
             "range": [
               -0.5,
-              2.5
+              0.5
             ],
             "showgrid": false,
             "showticklabels": true,
@@ -221,7 +221,7 @@
             "autorange": true,
             "range": [
               -0.5,
-              10.5
+              52.5
             ],
             "showgrid": false,
             "type": "category"
@@ -377,6 +377,7 @@
             "cellOptions": {
               "type": "auto"
             },
+            "filterable": true,
             "inspect": false
           },
           "mappings": [],
@@ -424,7 +425,7 @@
         ]
       },
       "gridPos": {
-        "h": 9,
+        "h": 15,
         "w": 24,
         "x": 0,
         "y": 34
@@ -435,11 +436,16 @@
         "footer": {
           "countRows": false,
           "enablePagination": true,
-          "fields": "",
+          "fields": [
+            "request_count",
+            "prompt_tokens",
+            "completion_tokens",
+            "money"
+          ],
           "reducer": [
             "sum"
           ],
-          "show": false
+          "show": true
         },
         "showHeader": true,
         "sortBy": [
@@ -522,6 +528,7 @@
             "cellOptions": {
               "type": "auto"
             },
+            "filterable": true,
             "inspect": false
           },
           "mappings": [],
@@ -569,10 +576,10 @@
         ]
       },
       "gridPos": {
-        "h": 9,
+        "h": 15,
         "w": 24,
         "x": 0,
-        "y": 43
+        "y": 49
       },
       "id": 7,
       "options": {
@@ -584,7 +591,7 @@
           "reducer": [
             "sum"
           ],
-          "show": false
+          "show": true
         },
         "showHeader": true,
         "sortBy": [
@@ -662,6 +669,7 @@
             "cellOptions": {
               "type": "auto"
             },
+            "filterable": true,
             "inspect": false
           },
           "mappings": [],
@@ -709,10 +717,10 @@
         ]
       },
       "gridPos": {
-        "h": 9,
+        "h": 15,
         "w": 24,
         "x": 0,
-        "y": 52
+        "y": 64
       },
       "id": 8,
       "options": {
@@ -724,7 +732,7 @@
           "reducer": [
             "sum"
           ],
-          "show": false
+          "show": true
         },
         "showHeader": true,
         "sortBy": [
@@ -790,7 +798,7 @@
       "type": "table"
     }
   ],
-  "refresh": "1m",
+  "refresh": "",
   "schemaVersion": 38,
   "style": "dark",
   "tags": [

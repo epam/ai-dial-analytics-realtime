@@ -1,6 +1,5 @@
 PORT ?= 5001
 IMAGE_NAME ?= ai-dial-analytics-realtime
-DEV_PYTHON ?= 3.12
 VENV_DIR ?= .venv
 POETRY ?= $(VENV_DIR)/bin/poetry
 POETRY_VERSION ?= 1.6.1
@@ -19,7 +18,6 @@ init_env:
 
 
 install: init_env
-	$(POETRY) env use python$(DEV_PYTHON)
 	$(POETRY) install
 
 

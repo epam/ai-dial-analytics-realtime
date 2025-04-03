@@ -172,18 +172,12 @@ async def make_point(
         .time(timestamp)
     )
 
-    if usage is not None:
-        point.field(
-            "completion_tokens",
-            usage["completion_tokens"] if "completion_tokens" in usage else 0,
-        )
-        point.field(
-            "prompt_tokens",
-            usage["prompt_tokens"] if "prompt_tokens" in usage else 0,
-        )
-    else:
-        point.field("completion_tokens", 0)
-        point.field("prompt_tokens", 0)
+    usage = usage or {}
+    point.field("completion_tokens", usage.get("completion_tokens") or 0)
+    point.field("prompt_tokens", usage.get("prompt_tokens") or 0)
+
+    details = usage.get("prompt_tokens_details") or {}
+    point.field("cached_prompt_tokens", details.get("cached_tokens") or 0)
 
     return point
 

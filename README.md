@@ -36,6 +36,7 @@ The logs for `/chat/completions` and `/embeddings` endpoints are saved to the `a
 |number_request_messages| The total number of messages in the request. For chat completion requests it's number of messages in the chat history. For embedding requests it's number of inputs. |
 |chat_id| The unique identifier for the conversation that this request is part of. |
 |prompt_tokens| The number of tokens in the request. |
+|cached_prompt_tokens| The number of tokens read from the model cache. `cached_prompt_tokens` <= `prompt_tokens`|
 |completion_tokens| The number of tokens in the response. |
 
 The logs for the `/rate` endpoint are saved to the `rate_analytics` measurement:

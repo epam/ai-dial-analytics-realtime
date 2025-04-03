@@ -16,8 +16,10 @@ init_env:
 	python -m venv $(VENV_DIR)
 	$(VENV_DIR)/bin/pip install poetry==$(POETRY_VERSION) --quiet
 
+
 install: init_env
 	$(POETRY) install
+
 
 build: init_env
 	$(POETRY) build

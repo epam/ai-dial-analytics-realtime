@@ -10,3 +10,5 @@ This directory contains the Grafana dashboards for the AI DIAL Realtime Analytic
 - [DIAL Project Insights](dial_project_insights.json) - This dashboard provides detailed metrics and key performance indicators (KPIs) for individual projects, facilitating targeted analysis.
 - [DIAL User Insights](dial_user_insights.json) - This dashboard offers user-specific insights, including usage patterns, cost breakdowns, and percentile rankings.
 - [DIAL Cost Insights](dial_cost_insights.json) - This dashboard provides metrics on cost on a monthly basis.
+
+## [Architecture Documentation](dial_influxdb_grafana_architecture_doc.md)

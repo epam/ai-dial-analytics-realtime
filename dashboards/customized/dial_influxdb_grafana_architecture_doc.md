@@ -1,6 +1,8 @@
 DIAL Analytics – InfluxDB & Grafana Architecture Documentation
 
-Overview
+# Overview
+
+
 This documentation presents the complete architecture and implementation of the DIAL Analytics platform, built on top of InfluxDB and Grafana. The solution was designed to overcome severe performance limitations in the previous setup, enabling fast, scalable, and reliable querying across various analytical dimensions such as usage behaviour, cost trends, user activity, application and project metrics, and system-level statistics.
 
 The document covers:
@@ -15,373 +17,556 @@ An explanation of the hybrid query logic in dashboards like DIAL Analytics Aggre
 
 A detailed template and process for loading historical data using Python and Flux, making it possible to backfill any of the aggregation buckets in a consistent, controlled manner.
 
-Grafana Dashboards and Visuals
-Dashboard: DIAL Application Insights
-Visual: Request count - Applications
-Type: barchart
+# Grafana Dashboards and Visuals
 
-Source Bucket: default_agg_stats
 
-Visual: Top Models
-Type: table
+## Dashboard: DIAL Application Insights
 
-Source Bucket: default_agg_application
 
-Visual: Application Stats
-Type: table
+### Visual: Request count - Applications
 
-Source Bucket: default_agg_application
 
-Visual: Application Insights
-Type: table
+- Type: barchart
 
-Source Bucket: default_agg_application
+- Source Bucket: default_agg_stats
 
-Dashboard: DIAL User Insights
-Visual: Messages per Conversation
-Type: stat
+### Visual: Top Models
 
-Source Bucket: default_agg_chatid
 
-Visual: Distribution of Cost (user/project)
-Type: piechart
+- Type: table
 
-Source Bucket: default_agg_kpi
+- Source Bucket: default_agg_application
 
-Visual: Distribution of Requests (user/project)
-Type: piechart
+### Visual: Application Stats
 
-Source Bucket: default_agg_kpi
 
-Visual: Distribution of conversation length
-Type: barchart
+- Type: table
 
-Source Bucket: default_agg_chatid
+- Source Bucket: default_agg_application
 
-Visual: Cost share by deciles of Users in chat
-Type: barchart
+### Visual: Application Insights
 
-Source Bucket: default_agg_kpi
 
-Visual: Cost share by deciles of Users in chat
-Type: table
+- Type: table
 
-Source Bucket: default_agg_kpi
+- Source Bucket: default_agg_application
 
-Visual: Chat Usage by Title
-Type: table
+## Dashboard: DIAL User Insights
 
-Source Bucket: default_agg_topic_2
 
-Requests share by deciles of Users in chat
-Type: barchart
+### Visual: Messages per Conversation
 
-Source Bucket: default_agg_kpi
 
-Visual: Requests share by deciles of Users in chat
-Type: table
+- Type: stat
 
-Source Bucket: default_agg_kpi
+- Source Bucket: default_agg_chatid
 
-Visual: Chat Usage by Deployment/Model
-Type: table
+### Visual: Distribution of Cost (user/project)
 
-Source Bucket: default_agg_stats
 
-Visual: Distribution of messages length in tokens
-Type: barchart
+- Type: piechart
 
-Source Bucket: default_agg_topic
+- Source Bucket: default_agg_kpi
 
-Visual: Chat Usage by Topic
-Type: table
+### Visual: Distribution of Requests (user/project)
 
-Source Bucket: default_agg_topic_2
 
-Visual: Distribution of messages length in tokens
-Type: table
+- Type: piechart
 
-Source Bucket: default_agg_topic
+- Source Bucket: default_agg_kpi
 
-Visual: Language Stats table
-Type: table
+### Visual: Distribution of conversation length
 
-Source Bucket: default_agg_stats
 
-Dashbaord: DIAL Project Insights
-Visual: Project Stats
-Type: table
+- Type: barchart
 
-Source Bucket: default_agg_stats
+- Source Bucket: default_agg_chatid
 
-Visual: Distribution of Requests (user/project)
-Type: piechart
+### Visual: Cost share by deciles of Users in chat
 
-Source Bucket: default_agg_kpi
 
-Visual: Distribution of Cost (user/project)
-Type: piechart
+- Type: barchart
 
-Source Bucket: default_agg_kpi
+- Source Bucket: default_agg_kpi
 
-Visual: Project/Deployment/Model Stats
-Type: table
+### Visual: Cost share by deciles of Users in chat
 
-Source Bucket: default_agg_stats
 
-Visual: Deployment/Model Stats
-Type: table
+- Type: table
 
-Source Bucket: default_agg_stats
+- Source Bucket: default_agg_kpi
 
-Visual: Project Requests share by deciles
-Type: barchart
+### Visual: Chat Usage by Title
 
-Source Bucket: default_agg_kpi
 
-Visual: Project Requests share by deciles
-Type: table
+- Type: table
 
-Source Bucket: default_agg_kpi
+- Source Bucket: default_agg_topic_2
 
-Visual: Top 10 Projects by Request count
-Type: table
+### Requests share by deciles of Users in chat
 
-Source Bucket: default_agg_kpi
 
-Visual: Project Cost share by deciles
-Type: barchart
+- Type: barchart
 
-Source Bucket: default_agg_kpi
+- Source Bucket: default_agg_kpi
 
-Visual: Project Cost share by deciles
-Type: table
+### Visual: Requests share by deciles of Users in chat
 
-Source Bucket: default_agg_kpi
 
-Visual: Top 10 Projects by Cost
-Type: table
+- Type: table
 
-Source Bucket: default_agg_kpi
+- Source Bucket: default_agg_kpi
 
-Visual: Distribution of messages length in tokens
-Type: barchart
+### Visual: Chat Usage by Deployment/Model
 
-Source Bucket: default_agg_topic
 
-Visual: Distribution of messages length in tokens
-Type: table
+- Type: table
 
-Source Bucket: default_agg_topic
+- Source Bucket: default_agg_stats
 
-Visual: Model - Deployment mismatch
-Type: table
+### Visual: Distribution of messages length in tokens
 
-Source Bucket: default_agg_stats
 
-Dashboard: DIAL Cost Insights
-Visual: Total Cost - Current Year Forecast ($)
-Type: stat
+- Type: barchart
 
-Source Bucket: default_agg_kpi
+- Source Bucket: default_agg_topic
 
-Visual: Project API Cost - Current Year Forecast ($)
-Type: stat
+### Visual: Chat Usage by Topic
 
-Source Bucket: default_agg_kpi
 
-Visual: Chat Cost - Current Year Forecast ($)
-Type: stat
+- Type: table
 
-Source Bucket: default_agg_kpi
+- Source Bucket: default_agg_topic_2
 
-Visual: Avg Cost Per User Per Month - Current Year Forecast ($)
-Type: stat
+### Visual: Distribution of messages length in tokens
 
-Source Bucket: default_agg_month
 
-Visual: Total Cost - Full Previous Year ($)
-Type: stat
+- Type: table
 
-Source Bucket: default_agg_month
+- Source Bucket: default_agg_topic
 
-Visual: Project API Cost - Full Previous Year ($)
-Type: stat
+### Visual: Language Stats table
 
-Source Bucket: default_agg_month
 
-Visual: Chat Cost - Full Previous Year ($)
-Type: stat
+- Type: table
 
-Source Bucket: default_agg_month
+- Source Bucket: default_agg_stats
 
-Visual: Avg Cost Per User Per Month - Full Previous Year ($)
-Type: stat
+## Dashbaord: DIAL Project Insights
 
-Source Bucket: default_agg_month
 
-Visual: Monthly Stats
-Type: table
+### Visual: Project Stats
 
-Source Bucket: default_agg_month
 
-Visual: Monthly Total User Cost and Avg Cost Per User
-Type: timeseries
+- Type: table
 
-Source Bucket: default_agg_month
+- Source Bucket: default_agg_stats
 
-Visual: Monthly Active Users and Projects
-Type: timeseries
+### Visual: Distribution of Requests (user/project)
 
-Source Bucket: default_agg_month
 
-Dashbaord: DIAL Analytics Aggregated
-Overview
+- Type: piechart
+
+- Source Bucket: default_agg_kpi
+
+### Visual: Distribution of Cost (user/project)
+
+
+- Type: piechart
+
+- Source Bucket: default_agg_kpi
+
+### Visual: Project/Deployment/Model Stats
+
+
+- Type: table
+
+- Source Bucket: default_agg_stats
+
+### Visual: Deployment/Model Stats
+
+
+- Type: table
+
+- Source Bucket: default_agg_stats
+
+### Visual: Project Requests share by deciles
+
+
+- Type: barchart
+
+- Source Bucket: default_agg_kpi
+
+### Visual: Project Requests share by deciles
+
+
+- Type: table
+
+- Source Bucket: default_agg_kpi
+
+### Visual: Top 10 Projects by Request count
+
+
+- Type: table
+
+- Source Bucket: default_agg_kpi
+
+### Visual: Project Cost share by deciles
+
+
+- Type: barchart
+
+- Source Bucket: default_agg_kpi
+
+### Visual: Project Cost share by deciles
+
+
+- Type: table
+
+- Source Bucket: default_agg_kpi
+
+### Visual: Top 10 Projects by Cost
+
+
+- Type: table
+
+- Source Bucket: default_agg_kpi
+
+### Visual: Distribution of messages length in tokens
+
+
+- Type: barchart
+
+- Source Bucket: default_agg_topic
+
+### Visual: Distribution of messages length in tokens
+
+
+- Type: table
+
+- Source Bucket: default_agg_topic
+
+### Visual: Model - Deployment mismatch
+
+
+- Type: table
+
+- Source Bucket: default_agg_stats
+
+## Dashboard: DIAL Cost Insights
+
+
+### Visual: Total Cost - Current Year Forecast ($)
+
+
+- Type: stat
+
+- Source Bucket: default_agg_kpi
+
+### Visual: Project API Cost - Current Year Forecast ($)
+
+
+- Type: stat
+
+- Source Bucket: default_agg_kpi
+
+### Visual: Chat Cost - Current Year Forecast ($)
+
+
+- Type: stat
+
+- Source Bucket: default_agg_kpi
+
+### Visual: Avg Cost Per User Per Month - Current Year Forecast ($)
+
+
+- Type: stat
+
+- Source Bucket: default_agg_month
+
+### Visual: Total Cost - Full Previous Year ($)
+
+
+- Type: stat
+
+- Source Bucket: default_agg_month
+
+### Visual: Project API Cost - Full Previous Year ($)
+
+
+- Type: stat
+
+- Source Bucket: default_agg_month
+
+### Visual: Chat Cost - Full Previous Year ($)
+
+
+- Type: stat
+
+- Source Bucket: default_agg_month
+
+### Visual: Avg Cost Per User Per Month - Full Previous Year ($)
+
+
+- Type: stat
+
+- Source Bucket: default_agg_month
+
+### Visual: Monthly Stats
+
+
+- Type: table
+
+- Source Bucket: default_agg_month
+
+### Visual: Monthly Total User Cost and Avg Cost Per User
+
+
+- Type: timeseries
+
+- Source Bucket: default_agg_month
+
+### Visual: Monthly Active Users and Projects
+
+
+- Type: timeseries
+
+- Source Bucket: default_agg_month
+
+## Dashbaord: DIAL Analytics Aggregated
+
+
+### Overview
+
+
 This dashboard presents a comprehensive summary of aggregated platform usage metrics including user activity, topic popularity, project statistics, and system load. The core innovation lies in dynamic bucket selection, which determines whether to use the raw or aggregated data based on the selected time range. The dashboard uses variables and helper functions in Flux to maintain consistent aggregation logic.
 
-Bucket Selection Logic
+### Bucket Selection Logic
+
+
 There are two types of buckets used in this dashboard:
+- `default`: contains detailed, unaggregated real-time data.
+- `default_agg_*`: contains pre-aggregated data in 6-hour windows.
 
-default: contains detailed, unaggregated real-time data.
-default_agg_*: contains pre-aggregated data in 6-hour windows.
-The logic to choose between these depends on the time window of the query. If the time range is <= 1 day (specified by threshold_duration_ns), only the default bucket is used. Otherwise, the data is split:
+The logic to choose between these depends on the time window of the query. If the time range is <= 1 day (specified by `threshold_duration_ns`), only the `default` bucket is used. Otherwise, the data is split:
+- the start portion (if misaligned with 6-hour intervals) comes from `default`
+- the middle (fully aligned) from the aggregated bucket (e.g., `default_agg_stats`, `default_agg_topic`)
+- the end portion (if misaligned) again from `default`
 
-the start portion (if misaligned with 6-hour intervals) comes from default
-the middle (fully aligned) from the aggregated bucket (e.g., default_agg_stats, default_agg_topic)
-the end portion (if misaligned) again from default
-Visualizations
-Visual: Unique Users
-Type: stat
+### Visualizations
 
-Source Bucket: default / default_agg_stats
 
-Visual: Popular Topics
-Type: magnesium-wordcloud-panel
+#### Visual: Unique Users
 
-Source Bucket: default / default_agg_topic
 
-Visual: Active Projects
-Type: stat
+- Type: stat
 
-Source Bucket: default_agg_stats
+- Source Bucket: default / default_agg_stats
 
-Visual: Title-Topic Heatmap
-Type: ae3e-plotly-panel
+#### Visual: Popular Topics
 
-Source Bucket: default / default_agg_topic
 
-Visual: System Usage
-Type: timeseries
+- Type: magnesium-wordcloud-panel
 
-Source Bucket: default / default_agg_stats
+- Source Bucket: default / default_agg_topic
 
-Visual: Stats Table
-Type: table
+#### Visual: Active Projects
 
-Source Bucket: default / default_agg_stats
 
-Visual: Project Stats Table
-Type: table
+- Type: stat
 
-Source Bucket: default / default_agg_stats
+- Source Bucket: default_agg_stats
 
-Visual: Deployment/Model Stats Table
-Type: table
+#### Visual: Title-Topic Heatmap
 
-Source Bucket: default / default_agg_stats
 
-InfluxDB Buckets
-default_agg_stats
-Dimensions: _time, deployment, model, project_id, parent_deployment, language, title
+- Type: ae3e-plotly-panel
 
-Fields: completion_tokens, number_request_messages, price, prompt_tokens, user_hash
+- Source Bucket: default / default_agg_topic
 
-Populated by Tasks: aggregate_data
+#### Visual: System Usage
 
-default_agg_topic
-Dimensions: _time, title, topic
 
-Fields: number_request_messages, request_count, prompt_token_class, topic_count
+- Type: timeseries
 
-Populated by Tasks: aggregate_data
+- Source Bucket: default / default_agg_stats
 
-default_agg_topic2
-Dimensions: _time, title, topic, model
+#### Visual: Stats Table
 
-Fields: number_request_messages, request_count, topic_count, price, prompt_tokens, competition_tokens
 
-Populated by Tasks: aggregate_data
+- Type: table
 
-default_agg_kpi
-Dimensions: _time, parent_deployment, model, project_id, user_hash,, title
+- Source Bucket: default / default_agg_stats
 
-Fields: request_count, completion_tokens, cost, prompt_tokens
+#### Visual: Project Stats Table
 
-Populated by Tasks: aggregate_data
 
-default_agg_chatid
-Dimensions: _time, chat_id,
+- Type: table
 
-Fields: request_count,
+- Source Bucket: default / default_agg_stats
 
-Populated by Tasks: aggregate_data
+#### Visual: Deployment/Model Stats Table
 
-default_agg_application
-Dimensions: _time, deployment, model, parent_deployment, title
 
-Fields: user_request_count, api_request_count, user_hash, deployment_price, number_request_messages, price, competition_tokens, prompt_tokens
+- Type: table
 
-Populated by Tasks: aggregate_data_daily
+- Source Bucket: default / default_agg_stats
 
-default_agg_month
-Dimensions: _time,
+# InfluxDB Buckets
 
-Fields: Avg_Cost_Per_Model, Total_Cost_Per_Model, Avg_RC_Per_Api, Total_RC_Per_Api, Active_Apis, Avg_Cost_Per_Api, Total_Cost_Per_Api, Unique_Users, Avg_Cost_Per_User, total_user_cost
 
-Populated by Tasks: monthly_agg
+## default_agg_stats
 
-InfluxDB Tasks
-Aggreaget_data
-Writes to Buckets
-default_agg_stats, default_agg_topic, default_agg_topic, default_agg_kpi, default_agg_chatid
-Description
-This Flux task runs every 6 hours to aggregate metrics from the default bucket.
 
-It computes totals of prompt_tokens, completion_tokens, price, and number_request_messages.
+1. Dimensions: _time, deployment, model, project_id, parent_deployment, language, title
 
-Request counts are calculated using user_hash, and timestamps are rounded to 6-hour intervals.
+1. Fields: completion_tokens, number_request_messages, price, prompt_tokens, user_hash
 
-The script handles boundary corrections to avoid overlapping or dropped records.
+1. Populated by Tasks: aggregate_data
 
-For per-user aggregations, the minimum _time per user_hash group is used to retain fidelity.
+## default_agg_topic
 
-aggregate_data_daily
-Schedule: Daily at 00:00
-Writes to Buckets
-default_agg_application
-Description
-Summarizes daily totals for application-level metrics, aggregating prompt_tokens, completion_tokens, and price by deployment and application. This provides high-level daily cost and usage trends.
-monthly_agg
-Schedule: 1st of each month
-Writes to Buckets
-default_agg_month
-Description
-Aggregates cost, user and request data monthly. This allows month-over-month comparison of project usage, useful for long-term trend reporting and budget forecasting.
-Historical Data Loading Template
-Overview
-This document provides a reusable template for loading historical data into InfluxDB buckets by mimicking the logic of an existing Flux task. This approach is useful when backfilling data for past time ranges, typically using Python and the InfluxDB client API.
-Use Case
-You can extract the Flux script logic from a production task and embed it into a Python string template. This enables running aggregations manually over historical time windows, and inserting the results back into target buckets using the InfluxDB Python client.
-Steps
-Extract the Flux aggregation logic from the task of interest.
-Replace any {} curly braces used in Flux maps or structs with {{}} to escape them in the Python f-string.
-Insert start and stop placeholders using Python variables, e.g., range(start: {start_time}, stop: {stop_time}).
-Copy the modified Flux into your Python script and use it inside a f"""...""" multiline string.
-Loop over the historical date range and execute the Flux for each window.
-Convert the result to a DataFrame and write to the target bucket.
-Template Flux Query (for f-string use in Python)
-This is an example script to load historic data from default bucket to default_agg_chatid bucket covering the following time frame: 2024.02.19. 2025.02.25.
 
+1. Dimensions: _time, title, topic
+
+1. Fields: number_request_messages, request_count, prompt_token_class, topic_count
+
+1. Populated by Tasks: aggregate_data
+
+## default_agg_topic2
+
+
+1. Dimensions: _time, title, topic, model
+
+1. Fields: number_request_messages, request_count, topic_count, price, prompt_tokens, competition_tokens
+
+1. Populated by Tasks: aggregate_data
+
+## default_agg_kpi
+
+
+1. Dimensions: _time, parent_deployment, model, project_id, user_hash,, title
+
+1. Fields: request_count, completion_tokens, cost, prompt_tokens
+
+1. Populated by Tasks: aggregate_data
+
+## default_agg_chatid
+
+
+1. Dimensions: _time, chat_id,
+
+1. Fields: request_count,
+
+1. Populated by Tasks: aggregate_data
+
+## default_agg_application
+
+
+1. Dimensions: _time, deployment, model, parent_deployment, title
+
+1. Fields: user_request_count, api_request_count, user_hash, deployment_price, number_request_messages, price, competition_tokens, prompt_tokens
+
+1. Populated by Tasks: aggregate_data_daily
+
+## default_agg_month
+
+
+1. Dimensions: _time,
+
+1. Fields: Avg_Cost_Per_Model, Total_Cost_Per_Model, Avg_RC_Per_Api, Total_RC_Per_Api, Active_Apis, Avg_Cost_Per_Api, Total_Cost_Per_Api, Unique_Users, Avg_Cost_Per_User, total_user_cost
+
+1. Populated by Tasks: monthly_agg
+
+# InfluxDB Tasks
+
+
+## Aggreaget_data
+
+
+### Writes to Buckets
+
+
+- default_agg_stats, default_agg_topic, default_agg_topic, default_agg_kpi, default_agg_chatid
+
+### Description
+
+
+- This Flux task runs every 6 hours to aggregate metrics from the `default` bucket.
+
+- It computes totals of `prompt_tokens`, `completion_tokens`, `price`, and `number_request_messages`.
+
+- Request counts are calculated using `user_hash`, and timestamps are rounded to 6-hour intervals.
+
+- The script handles boundary corrections to avoid overlapping or dropped records.
+
+- For per-user aggregations, the minimum `_time` per `user_hash` group is used to retain fidelity.
+
+## aggregate_data_daily
+
+
+- Schedule: Daily at 00:00
+
+### Writes to Buckets
+
+
+- default_agg_application
+
+### Description
+
+
+- Summarizes daily totals for application-level metrics, aggregating prompt_tokens, completion_tokens, and price by deployment and application. This provides high-level daily cost and usage trends.
+
+## monthly_agg
+
+
+- Schedule: 1st of each month
+
+### Writes to Buckets
+
+
+- default_agg_month
+
+### Description
+
+
+- Aggregates cost, user and request data monthly. This allows month-over-month comparison of project usage, useful for long-term trend reporting and budget forecasting.
+
+# Historical Data Loading Template
+
+
+## Overview
+
+
+- This document provides a reusable template for loading historical data into InfluxDB buckets by mimicking the logic of an existing Flux task. This approach is useful when backfilling data for past time ranges, typically using Python and the InfluxDB client API.
+
+## Use Case
+
+
+- You can extract the Flux script logic from a production task and embed it into a Python string template. This enables running aggregations manually over historical time windows, and inserting the results back into target buckets using the InfluxDB Python client.
+
+## Steps
+
+
+- 1. Extract the Flux aggregation logic from the task of interest.
+
+- 2. Replace any `{}` curly braces used in Flux maps or structs with `{{}}` to escape them in the Python f-string.
+
+- 3. Insert `start` and `stop` placeholders using Python variables, e.g., `range(start: {start_time}, stop: {stop_time})`.
+
+- 4. Copy the modified Flux into your Python script and use it inside a `f"""..."""` multiline string.
+
+- 5. Loop over the historical date range and execute the Flux for each window.
+
+- 6. Convert the result to a DataFrame and write to the target bucket.
+
+## Template Flux Query (for f-string use in Python)
+
+
+This is an example script to load historic data from default bucket to default_agg_chatid bucket covering the following time frame: 2024.02.19.  2025.02.25.
+
+
+```python
 
 from influxdb_client import InfluxDBClient, Point, WriteOptions
 import pandas as pd

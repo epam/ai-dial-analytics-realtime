@@ -26,7 +26,7 @@
     {
       "datasource": {
         "type": "influxdb",
-        "uid": "P3DF0C308D9792AAA"
+        "uid": "${datasource}"
       },
       "fieldConfig": {
         "defaults": {
@@ -103,7 +103,7 @@
         {
           "datasource": {
             "type": "influxdb",
-            "uid": "P3DF0C308D9792AAA"
+            "uid": "${datasource}"
           },
           "query": "import \"influxdata/influxdb/schema\"\r\nimport \"experimental\"\r\nimport \"array\"\r\n\r\ngetOrDefault = (f, d) => if exists f then f else d\r\n\r\n// Aggregate request counts per group\r\ndata_request = from(bucket: \"default_agg_stats\")\r\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\r\n      |> filter(fn: (r) => (r._field == \"request_count\" or r._field == \"prompt_tokens\" or r._field == \"completion_tokens\"  or r._field == \"deployment_price\" ) )\r\n          |> schema.fieldsAsCols()\r\n\r\n\r\nparent_deplyoment_data = data_request\r\n\r\n  |> group(columns: [\"parent_deployment\"])\r\n  |> keep(columns: [\"parent_deployment\"])\r\n    |> distinct(column: \"parent_deployment\")\r\n  |> map(fn: (r) => ({\r\n\r\n      deployment: r.parent_deployment\r\n  }))\r\n\r\n\r\ndata_request_filtered = data_request\r\n                        |> filter(fn: (r) => ((r.prompt_tokens != 0 or r.completion_tokens != 0)  and r.deployment_price == 0) )\r\ndata_request_result = join(\r\n  tables: {data: data_request_filtered, deployment: parent_deplyoment_data},\r\n  on: [\"deployment\"],\r\n\r\n)\r\ndata_request_result\r\n|> group(columns: [\"_time\"])\r\n    |> sum(column: \"request_count\")\r\n    |> group()\r\n",
           "refId": "A"
@@ -115,7 +115,7 @@
     {
       "datasource": {
         "type": "influxdb",
-        "uid": "P3DF0C308D9792AAA"
+        "uid": "${datasource}"
       },
       "fieldConfig": {
         "defaults": {
@@ -306,7 +306,7 @@
         {
           "datasource": {
             "type": "influxdb",
-            "uid": "P3DF0C308D9792AAA"
+            "uid": "${datasource}"
           },
           "query": "import \"influxdata/influxdb/schema\"\r\nimport \"experimental\"\r\nimport \"array\"\r\n\r\ngetOrDefault = (f, d) => if exists f then f else d\r\n\r\n// Aggregate request counts per group\r\ndata_request_source = from(bucket: \"default_agg_application\")\r\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\r\n  data_request = data_request_source\r\n      |> filter(fn: (r) => ( r._field == \"prompt_tokens\" or r._field == \"completion_tokens\" or r._field == \"api_request_count\"  or r._field == \"user_request_count\" or r._field == \"price\" or r._field == \"deployment_price\" ) )\r\n\r\n    |> schema.fieldsAsCols()\r\n\r\n|> group(columns: [\"deployment\",\"model\",\"parent_deployment\",\"title\"])\r\n    |> reduce(\r\n        fn: (r, accumulator) => ({\r\n          user_request_count: getOrDefault(f: r.user_request_count, d: 0) + accumulator.user_request_count,\r\n          api_request_count: getOrDefault(f: r.api_request_count, d: 0) + accumulator.api_request_count,\r\n          prompt_tokens: getOrDefault(f: r.prompt_tokens, d: 0) + accumulator.prompt_tokens,\r\n          completion_tokens: getOrDefault(f: r.completion_tokens, d: 0) + accumulator.completion_tokens,\r\n          price: getOrDefault(f: r.price, d: 0.0) + accumulator.price,\r\n          deployment_price: getOrDefault(f: r.deployment_price, d: 0) + accumulator.deployment_price,\r\n\r\n        }),\r\n        identity: {api_request_count: 0, user_request_count: 0,  prompt_tokens: 0, completion_tokens: 0, price:0.0, deployment_price:0}\r\n    )\r\n\r\n// Determine the top model per title\r\ntop_models = data_request\r\n|> map(fn: (r) => ({ r with parent_deployment: if exists r.parent_deployment and r.parent_deployment != \"\" then r.parent_deployment else \"undefined\" }))\r\n  |> group(columns: [\"parent_deployment\"])\r\n  |> top(n: 1, columns: [\"user_request_count\"])\r\n  |> keep(columns: [\"model\",\"parent_deployment\"])\r\n  |> map(fn: (r) => ({\r\n\r\n      model_top: r.model,\r\n      deployment: r.parent_deployment\r\n  }))\r\n\r\n\r\nfiltered_data = data_request\r\n|> filter(fn: (r) => ((r.prompt_tokens != 0 or r.completion_tokens != 0)  and r.deployment_price == 0) )\r\n  |> group(columns: [\"deployment\",\"title\"])  // Grouping by column A\r\n  \r\n  |> reduce(\r\n      identity: {user_request_count: 0,api_request_count: 0, prompt_tokens: 0, completion_tokens: 0, price:0.0},\r\n      fn: (r, accumulator) => ({\r\n        api_request_count: getOrDefault(f: r.api_request_count, d: 0) + accumulator.api_request_count,\r\n          user_request_count: getOrDefault(f: r.user_request_count, d: 0) + accumulator.user_request_count,\r\n          prompt_tokens: getOrDefault(f: r.prompt_tokens, d: 0) + accumulator.prompt_tokens,\r\n          completion_tokens: getOrDefault(f: r.completion_tokens, d: 0) + accumulator.completion_tokens,\r\n          price: getOrDefault(f: r.price, d: 0.0) + accumulator.price,\r\n        \r\n      })\r\n      )\r\n    |> map(fn: (r) => ({ \r\n      api_request_count: r.api_request_count,\r\n      user_request_count: r.user_request_count,\r\n     prompt_tokens: r.prompt_tokens,\r\n      completion_tokens: r.completion_tokens,\r\n      price: r.price,\r\n      deployment: r.deployment,\r\n      title: r.title,\r\n    }))\r\n\r\n\r\n  users = data_request_source\r\n        |> filter(fn: (r) => (r._field == \"user_hash\"  ))\r\n    |> schema.fieldsAsCols()\r\n   |> map(fn: (r) => ({ r with \r\n                              title: if exists r.title and r.title != \"\" then r.title else \"not available\",\r\n                              user_count: r._value,\r\n                              deployment: if exists r.deployment and r.deployment != \"\" then r.deployment else \"not available\"}))\r\n  |> group(columns: [\"deployment\",\"title\"])\r\n      |> distinct(column: \"user_hash\")\r\n |>count()\r\n   |> group(columns: [\"deployment\",\"title\"])\r\n\r\n\r\n   result = join(\r\n  tables: {data: filtered_data, top: top_models},\r\n  on: [\"deployment\"]\r\n\r\n)\r\n\r\n\r\nresult1 = join(\r\n  tables: {data: result, users: users},\r\n  on: [\"deployment\",\"title\"]\r\n\r\n)\r\n\r\n|> group(columns: [\"deployment\",\"model_top\",\"model\"])\r\n    |> reduce(\r\n        fn: (r, accumulator) => ({\r\n          prompt_tokens: getOrDefault(f: r.prompt_tokens, d: 0) + accumulator.prompt_tokens,\r\n          completion_tokens: getOrDefault(f: r.completion_tokens, d: 0) + accumulator.completion_tokens,\r\n          price: getOrDefault(f: r.price, d: 0.0) + accumulator.price,\r\n          api_request_count: getOrDefault(f: r.api_request_count, d: 0) + accumulator.api_request_count,\r\n          user_request_count: getOrDefault(f: r.user_request_count, d: 0) + accumulator.user_request_count,\r\n          _value: getOrDefault(f: r._value, d: 0) + accumulator._value,\r\n        }),\r\n        identity: {api_request_count: 0, user_request_count: 0, prompt_tokens: 0, completion_tokens: 0, price:0.0,_value:0}\r\n    )\r\nresult1\r\n|> group()",
           "refId": "A"
@@ -359,7 +359,7 @@
     {
       "datasource": {
         "type": "influxdb",
-        "uid": "P3DF0C308D9792AAA"
+        "uid": "${datasource}"
       },
       "fieldConfig": {
         "defaults": {
@@ -572,7 +572,7 @@
         {
           "datasource": {
             "type": "influxdb",
-            "uid": "P3DF0C308D9792AAA"
+            "uid": "${datasource}"
           },
           "query": "import \"influxdata/influxdb/schema\"\r\nimport \"experimental\"\r\nimport \"array\"\r\n\r\ngetOrDefault = (f, d) => if exists f then f else d\r\n\r\n// Aggregate request counts per group\r\ndata_request_source = from(bucket: \"default_agg_application\")\r\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\r\n\r\n data_request = data_request_source\r\n  |> filter(fn: (r) => ( r._field == \"prompt_tokens\" or r._field == \"completion_tokens\" or r._field == \"user_request_count\" or r._field == \"price\" or r._field == \"deployment_price\" ) )\r\n    |> schema.fieldsAsCols()\r\n    |> map(fn: (r) => ({ r with title: if exists r.title and r.title != \"\" then r.title else \"not available\" }))\r\n|> group(columns: [\"deployment\",\"parent_deployment\",\"title\"])\r\n    |> reduce(\r\n        fn: (r, accumulator) => ({\r\n          user_request_count: getOrDefault(f: r.user_request_count, d: 0) + accumulator.user_request_count,\r\n          prompt_tokens: getOrDefault(f: r.prompt_tokens, d: 0) + accumulator.prompt_tokens,\r\n          completion_tokens: getOrDefault(f: r.completion_tokens, d: 0) + accumulator.completion_tokens,\r\n          price: getOrDefault(f: r.price, d: 0.0) + accumulator.price,\r\n          deployment_price: getOrDefault(f: r.deployment_price, d: 0) + accumulator.deployment_price,\r\n\r\n        }),\r\n        identity: {user_request_count: 0, prompt_tokens: 0, completion_tokens: 0, price:0.0, deployment_price:0}\r\n    )\r\n\r\n\r\n// Determine the top model per title\r\ntop_models = data_request\r\n  |> keep(columns: [\"parent_deployment\"])\r\n  |> group()\r\n  |> distinct(column: \"parent_deployment\")\r\n  |> map(fn: (r) => ({\r\n      deployment: r._value\r\n  }))\r\n\r\n\r\nfiltered_data = data_request\r\n|> filter(fn: (r) => ((r.prompt_tokens != 0 or r.completion_tokens != 0)  and r.deployment_price == 0) )\r\n  |> group(columns: [\"deployment\",\"title\"])  // Grouping by column A\r\n  \r\n  |> reduce(\r\n      identity: {user_request_count: 0, prompt_tokens: 0, completion_tokens: 0, price:0.0},\r\n      fn: (r, accumulator) => ({\r\n          user_request_count: getOrDefault(f: r.user_request_count, d: 0) + accumulator.user_request_count,\r\n          prompt_tokens: getOrDefault(f: r.prompt_tokens, d: 0) + accumulator.prompt_tokens,\r\n          completion_tokens: getOrDefault(f: r.completion_tokens, d: 0) + accumulator.completion_tokens,\r\n          price: getOrDefault(f: r.price, d: 0.0) + accumulator.price,\r\n        \r\n      })\r\n      )\r\n    |> map(fn: (r) => ({ \r\n      user_request_count: r.user_request_count,\r\n      prompt_tokens: r.prompt_tokens,\r\n      completion_tokens: r.completion_tokens,\r\n      price: r.price,\r\n      deployment: r.deployment,\r\n      title: r.title,\r\n\r\n    }))\r\n\r\n\r\nusers = data_request_source\r\n        |> filter(fn: (r) => (r._field == \"user_hash\"  ))\r\n\r\n    |> schema.fieldsAsCols()\r\n   |> map(fn: (r) => ({ r with \r\n                              title: if exists r.title and r.title != \"\" then r.title else \"not available\",\r\n                              user_count: r._value,\r\n                              deployment: if exists r.deployment and r.deployment != \"\" then r.deployment else \"not available\"}))\r\n  |> group(columns: [\"deployment\",\"title\"])\r\n      |> distinct(column: \"user_hash\")\r\n |>count()\r\n   |> group(columns: [\"deployment\",\"title\"])\r\n  \r\nresult = join(\r\n  tables: {data: filtered_data, top: top_models},\r\n  on: [\"deployment\"]\r\n)\r\n|> group(columns: [\"deployment\",\"title\"])\r\n    |> reduce(\r\n        fn: (r, accumulator) => ({\r\n          user_request_count: getOrDefault(f: r.user_request_count, d: 0) + accumulator.user_request_count,\r\n          prompt_tokens: getOrDefault(f: r.prompt_tokens, d: 0) + accumulator.prompt_tokens,\r\n          completion_tokens: getOrDefault(f: r.completion_tokens, d: 0) + accumulator.completion_tokens,\r\n          price: getOrDefault(f: r.price, d: 0.0) + accumulator.price,\r\n      \r\n        }),\r\n        identity: { prompt_tokens: 0, completion_tokens: 0, price:0.0,user_request_count:0}\r\n    )\r\n\r\nresult1 = join(\r\n  tables: {data: result, users: users},\r\n  on: [\"deployment\",\"title\"],\r\n\r\n)\r\n\r\nresult1\r\n|> group()",
           "refId": "A"
@@ -626,7 +626,7 @@
     {
       "datasource": {
         "type": "influxdb",
-        "uid": "P3DF0C308D9792AAA"
+        "uid": "${datasource}"
       },
       "fieldConfig": {
         "defaults": {
@@ -826,7 +826,7 @@
         {
           "datasource": {
             "type": "influxdb",
-            "uid": "P3DF0C308D9792AAA"
+            "uid": "${datasource}"
           },
           "query": "import \"influxdata/influxdb/schema\"\r\nimport \"experimental\"\r\nimport \"array\"\r\n\r\ngetOrDefault = (f, d) => if exists f then f else d\r\n\r\n// Aggregate request counts per group\r\ndata_request = from(bucket: \"default_agg_application\")\r\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\r\n|> filter(fn: (r) => (r._field == \"prompt_tokens\" or r._field == \"completion_tokens\" or r._field == \"user_request_count\"or r._field == \"api_request_count\" or r._field == \"price\" or r._field == \"deployment_price\"or r._field == \"user_hash\"  ) )\r\n|> filter(fn: (r) => (r.parent_deployment != \"undefined\"  ) )\r\n\r\n    |> schema.fieldsAsCols()\r\n\r\n\r\n|> group(columns: [\"deployment\",\"parent_deployment\",\"user_hash\"])\r\n    |> reduce(\r\n        fn: (r, accumulator) => ({\r\n          user_request_count: getOrDefault(f: r.user_request_count, d: 0) + accumulator.user_request_count,\r\n          api_request_count: getOrDefault(f: r.api_request_count, d: 0) + accumulator.api_request_count,\r\n          prompt_tokens: getOrDefault(f: r.prompt_tokens, d: 0) + accumulator.prompt_tokens,\r\n          completion_tokens: getOrDefault(f: r.completion_tokens, d: 0) + accumulator.completion_tokens,\r\n          price: getOrDefault(f: r.price, d: 0.0) + accumulator.price,\r\n          deployment_price: getOrDefault(f: r.deployment_price, d: 0) + accumulator.deployment_price\r\n        }),\r\n        identity: {user_request_count: 0,api_request_count: 0, prompt_tokens: 0, completion_tokens: 0, price:0.0, deployment_price:0}\r\n    )\r\n\r\n    |> map(fn: (r) => ({ r with\r\n\r\n      request_count : r.user_request_count + r.api_request_count\r\n  }))\r\n// Determine the top model per title\r\ntop_models = data_request\r\n\r\n  |> group(columns: [\"parent_deployment\"])\r\n  |> top(n: 1, columns: [\"request_count\"])\r\n  |> keep(columns: [\"parent_deployment\",\"deployment\"])\r\n  |> map(fn: (r) => ({ \r\n\r\n      model_top: r.deployment,\r\n      parent_deployment: r.parent_deployment\r\n  }))\r\n\r\n\r\n\r\nresult = join(\r\n  tables: {data: data_request, top: top_models},\r\n  on: [\"parent_deployment\"]\r\n)\r\n|> group(columns: [\"parent_deployment\",\"deployment\",\"model_top\"])\r\n    |> reduce(\r\n        fn: (r, accumulator) => ({\r\n          request_count: getOrDefault(f: r.request_count, d: 0) + accumulator.request_count,\r\n          prompt_tokens: getOrDefault(f: r.prompt_tokens, d: 0) + accumulator.prompt_tokens,\r\n          completion_tokens: getOrDefault(f: r.completion_tokens, d: 0) + accumulator.completion_tokens,\r\n          price: getOrDefault(f: r.price, d: 0.0) + accumulator.price\r\n        }),\r\n        identity: {request_count: 0, prompt_tokens: 0, completion_tokens: 0, price:0.0}\r\n    )\r\n\r\n\r\nresult\r\n|> group()",
           "refId": "A"
@@ -913,7 +913,7 @@
         },
         "datasource": {
           "type": "influxdb",
-          "uid": "P3DF0C308D9792AAA"
+          "uid": "${datasource}"
         },
         "definition": "buckets()",
         "description": "A InfluxDB bucket name",

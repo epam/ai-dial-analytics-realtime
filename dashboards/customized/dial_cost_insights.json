@@ -25,7 +25,7 @@
     {
       "datasource": {
         "type": "influxdb",
-        "uid": "P3DF0C308D9792AAA"
+        "uid": "${datasource}"
       },
       "description": "",
       "fieldConfig": {
@@ -79,7 +79,7 @@
         {
           "datasource": {
             "type": "influxdb",
-            "uid": "P3DF0C308D9792AAA"
+            "uid": "${datasource}"
           },
           "query": "import \"influxdata/influxdb/schema\"\r\nimport \"date\"\r\ngetOrDefault = (f, d) => if exists f then f else d\r\n// not in use\r\ndays_observed = 60\r\ntotal_days_in_year = 365\r\nscaling_factor = float(v: total_days_in_year) / float(v: days_observed)\r\n\r\n\r\n//query previous years data\r\ndata = from(bucket: \"default_agg_kpi\")\r\n    |> range(start: -60d)\r\n  |> filter(fn: (r) =>  r._field == \"cost\")\r\n   |> group(columns: [\"_measurement\"])\r\n |> sum(column: \"_value\") // Sum cost within the groups\r\nfull_year_data = data\r\n  |> map(fn: (r) => ({\r\n    prev_user_cost: r._value ,\r\n      predicted_user_cost: r._value * 6.083333\r\n\r\n    }))\r\n    full_year_data\r\n   |> group()\r\n\r\n",
           "refId": "A"
@@ -91,7 +91,7 @@
     {
       "datasource": {
         "type": "influxdb",
-        "uid": "P3DF0C308D9792AAA"
+        "uid": "${datasource}"
       },
       "fieldConfig": {
         "defaults": {
@@ -145,7 +145,7 @@
         {
           "datasource": {
             "type": "influxdb",
-            "uid": "P3DF0C308D9792AAA"
+            "uid": "${datasource}"
           },
           "query": "import \"influxdata/influxdb/schema\"\r\nimport \"date\"\r\ngetOrDefault = (f, d) => if exists f then f else d\r\n// not in use\r\ndays_observed = 60\r\ntotal_days_in_year = 365\r\nscaling_factor = float(v: total_days_in_year) / float(v: days_observed)\r\n\r\n\r\n//query previous years data\r\ndata = from(bucket: \"default_agg_kpi\")\r\n    |> range(start: -60d)\r\n  |> filter(fn: (r) =>  r._field == \"cost\" and r.user_hash == \"undefined\")\r\n   |> group()\r\n |> sum(column: \"_value\") // Sum cost within the groups\r\nfull_year_data = data\r\n  |> map(fn: (r) => ({\r\n    prev_project_cost: r._value ,\r\n      predicted_project_cos: r._value * 6.083333\r\n\r\n    }))\r\n    full_year_data\r\n   |> group()\r\n\r\n",
           "refId": "A"
@@ -178,7 +178,7 @@
     {
       "datasource": {
         "type": "influxdb",
-        "uid": "P3DF0C308D9792AAA"
+        "uid": "${datasource}"
       },
       "description": "",
       "fieldConfig": {
@@ -232,7 +232,7 @@
         {
           "datasource": {
             "type": "influxdb",
-            "uid": "P3DF0C308D9792AAA"
+            "uid": "${datasource}"
           },
           "query": "import \"influxdata/influxdb/schema\"\r\nimport \"date\"\r\n\r\ngetOrDefault = (f, d) => if exists f then f else d\r\n\r\n// Constants\r\ndays_observed = 60\r\ntotal_days_in_year = 365\r\nscaling_factor = float(v: total_days_in_year) / float(v: days_observed)  // 6.083333\r\n\r\n// Step 1: Query Total Cost\r\ndata_total = from(bucket: \"default_agg_kpi\")\r\n  |> range(start: -60d)\r\n  |> filter(fn: (r) => r._field == \"cost\")\r\n  |> group()  // Group without specific columns to keep it simple\r\n  |> sum(column: \"_value\")\r\n  |> map(fn: (r) => ({\r\n      _key: \"combined\",  // Add a key for joining\r\n      total_predicted_cost: r._value * scaling_factor\r\n  }))\r\n\r\n// Step 2: Query Project-Specific Cost\r\ndata_project = from(bucket: \"default_agg_kpi\")\r\n  |> range(start: -60d)\r\n  |> filter(fn: (r) => r._field == \"cost\" and r.user_hash == \"undefined\")\r\n  |> group()\r\n  |> sum(column: \"_value\")\r\n  |> map(fn: (r) => ({\r\n      _key: \"combined\",  // Add the same key for joining\r\n      project_predicted_cost: r._value * scaling_factor\r\n  }))\r\n\r\n// Step 3: Join and Calculate the Difference\r\ndifference_data = join(\r\n  tables: {total: data_total, project: data_project},\r\n  on: [\"_key\"],  // Join on the common key\r\n)\r\n|> map(fn: (r) => ({\r\n    total_predicted_cost: r.total_predicted_cost,\r\n    project_predicted_cost: r.project_predicted_cost,\r\n    difference: r.total_predicted_cost - r.project_predicted_cost\r\n}))\r\n\r\n// Output the Difference\r\ndifference_data\r\n|> group()\r\n",
           "refId": "A"
@@ -244,7 +244,7 @@
     {
       "datasource": {
         "type": "influxdb",
-        "uid": "P3DF0C308D9792AAA"
+        "uid": "${datasource}"
       },
       "description": "",
       "fieldConfig": {
@@ -298,7 +298,7 @@
         {
           "datasource": {
             "type": "influxdb",
-            "uid": "P3DF0C308D9792AAA"
+            "uid": "${datasource}"
           },
           "query": "import \"influxdata/influxdb/schema\"\r\nimport \"date\"\r\n\r\ngetOrDefault = (f, d) => if exists f then f else d\r\nsafeDivide = (numerator, denominator, default) => \r\n  if denominator != 0.0 then numerator / denominator else default  // Prevent division by zero\r\n\r\nnow_time = now()\r\n\r\n// Determine the start of the current month\r\ncurrent_month_start = date.truncate(t: now_time, unit: 1mo)\r\n\r\n// Calculate the range for the last two complete months\r\ntwo_months_ago_start = date.sub(d: 2mo, from: current_month_start)\r\nlast_month_end = date.sub(d: 1ns, from: current_month_start)  // End of the last complete month\r\n\r\n// Query the last two complete months of data\r\nprev_year_data = from(bucket: \"default_agg_month\")\r\n  |> range(start: two_months_ago_start, stop: last_month_end)\r\n  |> filter(fn: (r) => r._field == \"Avg_Cost_Per_User\")\r\n  |> mean(column: \"_value\")\r\n  |> group()\r\n\r\nprev_year_data\r\n",
           "refId": "A"
@@ -310,7 +310,7 @@
     {
       "datasource": {
         "type": "influxdb",
-        "uid": "P3DF0C308D9792AAA"
+        "uid": "${datasource}"
       },
       "fieldConfig": {
         "defaults": {
@@ -363,7 +363,7 @@
         {
           "datasource": {
             "type": "influxdb",
-            "uid": "P3DF0C308D9792AAA"
+            "uid": "${datasource}"
           },
           "query": "import \"influxdata/influxdb/schema\"\r\nimport \"date\"\r\ngetOrDefault = (f, d) => if exists f then f else d\r\nsafeDivide = (numerator, denominator, default) => \r\n  if denominator != 0.0 then numerator / denominator else default  // Prevent division by zero\r\n\r\nnow_time = now()\r\ncurrent_year = date.year(t: now_time)\r\nprevious_year_start = time(v: string(v: current_year - 1) + \"-01-01T00:00:00Z\")\r\nprevious_year_end = time(v: string(v: current_year - 1) + \"-12-31T23:59:59Z\")\r\ncurrent_year_start = time(v: string(v: date.year(t: now_time)) + \"-01-01T00:00:00Z\")\r\ncurrent_year_end = time(v: string(v: date.year(t: now_time)) + \"-12-31T23:59:59Z\")\r\n\r\n//query previous years data\r\nprev_year_data = from(bucket: \"default_agg_month\")\r\n  |> range(start: previous_year_start, stop: previous_year_end)\r\n  |> filter(fn: (r) =>  r._field == \"total_user_cost\" or r._field == \"Total_Cost_Per_Api\" )\r\n  |>group(columns: [\"_measurement\"])\r\n\r\n  |> sum(column: \"_value\")\r\n  |>group()\r\n\r\nprev_year_data\r\n",
           "refId": "A"
@@ -381,7 +381,7 @@
     {
       "datasource": {
         "type": "influxdb",
-        "uid": "P3DF0C308D9792AAA"
+        "uid": "${datasource}"
       },
       "fieldConfig": {
         "defaults": {
@@ -435,7 +435,7 @@
         {
           "datasource": {
             "type": "influxdb",
-            "uid": "P3DF0C308D9792AAA"
+            "uid": "${datasource}"
           },
           "query": "import \"influxdata/influxdb/schema\"\r\nimport \"date\"\r\ngetOrDefault = (f, d) => if exists f then f else d\r\nsafeDivide = (numerator, denominator, default) => \r\n  if denominator != 0.0 then numerator / denominator else default  // Prevent division by zero\r\n\r\nnow_time = now()\r\ncurrent_year = date.year(t: now_time)\r\nprevious_year_start = time(v: string(v: current_year - 1) + \"-01-01T00:00:00Z\")\r\nprevious_year_end = time(v: string(v: current_year - 1) + \"-12-31T23:59:59Z\")\r\ncurrent_year_start = time(v: string(v: date.year(t: now_time)) + \"-01-01T00:00:00Z\")\r\ncurrent_year_end = time(v: string(v: date.year(t: now_time)) + \"-12-31T23:59:59Z\")\r\n\r\n//query previous years data\r\nprev_year_data = from(bucket: \"default_agg_month\")\r\n  |> range(start: previous_year_start, stop: previous_year_end)\r\n  |> filter(fn: (r) =>  r._field == \"total_user_cost\" or r._field == \"Total_Cost_Per_Api\" )\r\n  |> schema.fieldsAsCols()\r\n    |> map(fn: (r) => ({\r\n      _time_prev: r._time,\r\n      month: date.month(t: r._time),\r\n      prev_user_cost: r.total_user_cost,\r\n      prev_project_cost: r.Total_Cost_Per_Api,\r\n    }))\r\n  |>group()\r\n  |> sort(columns: [\"_time_prev\"], desc: true)  // Sort newest first\r\n\r\n//query current years data\r\ncurrent_year_data = from(bucket: \"default_agg_month\")\r\n\r\n  |> range(start: current_year_start, stop: current_year_end)\r\n  |> filter(fn: (r) =>  r._field == \"total_user_cost\" or r._field == \"Total_Cost_Per_Api\"  )\r\n  |> schema.fieldsAsCols()\r\n    |> map(fn: (r) => ({\r\n      _time_curr: r._time,\r\n      month: date.month(t: r._time),\r\n      current_user_cost: r.total_user_cost,\r\n      current_project_cost: r.Total_Cost_Per_Api\r\n    }))\r\n  |>group()\r\n  |> sort(columns: [\"_time_curr\"], desc: true)  // Sort newest first\r\n\r\n//join prev and current years data on month in order to identify the trends (hange in %)\r\njoined_data = join(\r\n  tables: {prev: prev_year_data, cur: current_year_data},\r\n  on: [\"month\"],\r\n  method: \"inner\"\r\n)\r\n |> group()\r\n    |> reduce(\r\n        fn: (r, accumulator) => ({\r\n          current_user_cost: getOrDefault(f: r.current_user_cost, d: 0.0) + accumulator.current_user_cost,\r\n          prev_user_cost: getOrDefault(f: r.prev_user_cost, d: 0.0) + accumulator.prev_user_cost,\r\n          current_project_cost: getOrDefault(f: r.current_project_cost, d: 0.0) + accumulator.current_project_cost,\r\n          prev_project_cost: getOrDefault(f: r.prev_project_cost, d: 0.0) + accumulator.prev_project_cost,\r\n   \r\n  \r\n        }),\r\n        identity: {current_user_cost: 0.0, prev_user_cost: 0.0,current_project_cost: 0.0,prev_project_cost: 0.0}\r\n    )\r\n      |> map(fn: (r) => ({\r\n      _time_prev: r._time_prev,\r\n      _time_cur: r._time_cur,\r\n      month: r.month,\r\n      prev_user_cost: r.prev_user_cost,\r\n      current_user_cost: r.current_user_cost,\r\n      prev_project_cost: r.prev_project_cost,\r\n      current_project_cost: r.current_project_cost,\r\n     growth_rate_user: safeDivide(numerator: r.current_user_cost, denominator: r.prev_user_cost, default: 1.0),  // Default growth is 1.0 if prev_user_cost is 0\r\n     growth_rate_project: safeDivide(numerator: r.current_project_cost, denominator: r.prev_project_cost, default: 1.0) \r\n    }))\r\n\r\n// Calculate Growth Rate (Safe Division)\r\ngrowth_rate_result_user = joined_data\r\n  |> map(fn: (r) => ({\r\n      growth_rate: r.growth_rate_user\r\n    }))\r\n  |> findRecord(fn: (key) => true, idx: 0)  // Extract single growth rate value\r\ngrowth_rate_result_project = joined_data\r\n  |> map(fn: (r) => ({\r\n\r\n      growth_rate: r.growth_rate_project\r\n    }))\r\n  |> findRecord(fn: (key) => true, idx: 0)  // Extract single growth rate value\r\n\r\n// Append Growth Rate as a Fixed Column in Current Year Data\r\ncurrent_year_data_with_growth_user = prev_year_data\r\n|>sum(column:\"prev_user_cost\")\r\n  |> map(fn: (r) => ({\r\n      month: r.month,\r\n      prev_user_cost: r.prev_user_cost,\r\n      growth_rate_user: growth_rate_result_user.growth_rate,  // Assign the computed fixed growth rate\r\n      predicted_user_cos: r.prev_user_cost * growth_rate_result_user.growth_rate\r\n    }))\r\n\r\ncurrent_year_data_with_growth_project = prev_year_data\r\n|>sum(column:\"prev_project_cost\")\r\n  |> map(fn: (r) => ({\r\n      month: r.month,\r\n      prev_project_cost: r.prev_project_cost,\r\n      growth_rate_project: growth_rate_result_project.growth_rate,  // Assign the computed fixed growth rate\r\n      predicted_project_cos: r.prev_project_cost * growth_rate_result_project.growth_rate\r\n    }))\r\n\r\n// Output the modified current year data\r\ncurrent_year_data_with_growth_project\r\n|> group()",
           "refId": "A"
@@ -469,7 +469,7 @@
     {
       "datasource": {
         "type": "influxdb",
-        "uid": "P3DF0C308D9792AAA"
+        "uid": "${datasource}"
       },
       "fieldConfig": {
         "defaults": {
@@ -522,7 +522,7 @@
         {
           "datasource": {
             "type": "influxdb",
-            "uid": "P3DF0C308D9792AAA"
+            "uid": "${datasource}"
           },
           "query": "import \"influxdata/influxdb/schema\"\r\nimport \"date\"\r\ngetOrDefault = (f, d) => if exists f then f else d\r\nsafeDivide = (numerator, denominator, default) => \r\n  if denominator != 0.0 then numerator / denominator else default  // Prevent division by zero\r\n\r\nnow_time = now()\r\ncurrent_year = date.year(t: now_time)\r\nprevious_year_start = time(v: string(v: current_year - 1) + \"-01-01T00:00:00Z\")\r\nprevious_year_end = time(v: string(v: current_year - 1) + \"-12-31T23:59:59Z\")\r\ncurrent_year_start = time(v: string(v: date.year(t: now_time)) + \"-01-01T00:00:00Z\")\r\ncurrent_year_end = time(v: string(v: date.year(t: now_time)) + \"-12-31T23:59:59Z\")\r\n\r\n//query previous years data\r\nprev_year_data = from(bucket: \"default_agg_month\")\r\n  |> range(start: previous_year_start, stop: previous_year_end)\r\n  |> filter(fn: (r) =>  r._field == \"total_user_cost\" or r._field == \"Total_Cost_Per_Api\" )\r\n  |> schema.fieldsAsCols()\r\n    |> map(fn: (r) => ({\r\n      _time_prev: r._time,\r\n      month: date.month(t: r._time),\r\n      prev_user_cost: r.total_user_cost,\r\n      prev_project_cost: r.Total_Cost_Per_Api,\r\n    }))\r\n  |>group()\r\n  |> sort(columns: [\"_time_prev\"], desc: true)  // Sort newest first\r\n\r\n//query current years data\r\ncurrent_year_data = from(bucket: \"default_agg_month\")\r\n\r\n  |> range(start: current_year_start, stop: current_year_end)\r\n  |> filter(fn: (r) =>  r._field == \"total_user_cost\" or r._field == \"Total_Cost_Per_Api\"  )\r\n  |> schema.fieldsAsCols()\r\n    |> map(fn: (r) => ({\r\n      _time_curr: r._time,\r\n      month: date.month(t: r._time),\r\n      current_user_cost: r.total_user_cost,\r\n      current_project_cost: r.Total_Cost_Per_Api\r\n    }))\r\n  |>group()\r\n  |> sort(columns: [\"_time_curr\"], desc: true)  // Sort newest first\r\n\r\n//join prev and current years data on month in order to identify the trends (hange in %)\r\njoined_data = join(\r\n  tables: {prev: prev_year_data, cur: current_year_data},\r\n  on: [\"month\"],\r\n  method: \"inner\"\r\n)\r\n |> group()\r\n    |> reduce(\r\n        fn: (r, accumulator) => ({\r\n          current_user_cost: getOrDefault(f: r.current_user_cost, d: 0.0) + accumulator.current_user_cost,\r\n          prev_user_cost: getOrDefault(f: r.prev_user_cost, d: 0.0) + accumulator.prev_user_cost,\r\n          current_project_cost: getOrDefault(f: r.current_project_cost, d: 0.0) + accumulator.current_project_cost,\r\n          prev_project_cost: getOrDefault(f: r.prev_project_cost, d: 0.0) + accumulator.prev_project_cost,\r\n   \r\n  \r\n        }),\r\n        identity: {current_user_cost: 0.0, prev_user_cost: 0.0,current_project_cost: 0.0,prev_project_cost: 0.0}\r\n    )\r\n      |> map(fn: (r) => ({\r\n      _time_prev: r._time_prev,\r\n      _time_cur: r._time_cur,\r\n      month: r.month,\r\n      prev_user_cost: r.prev_user_cost,\r\n      current_user_cost: r.current_user_cost,\r\n      prev_project_cost: r.prev_project_cost,\r\n      current_project_cost: r.current_project_cost,\r\n     growth_rate_user: safeDivide(numerator: r.current_user_cost, denominator: r.prev_user_cost, default: 1.0),  // Default growth is 1.0 if prev_user_cost is 0\r\n     growth_rate_project: safeDivide(numerator: r.current_project_cost, denominator: r.prev_project_cost, default: 1.0) \r\n    }))\r\n\r\n// Calculate Growth Rate (Safe Division)\r\ngrowth_rate_result_user = joined_data\r\n  |> map(fn: (r) => ({\r\n      growth_rate: r.growth_rate_user\r\n    }))\r\n  |> findRecord(fn: (key) => true, idx: 0)  // Extract single growth rate value\r\ngrowth_rate_result_project = joined_data\r\n  |> map(fn: (r) => ({\r\n\r\n      growth_rate: r.growth_rate_project\r\n    }))\r\n  |> findRecord(fn: (key) => true, idx: 0)  // Extract single growth rate value\r\n\r\n// Append Growth Rate as a Fixed Column in Current Year Data\r\ncurrent_year_data_with_growth_user = prev_year_data\r\n|>sum(column:\"prev_user_cost\")\r\n  |> map(fn: (r) => ({\r\n      month: r.month,\r\n      prev_user_cost: r.prev_user_cost,\r\n      growth_rate_user: growth_rate_result_user.growth_rate,  // Assign the computed fixed growth rate\r\n      predicted_user_cos: r.prev_user_cost * growth_rate_result_user.growth_rate\r\n    }))\r\n\r\ncurrent_year_data_with_growth_project = prev_year_data\r\n|>sum(column:\"prev_project_cost\")\r\n  |> map(fn: (r) => ({\r\n      month: r.month,\r\n      prev_project_cost: r.prev_project_cost,\r\n      growth_rate_project: growth_rate_result_project.growth_rate,  // Assign the computed fixed growth rate\r\n      predicted_project_cos: r.prev_project_cost * growth_rate_result_project.growth_rate\r\n    }))\r\n\r\ncurrent_year_data_with_growth_user\r\n",
           "refId": "A"
@@ -540,7 +540,7 @@
     {
       "datasource": {
         "type": "influxdb",
-        "uid": "P3DF0C308D9792AAA"
+        "uid": "${datasource}"
       },
       "fieldConfig": {
         "defaults": {
@@ -593,7 +593,7 @@
         {
           "datasource": {
             "type": "influxdb",
-            "uid": "P3DF0C308D9792AAA"
+            "uid": "${datasource}"
           },
           "query": "import \"influxdata/influxdb/schema\"\r\nimport \"date\"\r\ngetOrDefault = (f, d) => if exists f then f else d\r\nsafeDivide = (numerator, denominator, default) => \r\n  if denominator != 0.0 then numerator / denominator else default  // Prevent division by zero\r\n\r\nnow_time = now()\r\ncurrent_year = date.year(t: now_time)\r\nprevious_year_start = time(v: string(v: current_year - 1) + \"-01-01T00:00:00Z\")\r\nprevious_year_end = time(v: string(v: current_year - 1) + \"-12-31T23:59:59Z\")\r\ncurrent_year_start = time(v: string(v: date.year(t: now_time)) + \"-01-01T00:00:00Z\")\r\ncurrent_year_end = time(v: string(v: date.year(t: now_time)) + \"-12-31T23:59:59Z\")\r\n\r\n//query previous years data\r\nprev_year_data = from(bucket: \"default_agg_month\")\r\n  |> range(start: previous_year_start, stop: previous_year_end)\r\n  |> filter(fn: (r) =>   r._field == \"Avg_Cost_Per_User\" )\r\n\r\n  |> mean(column: \"_value\")\r\n  |>group()\r\n\r\nprev_year_data\r\n",
           "refId": "A"
@@ -611,7 +611,7 @@
     {
       "datasource": {
         "type": "influxdb",
-        "uid": "P3DF0C308D9792AAA"
+        "uid": "${datasource}"
       },
       "fieldConfig": {
         "defaults": {
@@ -704,7 +704,7 @@
         {
           "datasource": {
             "type": "influxdb",
-            "uid": "P3DF0C308D9792AAA"
+            "uid": "${datasource}"
           },
           "query": "import \"influxdata/influxdb/schema\"\r\nimport \"date\"\r\nfrom(bucket: \"default_agg_month\")\r\n  |> range(start: -1000mo)  // Get last 12 months of data\r\n  |> schema.fieldsAsCols()\r\n    |> map(fn: (r) => ({\r\n      r with \r\n      time_str: string(v: date.year(t: r._time)) + \"-\" + string(v: date.month(t: r._time))  // Convert to \"YYYY-MM\"\r\n    }))\r\n  |>group()\r\n  |> sort(columns: [\"_time\"], desc: true)  // Sort newest first",
           "refId": "A"
@@ -762,7 +762,7 @@
     {
       "datasource": {
         "type": "influxdb",
-        "uid": "P3DF0C308D9792AAA"
+        "uid": "${datasource}"
       },
       "fieldConfig": {
         "defaults": {
@@ -871,7 +871,7 @@
         {
           "datasource": {
             "type": "influxdb",
-            "uid": "P3DF0C308D9792AAA"
+            "uid": "${datasource}"
           },
           "query": "import \"influxdata/influxdb/schema\"\r\nimport \"date\"\r\nfrom(bucket: \"default_agg_month\")\r\n  |> range(start: -1000mo)  // Get last 12 months of data\r\n  |> schema.fieldsAsCols()\r\n  |>group()\r\n  |> sort(columns: [\"_time\"], desc: true)  // Sort newest first",
           "refId": "A"
@@ -937,7 +937,7 @@
     {
       "datasource": {
         "type": "influxdb",
-        "uid": "P3DF0C308D9792AAA"
+        "uid": "${datasource}"
       },
       "fieldConfig": {
         "defaults": {
@@ -1034,7 +1034,7 @@
         {
           "datasource": {
             "type": "influxdb",
-            "uid": "P3DF0C308D9792AAA"
+            "uid": "${datasource}"
           },
           "query": "import \"influxdata/influxdb/schema\"\r\nimport \"date\"\r\nfrom(bucket: \"default_agg_month\")\r\n  |> range(start: -1000mo)  // Get last 12 months of data\r\n  |> schema.fieldsAsCols()\r\n  |>group()\r\n  |> sort(columns: [\"_time\"], desc: true)  // Sort newest first",
           "refId": "A"
@@ -1107,7 +1107,7 @@
         "current": {
           "selected": false,
           "text": "InfluxDB_EPAM",
-          "value": "P3DF0C308D9792AAA"
+          "value": "${datasource}"
         },
         "description": "InfluxDB datasource",
         "hide": 0,
@@ -1131,7 +1131,7 @@
         },
         "datasource": {
           "type": "influxdb",
-          "uid": "P3DF0C308D9792AAA"
+          "uid": "${datasource}"
         },
         "definition": "buckets()",
         "description": "A InfluxDB bucket name",

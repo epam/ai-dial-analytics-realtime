@@ -25,7 +25,7 @@
     {
       "datasource": {
         "type": "influxdb",
-        "uid": "P3DF0C308D9792AAA"
+        "uid": "${datasource}"
       },
       "description": "",
       "fieldConfig": {
@@ -79,7 +79,7 @@
         {
           "datasource": {
             "type": "influxdb",
-            "uid": "P3DF0C308D9792AAA"
+            "uid": "${datasource}"
           },
           "query": "import \"experimental\"\r\n\r\n// Constants\r\nthreshold_duration_ns =  ${threshold_duration_ns} // 1 day-1ns in nanoseconds\r\nsix_hours_ns = ${six_hours_ns}  // 6 hours in nanoseconds\r\n\r\n// Calculate the time range duration\r\ntime_diff_ns = int(v: v.timeRangeStop) - int(v: v.timeRangeStart)\r\n\r\n// Calculate remainder for 6-hour alignment at start and end\r\nstart_remainder_ns = int(v: v.timeRangeStart) % six_hours_ns\r\nend_remainder_ns_pre = int(v: v.timeRangeStop) % six_hours_ns\r\n// Extract the hour from timeRangeStop in hours (convert nanoseconds to hours)\r\ntime_hour = int(v: int(v: v.timeRangeStop) % 86400000000000) / 3600000000000\r\n\r\n// Check if the end time is in xx:59:59 for the specified hours (05, 11, 17, 23)\r\nend_remainder_ns = ${end_reminder_calc}\r\n\r\n// Bucket selection logic based on total time range duration\r\nbucket_default_only = time_diff_ns <= threshold_duration_ns\r\n\r\n// Helper function to query bucket\r\ndefault_bucket_query = (start, stop) => from(bucket: \"${INFLUX_BUCKET}\")\r\n    |> range(start: start, stop: stop)\r\n    |> filter(fn: (r) => r._measurement == \"analytics\" and r._field == \"user_hash\" and r._value != \"undefined\")\r\n    |> group()\r\n    |> distinct()\r\n\r\nagg_bucket_query = (start, stop) => from(bucket: \"${INFLUX_BUCKET}_agg_stats\")\r\n    |> range(start: start, stop: stop)\r\n    |> filter(fn: (r) => r._measurement == \"analytics\" and r._field == \"user_hash\"and r._value != \"undefined\")\r\n    |> group()\r\n    |> distinct()\r\n\r\n// Query data for the start from the default bucket if the start time is not aligned\r\ndata_default_start = \r\n    if start_remainder_ns > 0 and not bucket_default_only then ${data_default_start} \r\n    else from(bucket: \"${INFLUX_BUCKET}\") |> limit(n: 0)\r\n\r\n// Query data for the aggregated bucket (middle part)\r\ndata_agg = \r\n    if not bucket_default_only then ${data_agg}\r\n    else from(bucket: \"${INFLUX_BUCKET}_agg_stats\") |> limit(n: 0)\r\n\r\n// Query data for the end from the default bucket if the end time is not aligned\r\ndata_default_end = \r\n        if end_remainder_ns > 0 then ${data_default_end}\r\n        else from(bucket: \"${INFLUX_BUCKET}\") |> limit(n: 0)\r\n\r\n// Combine data from all buckets (start, middle, end)\r\ncombined_data = ${combine_data}\r\n\r\n// Apply final grouping and counting to get the total unique user_hash count\r\nfinal_data = combined_data\r\n    |> group()\r\n    |> distinct()\r\n    |> count()\r\n\r\nif \"${Aggregation}\" == \"SEMI\" then final_data else ${user_cnt_agg}",
           "refId": "A"
@@ -91,7 +91,7 @@
     {
       "datasource": {
         "type": "influxdb",
-        "uid": "P3DF0C308D9792AAA"
+        "uid": "${datasource}"
       },
       "gridPos": {
         "h": 10,
@@ -127,7 +127,7 @@
         {
           "datasource": {
             "type": "influxdb",
-            "uid": "P3DF0C308D9792AAA"
+            "uid": "${datasource}"
           },
           "query": "import \"experimental\"\r\n\r\n// Constants\r\nthreshold_duration_ns =  ${threshold_duration_ns} // 1 day-1ns in nanoseconds\r\nsix_hours_ns = ${six_hours_ns}  // 6 hours in nanoseconds\r\n\r\n// Calculate the time range duration\r\ntime_diff_ns = int(v: v.timeRangeStop) - int(v: v.timeRangeStart)\r\n\r\n// Calculate remainder for 6-hour alignment at start and end\r\nstart_remainder_ns = int(v: v.timeRangeStart) % six_hours_ns\r\nend_remainder_ns_pre = int(v: v.timeRangeStop) % six_hours_ns\r\n// Extract the hour from timeRangeStop in hours (convert nanoseconds to hours)\r\ntime_hour = int(v: int(v: v.timeRangeStop) % 86400000000000) / 3600000000000\r\n\r\n// Check if the end time is in xx:59:59 for the specified hours (05, 11, 17, 23)\r\nend_remainder_ns = ${end_reminder_calc}\r\n\r\n// Bucket selection logic based on total time range duration\r\nbucket_default_only = time_diff_ns <= threshold_duration_ns\r\n\r\n// Helper function to query default bucket\r\ndefault_bucket_query = (start, stop) => from(bucket: \"${INFLUX_BUCKET}\")\r\n    |> range(start: start, stop: stop)\r\n    |> filter(fn: (r) => r._measurement == \"analytics\")\r\n    |> filter(fn: (r) => r._field == \"number_request_messages\")\r\n        |> map(fn: (r) => ({r with _field: \"topic_count\"}))  // Map _field to \"topic_count\"\r\n    |> group(columns: [\"topic\"])\r\n    |> count()\r\n    \r\n\r\n// Helper function to query aggregated bucket\r\nagg_bucket_query = (start, stop) => from(bucket: \"${INFLUX_BUCKET}_agg_topic\")\r\n    |> range(start: start, stop: stop)\r\n    |> filter(fn: (r) => r._measurement == \"analytics\" and r._field == \"topic_count\")\r\n    |> group(columns: [\"topic\"])\r\n    |> sum(column: \"_value\")\r\n\r\n// Query data for the start from the default bucket if the start time is not aligned\r\ndata_default_start = \r\n    if start_remainder_ns > 0 and not bucket_default_only then ${data_default_start} \r\n    else from(bucket: \"${INFLUX_BUCKET}\") |> limit(n: 0)\r\n\r\n// Query data for the aggregated bucket (middle part)\r\ndata_agg = \r\n    if not bucket_default_only then ${data_agg}\r\n    else from(bucket: \"${INFLUX_BUCKET}_agg_stats\") |> limit(n: 0)\r\n\r\n// Query data for the end from the default bucket if the end time is not aligned\r\ndata_default_end = \r\n        if end_remainder_ns > 0 then ${data_default_end}\r\n        else from(bucket: \"${INFLUX_BUCKET}\") |> limit(n: 0)\r\n\r\n// Combine data from all buckets (start, middle, end)\r\ncombined_data = ${combine_data}\r\n\r\n// Final aggregation over the entire dataset\r\nfinal_data = combined_data\r\n\r\n    |> map(fn: (r) => ({r with topic: r.topic}))  // Explicitly preserve topic field\r\n    |> map(fn: (r) => ({r with _start: v.timeRangeStart}))  // Add static start time\r\n    |> map(fn: (r) => ({r with _stop: v.timeRangeStop}))  // Add static start time\r\n    |> group(columns: [\"_start\",\"_stop\",\"topic\"])  // Ensure were grouping by topic\r\n    |> sum(column: \"_value\")      // Sum the values by topic\r\n    |> group()\r\n\r\nif \"${Aggregation}\" == \"SEMI\" then final_data else ${topic_agg} \r\n\r\n\r\n",
           "refId": "A"
@@ -139,7 +139,7 @@
     {
       "datasource": {
         "type": "influxdb",
-        "uid": "P3DF0C308D9792AAA"
+        "uid": "${datasource}"
       },
       "description": "",
       "fieldConfig": {
@@ -192,7 +192,7 @@
         {
           "datasource": {
             "type": "influxdb",
-            "uid": "P3DF0C308D9792AAA"
+            "uid": "${datasource}"
           },
           "query": "import \"experimental\"\r\nimport \"influxdata/influxdb/schema\"\r\n\r\nfrom(bucket: \"default_agg_stats\")\r\n    |> range(start: v.timeRangeStart, stop: v.timeRangeStop)  \r\n  |> filter(fn: (r) => r._field == \"prompt_tokens\" )\r\n   |> filter(fn: (r) => r.project_id != \"\")\r\n  //|> schema.fieldsAsCols()\r\n |> group(columns: [\"project_id\"])\r\n |> distinct(column: \"project_id\") // Get unique project_id values\r\n    |> group()  // Keep project_id in the result\r\n    |> count()",
           "refId": "A"
@@ -204,7 +204,7 @@
     {
       "datasource": {
         "type": "influxdb",
-        "uid": "P3DF0C308D9792AAA"
+        "uid": "${datasource}"
       },
       "description": "",
       "gridPos": {
@@ -259,7 +259,7 @@
         {
           "datasource": {
             "type": "influxdb",
-            "uid": "P3DF0C308D9792AAA"
+            "uid": "${datasource}"
           },
           "query": "import \"experimental\"\r\n\r\n// Constants\r\nthreshold_duration_ns =  ${threshold_duration_ns} // 1 day-1ns in nanoseconds\r\nsix_hours_ns = ${six_hours_ns}  // 6 hours in nanoseconds\r\n\r\n// Calculate the time range duration\r\ntime_diff_ns = int(v: v.timeRangeStop) - int(v: v.timeRangeStart)\r\n\r\n// Calculate remainder for 6-hour alignment at start and end\r\nstart_remainder_ns = int(v: v.timeRangeStart) % six_hours_ns\r\nend_remainder_ns_pre = int(v: v.timeRangeStop) % six_hours_ns\r\n// Extract the hour from timeRangeStop in hours (convert nanoseconds to hours)\r\ntime_hour = int(v: int(v: v.timeRangeStop) % 86400000000000) / 3600000000000\r\n\r\n// Check if the end time is in xx:59:59 for the specified hours (05, 11, 17, 23)\r\nend_remainder_ns = ${end_reminder_calc}\r\n\r\n// Bucket selection logic based on total time range duration\r\nbucket_default_only = time_diff_ns <= threshold_duration_ns\r\n\r\n// Helper function to query default bucket\r\ndefault_bucket_query = (start, stop) => from(bucket: \"${INFLUX_BUCKET}\")\r\n    |> range(start: start, stop: stop)\r\n    |> filter(fn: (r) => r._measurement == \"analytics\")\r\n    |> filter(fn: (r) => r._field == \"number_request_messages\")\r\n    |> filter(fn: (r) => r.title != \"undefined\")\r\n    |> group(columns: [\"topic\", \"title\"]) \r\n    |> count()  // Counting occurrences if non-aggregated\r\n    \r\n\r\n// Helper function to query aggregated bucket\r\nagg_bucket_query = (start, stop) => from(bucket: \"${INFLUX_BUCKET}_agg_topic\")\r\n    |> range(start: start, stop: stop)\r\n    |> filter(fn: (r) => r._measurement == \"analytics\")\r\n    |> filter(fn: (r) => r._field == \"topic_count\")\r\n    |> filter(fn: (r) => r.title != \"undefined\")\r\n    |> group(columns: [\"topic\", \"title\"]) \r\n    |> sum(column: \"_value\")  // Summing the values if aggregated\r\n// Query data for the start from the default bucket if the start time is not aligned\r\ndata_default_start = \r\n    if start_remainder_ns > 0 and not bucket_default_only then ${data_default_start} \r\n    else from(bucket: \"${INFLUX_BUCKET}\") |> limit(n: 0)\r\n\r\n// Query data for the aggregated bucket (middle part)\r\ndata_agg = \r\n    if not bucket_default_only then ${data_agg}\r\n    else from(bucket: \"${INFLUX_BUCKET}_agg_stats\") |> limit(n: 0)\r\n\r\n// Query data for the end from the default bucket if the end time is not aligned\r\ndata_default_end = \r\n        if end_remainder_ns > 0 then ${data_default_end}\r\n        else from(bucket: \"${INFLUX_BUCKET}\") |> limit(n: 0)\r\n\r\n// Combine data from all buckets (start, middle, end)\r\ncombined_data = ${combine_data}\r\n\r\n// Conditional logic to branch based on the time difference\r\n\r\n// Final aggregation over the entire dataset\r\nfinal_data = combined_data\r\n\r\n     |> map(fn: (r) => ({r with _start: v.timeRangeStart}))  // Add static start time\r\n      |> map(fn: (r) => ({r with _stop: v.timeRangeStop}))  // Add static start time\r\n      |> group(columns: [\"_start\",\"_stop\",\"topic\", \"title\"]) \r\n      |> sum(column: \"_value\")  // Summing the values if aggregated\r\n      |> group()\r\n      |> sort(columns: [\"_value\"], desc: true)  // Sorting in descending order\r\n      |> limit(n: 100)  // Limit to top 10\r\n\t  \r\nif \"${Aggregation}\" == \"SEMI\" then final_data else \r\nfrom(bucket: \"${INFLUX_BUCKET}_agg_topic\")\r\n|> range(start: v.timeRangeStart, stop: v.timeRangeStop)\r\n\r\n    |> filter(fn: (r) => r._measurement == \"analytics\")\r\n    |> filter(fn: (r) => r._field == \"topic_count\")\r\n    |> group(columns: [\"topic\", \"title\"]) \r\n    |> sum(column: \"_value\")  // Summing the values if aggregated\r\n|> group()\r\n|> filter(fn: (r) => r.title != \"undefined\")\r\n      |> sort(columns: [\"_value\"], desc: true)  // Sorting in descending order\r\n      |> limit(n: 1000)  // Limit to top 10\r\n",
           "refId": "A"
@@ -283,7 +283,7 @@
     {
       "datasource": {
         "type": "influxdb",
-        "uid": "P3DF0C308D9792AAA"
+        "uid": "${datasource}"
       },
       "fieldConfig": {
         "defaults": {
@@ -378,7 +378,7 @@
         {
           "datasource": {
             "type": "influxdb",
-            "uid": "P3DF0C308D9792AAA"
+            "uid": "${datasource}"
           },
           "query": "import \"experimental\"\r\n\r\n\r\n// Constants\r\nthreshold_duration_ns =  ${threshold_duration_ns} // 1 day-1ns in nanoseconds\r\nsix_hours_ns = ${six_hours_ns}  // 6 hours in nanoseconds\r\n\r\n// Calculate the time range duration\r\ntime_diff_ns = int(v: v.timeRangeStop) - int(v: v.timeRangeStart)\r\n\r\n// Calculate remainder for 6-hour alignment at start and end\r\nstart_remainder_ns = int(v: v.timeRangeStart) % six_hours_ns\r\nend_remainder_ns_pre = int(v: v.timeRangeStop) % six_hours_ns\r\n\r\n// Extract the hour from timeRangeStop in hours (convert nanoseconds to hours)\r\ntime_hour = int(v: int(v: v.timeRangeStop) % 86400000000000) / 3600000000000\r\n\r\n// Check if the end time is in xx:59:59 for the specified hours (05, 11, 17, 23)\r\nend_remainder_ns = ${end_reminder_calc}\r\n\r\n// Bucket selection logic based on total time range duration\r\nbucket_default_only = time_diff_ns <= threshold_duration_ns\r\n\r\n// Helper function to query default bucket\r\ndefault_bucket_query = (start, stop) => from(bucket: \"${INFLUX_BUCKET}\")\r\n    |> range(start: start, stop: stop)\r\n    |> filter(fn: (r) => r._measurement == \"analytics\")\r\n    |> filter(fn: (r) => r._field == \"number_request_messages\")\r\n    |> group()\r\n    |> aggregateWindow(every: v.windowPeriod, fn: count)\r\n    |> keep(columns: [\"_time\", \"_value\"])\r\n\r\n// Helper function to query aggregated bucket\r\nagg_bucket_query = (start, stop) => from(bucket: \"${INFLUX_BUCKET}_agg_stats\")\r\n    |> range(start: start, stop: stop)\r\n    |> filter(fn: (r) => r._measurement == \"analytics\")\r\n    |> filter(fn: (r) => r._field == \"request_count\")\r\n    |> group()\r\n    |> aggregateWindow(every: v.windowPeriod, fn: sum, column: \"_value\")  // Sum the request_count column\r\n    |> keep(columns: [\"_time\", \"_value\"]) \r\n    |> filter(fn: (r) => r._value != 0 )\r\n\r\n// Query data for the start from the default bucket if the start time is not aligned\r\ndata_default_start = \r\n    if start_remainder_ns > 0 and not bucket_default_only then ${data_default_start} \r\n    else from(bucket: \"${INFLUX_BUCKET}\") |> limit(n: 0)\r\n\r\n// Query data for the aggregated bucket (middle part)\r\ndata_agg = \r\n    if not bucket_default_only then ${data_agg}\r\n    else from(bucket: \"${INFLUX_BUCKET}_agg_stats\") |> limit(n: 0)\r\n\r\n// Query data for the end from the default bucket if the end time is not aligned\r\ndata_default_end = \r\n        if end_remainder_ns > 0 then ${data_default_end}\r\n        else from(bucket: \"${INFLUX_BUCKET}\") |> limit(n: 0)\r\n\r\n// Combine data from all buckets (start, middle, end)\r\nfinal_data = ${combine_data}\r\n\r\nif \"${Aggregation}\" == \"SEMI\" then final_data else ${system_agg} \r\n\r\n\r\n",
           "refId": "A"
@@ -390,7 +390,7 @@
     {
       "datasource": {
         "type": "influxdb",
-        "uid": "P3DF0C308D9792AAA"
+        "uid": "${datasource}"
       },
       "fieldConfig": {
         "defaults": {
@@ -470,7 +470,7 @@
         {
           "datasource": {
             "type": "influxdb",
-            "uid": "P3DF0C308D9792AAA"
+            "uid": "${datasource}"
           },
           "hide": false,
           "query": "import \"influxdata/influxdb/schema\"\r\nimport \"strings\"\r\nimport \"regexp\"\r\nimport \"array\"\r\nimport \"experimental\"\r\ngetOrDefault = (f, d) => if exists f then f else d\r\n\r\n// Constants\r\nthreshold_duration_ns =  ${threshold_duration_ns} // 1 day-1ns in nanoseconds\r\nsix_hours_ns = ${six_hours_ns}  // 6 hours in nanoseconds\r\n\r\n// Calculate the time range duration\r\ntime_diff_ns = int(v: v.timeRangeStop) - int(v: v.timeRangeStart)\r\n\r\n// Calculate remainder for 6-hour alignment at start and end\r\nstart_remainder_ns = int(v: v.timeRangeStart) % six_hours_ns\r\nend_remainder_ns_pre = int(v: v.timeRangeStop) % six_hours_ns\r\n// Extract the hour from timeRangeStop in hours (convert nanoseconds to hours)\r\ntime_hour = int(v: int(v: v.timeRangeStop) % 86400000000000) / 3600000000000\r\n\r\n// Check if the end time is in xx:59:59 for the specified hours (05, 11, 17, 23)\r\nend_remainder_ns = ${end_reminder_calc}\r\n\r\n// Bucket selection logic based on total time range duration\r\nbucket_default_only = time_diff_ns <= threshold_duration_ns\r\n\r\n// Helper function to query default bucket\r\ndefault_bucket_query = (start, stop) => from(bucket: \"${INFLUX_BUCKET}\")\r\n  |> range(start: start, stop: stop)\r\n  |> filter(fn: (r) => r._measurement == \"analytics\")\r\n  |> filter(fn: (r) => r._field == \"prompt_tokens\" or r._field == \"completion_tokens\" or r._field == \"number_request_messages\" or r._field == \"user_hash\" or r._field == \"price\"or r._field == \"request_count\")\r\n  |> schema.fieldsAsCols()\r\n  |> group(columns: [\"project_id\", \"deployment\", \"model\", \"user_hash\"])\r\n  |> reduce(\r\n        fn: (r, accumulator) => ({\r\n          request_count: accumulator.request_count + 1,\r\n          prompt_tokens: getOrDefault(f: r.prompt_tokens, d: 0) + accumulator.prompt_tokens,\r\n          completion_tokens: getOrDefault(f: r.completion_tokens, d: 0) + accumulator.completion_tokens,\r\n          money: getOrDefault(f: r.price, d: 0.0) + accumulator.money,\r\n          user_count: 1\r\n        }),\r\n        identity: {request_count: 0, prompt_tokens: 0, completion_tokens: 0, money: 0.0, user_count: 0}\r\n    )\r\n\r\n\r\n  // Helper function to query aggregated bucket\r\n  agg_bucket_query = (start, stop) => from(bucket: \"${INFLUX_BUCKET}_agg_stats\")\r\n    |> range(start: start, stop: stop)\r\n    |> filter(fn: (r) => r._field == \"prompt_tokens\" or r._field == \"completion_tokens\" or r._field == \"number_request_messages\" or r._field == \"user_hash\" or r._field == \"price\"or r._field == \"request_count\")\r\n    |> schema.fieldsAsCols()\r\n    |> group(columns: [\"project_id\", \"deployment\", \"model\", \"user_hash\"])\r\n    |> reduce(\r\n        fn: (r, accumulator) => ({\r\n          request_count: getOrDefault(f: r.request_count, d: 0) + accumulator.request_count,\r\n          prompt_tokens: getOrDefault(f: r.prompt_tokens, d: 0) + accumulator.prompt_tokens,\r\n          completion_tokens: getOrDefault(f: r.completion_tokens, d: 0) + accumulator.completion_tokens,\r\n          money: getOrDefault(f: r.price, d: 0.0) + accumulator.money,\r\n          user_count: 1\r\n        }),\r\n        identity: {request_count: 0, prompt_tokens: 0, completion_tokens: 0, money: 0.0, user_count: 0}\r\n    )\r\n\r\n\r\n// Query data for the start from the default bucket if the start time is not aligned\r\ndata_default_start = \r\n    if start_remainder_ns > 0 and not bucket_default_only then ${data_default_start} \r\n    else from(bucket: \"${INFLUX_BUCKET}\") |> limit(n: 0)\r\n\r\n// Query data for the aggregated bucket (middle part)\r\ndata_agg = \r\n    if not bucket_default_only then ${data_agg}\r\n    else from(bucket: \"${INFLUX_BUCKET}_agg_stats\") |> limit(n: 0)\r\n\r\n// Query data for the end from the default bucket if the end time is not aligned\r\ndata_default_end = \r\n        if end_remainder_ns > 0 then ${data_default_end}\r\n        else from(bucket: \"${INFLUX_BUCKET}\") |> limit(n: 0)\r\n\r\n// Combine data from all buckets (start, middle, end)\r\ncombined_data = ${combine_data}\r\n// User count is slightly differently calculated for the agg and for the start/end piece\r\nuser_count_value = if bucket_default_only then 0\r\n    else -1\r\n// Combine default and agg buckets data  \r\nfinal_data = combined_data\r\n  |> group(columns: [\"project_id\", \"deployment\", \"model\",\"user_hash\"])\r\n  |> reduce(\r\n        fn: (r, accumulator) => ({\r\n         // user_count: accumulator.user_count + 1,\r\n          request_count: r.request_count + accumulator.request_count,\r\n          prompt_tokens: r.prompt_tokens + accumulator.prompt_tokens,\r\n          completion_tokens: r.completion_tokens + accumulator.completion_tokens,\r\n          money: r.money + accumulator.money\r\n        }),\r\n        identity: {request_count: 0, prompt_tokens: 0, completion_tokens: 0, money: 0.0}\r\n    )\r\n      |> group(columns: [\"project_id\", \"deployment\", \"model\"])\r\n  |> reduce(\r\n        fn: (r, accumulator) => ({\r\n          user_count: accumulator.user_count + 1,\r\n          request_count: r.request_count + accumulator.request_count,\r\n          prompt_tokens: r.prompt_tokens + accumulator.prompt_tokens,\r\n          completion_tokens: r.completion_tokens + accumulator.completion_tokens,\r\n          money: r.money + accumulator.money\r\n        }),\r\n        identity: {user_count: user_count_value, request_count: 0, prompt_tokens: 0, completion_tokens: 0, money: 0.0}\r\n    )\r\n  |> group()\r\n\r\nif \"${Aggregation}\" == \"SEMI\" then final_data else ${stats_agg} ",
@@ -524,7 +524,7 @@
     {
       "datasource": {
         "type": "influxdb",
-        "uid": "P3DF0C308D9792AAA"
+        "uid": "${datasource}"
       },
       "fieldConfig": {
         "defaults": {
@@ -599,7 +599,7 @@
         {
           "datasource": {
             "type": "influxdb",
-            "uid": "P3DF0C308D9792AAA"
+            "uid": "${datasource}"
           },
           "hide": false,
           "query": "import \"influxdata/influxdb/schema\"\r\nimport \"strings\"\r\nimport \"regexp\"\r\nimport \"array\"\r\nimport \"experimental\"\r\ngetOrDefault = (f, d) => if exists f then f else d\r\n\r\n// Constants\r\nthreshold_duration_ns =  ${threshold_duration_ns} // 1 day-1ns in nanoseconds\r\nsix_hours_ns = ${six_hours_ns}  // 6 hours in nanoseconds\r\n\r\n// Calculate the time range duration\r\ntime_diff_ns = int(v: v.timeRangeStop) - int(v: v.timeRangeStart)\r\n\r\n// Calculate remainder for 6-hour alignment at start and end\r\nstart_remainder_ns = int(v: v.timeRangeStart) % six_hours_ns\r\nend_remainder_ns_pre = int(v: v.timeRangeStop) % six_hours_ns\r\n// Extract the hour from timeRangeStop in hours (convert nanoseconds to hours)\r\ntime_hour = int(v: int(v: v.timeRangeStop) % 86400000000000) / 3600000000000\r\n\r\n// Check if the end time is in xx:59:59 for the specified hours (05, 11, 17, 23)\r\nend_remainder_ns = ${end_reminder_calc}\r\n\r\n// Bucket selection logic based on total time range duration\r\nbucket_default_only = time_diff_ns <= threshold_duration_ns\r\n\r\n// Helper function to query default bucket\r\ndefault_bucket_query = (start, stop) => from(bucket: \"${INFLUX_BUCKET}\")\r\n  |> range(start: start, stop: stop)\r\n  |> filter(fn: (r) => r._measurement == \"analytics\")\r\n  |> filter(fn: (r) => r._field == \"prompt_tokens\" or r._field == \"completion_tokens\" or r._field == \"number_request_messages\"  or r._field == \"price\"or r._field == \"request_count\")\r\n  |> schema.fieldsAsCols()\r\n  |> group(columns: [\"project_id\"])\r\n  |> reduce(\r\n        fn: (r, accumulator) => ({\r\n          request_count: accumulator.request_count + 1,\r\n          prompt_tokens: getOrDefault(f: r.prompt_tokens, d: 0) + accumulator.prompt_tokens,\r\n          completion_tokens: getOrDefault(f: r.completion_tokens, d: 0) + accumulator.completion_tokens,\r\n          money: getOrDefault(f: r.price, d: 0.0) + accumulator.money\r\n        }),\r\n        identity: {request_count: 0, prompt_tokens: 0, completion_tokens: 0, money: 0.0}\r\n    )\r\n\r\n\r\n  // Helper function to query aggregated bucket\r\n  agg_bucket_query = (start, stop) => from(bucket: \"${INFLUX_BUCKET}_agg_stats\")\r\n    |> range(start: start, stop: stop)\r\n    |> filter(fn: (r) => r._field == \"prompt_tokens\" or r._field == \"completion_tokens\" or r._field == \"number_request_messages\" or r._field == \"price\"or r._field == \"request_count\")\r\n    |> schema.fieldsAsCols()\r\n    |> group(columns: [\"project_id\"])\r\n    |> reduce(\r\n        fn: (r, accumulator) => ({\r\n          request_count: getOrDefault(f: r.request_count, d: 0) + accumulator.request_count,\r\n          prompt_tokens: getOrDefault(f: r.prompt_tokens, d: 0) + accumulator.prompt_tokens,\r\n          completion_tokens: getOrDefault(f: r.completion_tokens, d: 0) + accumulator.completion_tokens,\r\n          money: getOrDefault(f: r.price, d: 0.0) + accumulator.money\r\n        }),\r\n        identity: {request_count: 0, prompt_tokens: 0, completion_tokens: 0, money: 0.0}\r\n    )\r\n\r\n\r\n// Query data for the start from the default bucket if the start time is not aligned\r\ndata_default_start = \r\n    if start_remainder_ns > 0 and not bucket_default_only then ${data_default_start} \r\n    else from(bucket: \"${INFLUX_BUCKET}\") |> limit(n: 0)\r\n\r\n// Query data for the aggregated bucket (middle part)\r\ndata_agg = \r\n    if not bucket_default_only then ${data_agg}\r\n    else from(bucket: \"${INFLUX_BUCKET}_agg_stats\") |> limit(n: 0)\r\n\r\n// Query data for the end from the default bucket if the end time is not aligned\r\ndata_default_end = \r\n        if end_remainder_ns > 0 then ${data_default_end}\r\n        else from(bucket: \"${INFLUX_BUCKET}\") |> limit(n: 0)\r\n\r\n// Combine data from all buckets (start, middle, end)\r\ncombined_data = ${combine_data}\r\n\r\nfinal_data = combined_data\r\n  |> group(columns: [\"project_id\"])\r\n  |> reduce(\r\n        fn: (r, accumulator) => ({\r\n          request_count: r.request_count + accumulator.request_count,\r\n          prompt_tokens: r.prompt_tokens + accumulator.prompt_tokens,\r\n          completion_tokens: r.completion_tokens + accumulator.completion_tokens,\r\n          money: r.money + accumulator.money\r\n        }),\r\n        identity: {request_count: 0, prompt_tokens: 0, completion_tokens: 0, money: 0.0}\r\n    )\r\n  |> group()\r\n\r\n\r\nif \"${Aggregation}\" == \"SEMI\" then final_data else ${stats_2_agg} \r\n",
@@ -656,7 +656,7 @@
     {
       "datasource": {
         "type": "influxdb",
-        "uid": "P3DF0C308D9792AAA"
+        "uid": "${datasource}"
       },
       "fieldConfig": {
         "defaults": {
@@ -740,7 +740,7 @@
         {
           "datasource": {
             "type": "influxdb",
-            "uid": "P3DF0C308D9792AAA"
+            "uid": "${datasource}"
           },
           "hide": false,
           "query": "import \"influxdata/influxdb/schema\"\r\nimport \"strings\"\r\nimport \"regexp\"\r\nimport \"array\"\r\nimport \"experimental\"\r\ngetOrDefault = (f, d) => if exists f then f else d\r\n\r\n// Constants\r\nthreshold_duration_ns =  ${threshold_duration_ns} // 1 day-1ns in nanoseconds\r\nsix_hours_ns = ${six_hours_ns}  // 6 hours in nanoseconds\r\n\r\n// Calculate the time range duration\r\ntime_diff_ns = int(v: v.timeRangeStop) - int(v: v.timeRangeStart)\r\n\r\n// Calculate remainder for 6-hour alignment at start and end\r\nstart_remainder_ns = int(v: v.timeRangeStart) % six_hours_ns\r\nend_remainder_ns_pre = int(v: v.timeRangeStop) % six_hours_ns\r\n// Extract the hour from timeRangeStop in hours (convert nanoseconds to hours)\r\ntime_hour = int(v: int(v: v.timeRangeStop) % 86400000000000) / 3600000000000\r\n\r\n// Check if the end time is in xx:59:59 for the specified hours (05, 11, 17, 23)\r\nend_remainder_ns = ${end_reminder_calc}\r\n\r\n// Bucket selection logic based on total time range duration\r\nbucket_default_only = time_diff_ns <= threshold_duration_ns\r\n\r\n// Helper function to query default bucket\r\ndefault_bucket_query = (start, stop) => from(bucket: \"${INFLUX_BUCKET}\")\r\n  |> range(start: start, stop: stop)\r\n  |> filter(fn: (r) => r._measurement == \"analytics\")\r\n  |> filter(fn: (r) => r._field == \"prompt_tokens\" or r._field == \"completion_tokens\" or r._field == \"number_request_messages\"  or r._field == \"price\"or r._field == \"request_count\")\r\n  |> schema.fieldsAsCols()\r\n  |> group(columns: [\"deployment\", \"model\"])\r\n  |> reduce(\r\n        fn: (r, accumulator) => ({\r\n          request_count: accumulator.request_count + 1,\r\n          prompt_tokens: getOrDefault(f: r.prompt_tokens, d: 0) + accumulator.prompt_tokens,\r\n          completion_tokens: getOrDefault(f: r.completion_tokens, d: 0) + accumulator.completion_tokens,\r\n          money: getOrDefault(f: r.price, d: 0.0) + accumulator.money\r\n        }),\r\n        identity: {request_count: 0, prompt_tokens: 0, completion_tokens: 0, money: 0.0}\r\n    )\r\n\r\n  // Helper function to query aggregated bucket\r\n  agg_bucket_query = (start, stop) => from(bucket: \"${INFLUX_BUCKET}_agg_stats\")\r\n    |> range(start: start, stop: stop)\r\n    |> filter(fn: (r) => r._field == \"prompt_tokens\" or r._field == \"completion_tokens\" or r._field == \"number_request_messages\" or r._field == \"user_hash\" or r._field == \"price\"or r._field == \"request_count\")\r\n    |> schema.fieldsAsCols()\r\n    |> group(columns: [\"deployment\", \"model\"])\r\n    |> reduce(\r\n        fn: (r, accumulator) => ({\r\n          request_count: getOrDefault(f: r.request_count, d: 0) + accumulator.request_count,\r\n          prompt_tokens: getOrDefault(f: r.prompt_tokens, d: 0) + accumulator.prompt_tokens,\r\n          completion_tokens: getOrDefault(f: r.completion_tokens, d: 0) + accumulator.completion_tokens,\r\n          money: getOrDefault(f: r.price, d: 0.0) + accumulator.money\r\n        }),\r\n        identity: {request_count: 0, prompt_tokens: 0, completion_tokens: 0, money: 0.0}\r\n    )\r\n\r\n\r\n// Query data for the start from the default bucket if the start time is not aligned\r\ndata_default_start = \r\n    if start_remainder_ns > 0 and not bucket_default_only then ${data_default_start} \r\n    else from(bucket: \"${INFLUX_BUCKET}\") |> limit(n: 0)\r\n\r\n// Query data for the aggregated bucket (middle part)\r\ndata_agg = \r\n    if not bucket_default_only then ${data_agg}\r\n    else from(bucket: \"${INFLUX_BUCKET}_agg_stats\") |> limit(n: 0)\r\n\r\n// Query data for the end from the default bucket if the end time is not aligned\r\ndata_default_end = \r\n        if end_remainder_ns > 0 then ${data_default_end}\r\n        else from(bucket: \"${INFLUX_BUCKET}\") |> limit(n: 0)\r\n\r\n// Combine data from all buckets (start, middle, end)\r\ncombined_data = ${combine_data}\r\n\r\nfinal_data = combined_data\r\n  |> group(columns: [\"deployment\", \"model\"])\r\n  |> reduce(\r\n        fn: (r, accumulator) => ({\r\n          request_count: r.request_count + accumulator.request_count,\r\n          prompt_tokens: r.prompt_tokens + accumulator.prompt_tokens,\r\n          completion_tokens: r.completion_tokens + accumulator.completion_tokens,\r\n          money: r.money + accumulator.money\r\n        }),\r\n        identity: {request_count: 0, prompt_tokens: 0, completion_tokens: 0, money: 0.0}\r\n    )\r\n  |> group()\r\nif \"${Aggregation}\" == \"SEMI\" then final_data else ${stats_3_agg}",
@@ -804,7 +804,7 @@
         "current": {
           "selected": false,
           "text": "InfluxDB_EPAM",
-          "value": "P3DF0C308D9792AAA"
+          "value": "${datasource}"
         },
         "description": "InfluxDB datasource",
         "hide": 0,
@@ -828,7 +828,7 @@
         },
         "datasource": {
           "type": "influxdb",
-          "uid": "P3DF0C308D9792AAA"
+          "uid": "${datasource}"
         },
         "definition": "buckets()",
         "description": "A InfluxDB bucket name",

@@ -1,0 +1,1166 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {
+          "type": "grafana",
+          "uid": "-- Grafana --"
+        },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "__requires": [
+    {
+      "type": "datasource",
+      "id": "influxdb",
+      "name": "InfluxDB",
+      "version": "1.8.0"
+    },
+    {
+      "type": "panel",
+      "id": "barchart",
+      "name": "Bar chart",
+      "version": ""
+    },
+    {
+      "type": "panel",
+      "id": "table",
+      "name": "Table",
+      "version": ""
+    }
+  ],
+  "description": "",
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 0,
+  "id": 8,
+  "links": [],
+  "liveNow": false,
+  "panels": [
+    {
+      "datasource": {
+        "type": "influxdb",
+        "uid": "${datasource}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "fillOpacity": 80,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "lineWidth": 1,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 13,
+        "w": 23,
+        "x": 0,
+        "y": 0
+      },
+      "id": 63,
+      "options": {
+        "barRadius": 0,
+        "barWidth": 0.58,
+        "fullHighlight": false,
+        "groupWidth": 0.7,
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "orientation": "auto",
+        "showValue": "auto",
+        "stacking": "none",
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        },
+        "xTickLabelRotation": -45,
+        "xTickLabelSpacing": 100
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "${datasource}"
+          },
+          "query": "import \"influxdata/influxdb/schema\"\r\nimport \"experimental\"\r\nimport \"array\"\r\n\r\ngetOrDefault = (f, d) => if exists f then f else d\r\n\r\n// Aggregate request counts per group\r\ndata_request = from(bucket: \"default_agg_stats\")\r\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\r\n      |> filter(fn: (r) => (r._field == \"request_count\" or r._field == \"prompt_tokens\" or r._field == \"completion_tokens\"  or r._field == \"deployment_price\" ) )\r\n          |> schema.fieldsAsCols()\r\n\r\n\r\nparent_deplyoment_data = data_request\r\n\r\n  |> group(columns: [\"parent_deployment\"])\r\n  |> keep(columns: [\"parent_deployment\"])\r\n    |> distinct(column: \"parent_deployment\")\r\n  |> map(fn: (r) => ({\r\n\r\n      deployment: r.parent_deployment\r\n  }))\r\n\r\n\r\ndata_request_filtered = data_request\r\n                        |> filter(fn: (r) => ((r.prompt_tokens != 0 or r.completion_tokens != 0)  and r.deployment_price == 0) )\r\ndata_request_result = join(\r\n  tables: {data: data_request_filtered, deployment: parent_deplyoment_data},\r\n  on: [\"deployment\"],\r\n\r\n)\r\ndata_request_result\r\n|> group(columns: [\"_time\"])\r\n    |> sum(column: \"request_count\")\r\n    |> group()\r\n",
+          "refId": "A"
+        }
+      ],
+      "title": "Request count - Applications",
+      "type": "barchart"
+    },
+    {
+      "datasource": {
+        "type": "influxdb",
+        "uid": "${datasource}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "custom": {
+            "align": "left",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "filterable": true,
+            "inspect": false
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Prompt tokens"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 142
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Deployment"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 549
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Request count"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 192
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Cost ($)"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 94
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Model"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 232
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Completion tokens"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 166
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "All Models Used"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 216
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Top Model Used"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 191
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Request"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 112
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Application"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 508
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 14,
+        "w": 23,
+        "x": 0,
+        "y": 13
+      },
+      "id": 69,
+      "options": {
+        "cellHeight": "sm",
+        "footer": {
+          "countRows": false,
+          "enablePagination": true,
+          "fields": [
+            "prompt_tokens",
+            "completion_tokens",
+            "price",
+            "user_request_count",
+            "api_request_count",
+            "_value"
+          ],
+          "reducer": [
+            "sum"
+          ],
+          "show": true
+        },
+        "showHeader": true,
+        "sortBy": [
+          {
+            "desc": true,
+            "displayName": "Unique Users"
+          }
+        ]
+      },
+      "pluginVersion": "10.4.0",
+      "targets": [
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "${datasource}"
+          },
+          "query": "import \"influxdata/influxdb/schema\"\r\nimport \"experimental\"\r\nimport \"array\"\r\n\r\ngetOrDefault = (f, d) => if exists f then f else d\r\n\r\n// Aggregate request counts per group\r\ndata_request_source = from(bucket: \"default_agg_application\")\r\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\r\n  data_request = data_request_source\r\n      |> filter(fn: (r) => ( r._field == \"prompt_tokens\" or r._field == \"completion_tokens\" or r._field == \"api_request_count\"  or r._field == \"user_request_count\" or r._field == \"price\" or r._field == \"deployment_price\" ) )\r\n\r\n    |> schema.fieldsAsCols()\r\n\r\n|> group(columns: [\"deployment\",\"model\",\"parent_deployment\",\"title\"])\r\n    |> reduce(\r\n        fn: (r, accumulator) => ({\r\n          user_request_count: getOrDefault(f: r.user_request_count, d: 0) + accumulator.user_request_count,\r\n          api_request_count: getOrDefault(f: r.api_request_count, d: 0) + accumulator.api_request_count,\r\n          prompt_tokens: getOrDefault(f: r.prompt_tokens, d: 0) + accumulator.prompt_tokens,\r\n          completion_tokens: getOrDefault(f: r.completion_tokens, d: 0) + accumulator.completion_tokens,\r\n          price: getOrDefault(f: r.price, d: 0.0) + accumulator.price,\r\n          deployment_price: getOrDefault(f: r.deployment_price, d: 0) + accumulator.deployment_price,\r\n\r\n        }),\r\n        identity: {api_request_count: 0, user_request_count: 0,  prompt_tokens: 0, completion_tokens: 0, price:0.0, deployment_price:0}\r\n    )\r\n\r\n// Determine the top model per title\r\ntop_models = data_request\r\n|> map(fn: (r) => ({ r with parent_deployment: if exists r.parent_deployment and r.parent_deployment != \"\" then r.parent_deployment else \"undefined\" }))\r\n  |> group(columns: [\"parent_deployment\"])\r\n  |> top(n: 1, columns: [\"user_request_count\"])\r\n  |> keep(columns: [\"model\",\"parent_deployment\"])\r\n  |> map(fn: (r) => ({\r\n\r\n      model_top: r.model,\r\n      deployment: r.parent_deployment\r\n  }))\r\n\r\n\r\nfiltered_data = data_request\r\n|> filter(fn: (r) => ((r.prompt_tokens != 0 or r.completion_tokens != 0)  and r.deployment_price == 0) )\r\n  |> group(columns: [\"deployment\",\"title\"])  // Grouping by column A\r\n  \r\n  |> reduce(\r\n      identity: {user_request_count: 0,api_request_count: 0, prompt_tokens: 0, completion_tokens: 0, price:0.0},\r\n      fn: (r, accumulator) => ({\r\n        api_request_count: getOrDefault(f: r.api_request_count, d: 0) + accumulator.api_request_count,\r\n          user_request_count: getOrDefault(f: r.user_request_count, d: 0) + accumulator.user_request_count,\r\n          prompt_tokens: getOrDefault(f: r.prompt_tokens, d: 0) + accumulator.prompt_tokens,\r\n          completion_tokens: getOrDefault(f: r.completion_tokens, d: 0) + accumulator.completion_tokens,\r\n          price: getOrDefault(f: r.price, d: 0.0) + accumulator.price,\r\n        \r\n      })\r\n      )\r\n    |> map(fn: (r) => ({ \r\n      api_request_count: r.api_request_count,\r\n      user_request_count: r.user_request_count,\r\n     prompt_tokens: r.prompt_tokens,\r\n      completion_tokens: r.completion_tokens,\r\n      price: r.price,\r\n      deployment: r.deployment,\r\n      title: r.title,\r\n    }))\r\n\r\n\r\n  users = data_request_source\r\n        |> filter(fn: (r) => (r._field == \"user_hash\"  ))\r\n    |> schema.fieldsAsCols()\r\n   |> map(fn: (r) => ({ r with \r\n                              title: if exists r.title and r.title != \"\" then r.title else \"not available\",\r\n                              user_count: r._value,\r\n                              deployment: if exists r.deployment and r.deployment != \"\" then r.deployment else \"not available\"}))\r\n  |> group(columns: [\"deployment\",\"title\"])\r\n      |> distinct(column: \"user_hash\")\r\n |>count()\r\n   |> group(columns: [\"deployment\",\"title\"])\r\n\r\n\r\n   result = join(\r\n  tables: {data: filtered_data, top: top_models},\r\n  on: [\"deployment\"]\r\n\r\n)\r\n\r\n\r\nresult1 = join(\r\n  tables: {data: result, users: users},\r\n  on: [\"deployment\",\"title\"]\r\n\r\n)\r\n\r\n|> group(columns: [\"deployment\",\"model_top\",\"model\"])\r\n    |> reduce(\r\n        fn: (r, accumulator) => ({\r\n          prompt_tokens: getOrDefault(f: r.prompt_tokens, d: 0) + accumulator.prompt_tokens,\r\n          completion_tokens: getOrDefault(f: r.completion_tokens, d: 0) + accumulator.completion_tokens,\r\n          price: getOrDefault(f: r.price, d: 0.0) + accumulator.price,\r\n          api_request_count: getOrDefault(f: r.api_request_count, d: 0) + accumulator.api_request_count,\r\n          user_request_count: getOrDefault(f: r.user_request_count, d: 0) + accumulator.user_request_count,\r\n          _value: getOrDefault(f: r._value, d: 0) + accumulator._value,\r\n        }),\r\n        identity: {api_request_count: 0, user_request_count: 0, prompt_tokens: 0, completion_tokens: 0, price:0.0,_value:0}\r\n    )\r\nresult1\r\n|> group()",
+          "refId": "A"
+        }
+      ],
+      "title": "Top Models",
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "request_class": false,
+              "request_count": true
+            },
+            "includeByName": {},
+            "indexByName": {
+              "api_request_count": 1,
+              "completion_tokens": 4,
+              "deployment": 0,
+              "model_top": 6,
+              "price": 5,
+              "prompt_tokens": 3,
+              "user_count": 7,
+              "user_request_count": 2
+            },
+            "renameByName": {
+              "_value": "Unique Users",
+              "all_models": "All Models",
+              "api": "Api Request Count",
+              "api_request_count": "Api Request",
+              "completion_tokens": "Completion tokens",
+              "deployment": "Application",
+              "model": "All Models Used",
+              "model_top": "Top Model Used",
+              "parent_deployment": "Application",
+              "price": "Cost ($)",
+              "project_id": "",
+              "prompt_tokens": "Prompt tokens",
+              "request_count": "Request",
+              "user": "User Request Count",
+              "user_count": "Unique Users",
+              "user_hash": "Unique Users",
+              "user_request_count": "User Request"
+            }
+          }
+        }
+      ],
+      "type": "table"
+    },
+    {
+      "datasource": {
+        "type": "influxdb",
+        "uid": "${datasource}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "custom": {
+            "align": "left",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "filterable": true,
+            "inspect": false
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green"
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Prompt tokens"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 142
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Deployment"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 549
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Request count"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 192
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Cost ($)"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 217
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Model"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 232
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Completion tokens"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 166
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "All Models Used"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 216
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Top Model Used"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 191
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Request"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 112
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Application"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 508
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Title"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 231
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "User Request Count"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 235
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 15,
+        "w": 23,
+        "x": 0,
+        "y": 27
+      },
+      "id": 70,
+      "options": {
+        "cellHeight": "sm",
+        "footer": {
+          "countRows": false,
+          "enablePagination": true,
+          "fields": [
+            "prompt_tokens",
+            "completion_tokens",
+            "price",
+            "user_request_count",
+            "_value"
+          ],
+          "reducer": [
+            "sum"
+          ],
+          "show": true
+        },
+        "showHeader": true,
+        "sortBy": [
+          {
+            "desc": true,
+            "displayName": "Unique Users"
+          }
+        ]
+      },
+      "pluginVersion": "10.4.0",
+      "targets": [
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "${datasource}"
+          },
+          "query": "import \"influxdata/influxdb/schema\"\r\nimport \"experimental\"\r\nimport \"array\"\r\n\r\ngetOrDefault = (f, d) => if exists f then f else d\r\n\r\n// Aggregate request counts per group\r\ndata_request_source = from(bucket: \"default_agg_application\")\r\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\r\n\r\n data_request = data_request_source\r\n  |> filter(fn: (r) => ( r._field == \"prompt_tokens\" or r._field == \"completion_tokens\" or r._field == \"user_request_count\" or r._field == \"price\" or r._field == \"deployment_price\" ) )\r\n    |> schema.fieldsAsCols()\r\n    |> map(fn: (r) => ({ r with title: if exists r.title and r.title != \"\" then r.title else \"not available\" }))\r\n|> group(columns: [\"deployment\",\"parent_deployment\",\"title\"])\r\n    |> reduce(\r\n        fn: (r, accumulator) => ({\r\n          user_request_count: getOrDefault(f: r.user_request_count, d: 0) + accumulator.user_request_count,\r\n          prompt_tokens: getOrDefault(f: r.prompt_tokens, d: 0) + accumulator.prompt_tokens,\r\n          completion_tokens: getOrDefault(f: r.completion_tokens, d: 0) + accumulator.completion_tokens,\r\n          price: getOrDefault(f: r.price, d: 0.0) + accumulator.price,\r\n          deployment_price: getOrDefault(f: r.deployment_price, d: 0) + accumulator.deployment_price,\r\n\r\n        }),\r\n        identity: {user_request_count: 0, prompt_tokens: 0, completion_tokens: 0, price:0.0, deployment_price:0}\r\n    )\r\n\r\n\r\n// Determine the top model per title\r\ntop_models = data_request\r\n  |> keep(columns: [\"parent_deployment\"])\r\n  |> group()\r\n  |> distinct(column: \"parent_deployment\")\r\n  |> map(fn: (r) => ({\r\n      deployment: r._value\r\n  }))\r\n\r\n\r\nfiltered_data = data_request\r\n|> filter(fn: (r) => ((r.prompt_tokens != 0 or r.completion_tokens != 0)  and r.deployment_price == 0) )\r\n  |> group(columns: [\"deployment\",\"title\"])  // Grouping by column A\r\n  \r\n  |> reduce(\r\n      identity: {user_request_count: 0, prompt_tokens: 0, completion_tokens: 0, price:0.0},\r\n      fn: (r, accumulator) => ({\r\n          user_request_count: getOrDefault(f: r.user_request_count, d: 0) + accumulator.user_request_count,\r\n          prompt_tokens: getOrDefault(f: r.prompt_tokens, d: 0) + accumulator.prompt_tokens,\r\n          completion_tokens: getOrDefault(f: r.completion_tokens, d: 0) + accumulator.completion_tokens,\r\n          price: getOrDefault(f: r.price, d: 0.0) + accumulator.price,\r\n        \r\n      })\r\n      )\r\n    |> map(fn: (r) => ({ \r\n      user_request_count: r.user_request_count,\r\n      prompt_tokens: r.prompt_tokens,\r\n      completion_tokens: r.completion_tokens,\r\n      price: r.price,\r\n      deployment: r.deployment,\r\n      title: r.title,\r\n\r\n    }))\r\n\r\n\r\nusers = data_request_source\r\n        |> filter(fn: (r) => (r._field == \"user_hash\"  ))\r\n\r\n    |> schema.fieldsAsCols()\r\n   |> map(fn: (r) => ({ r with \r\n                              title: if exists r.title and r.title != \"\" then r.title else \"not available\",\r\n                              user_count: r._value,\r\n                              deployment: if exists r.deployment and r.deployment != \"\" then r.deployment else \"not available\"}))\r\n  |> group(columns: [\"deployment\",\"title\"])\r\n      |> distinct(column: \"user_hash\")\r\n |>count()\r\n   |> group(columns: [\"deployment\",\"title\"])\r\n  \r\nresult = join(\r\n  tables: {data: filtered_data, top: top_models},\r\n  on: [\"deployment\"]\r\n)\r\n|> group(columns: [\"deployment\",\"title\"])\r\n    |> reduce(\r\n        fn: (r, accumulator) => ({\r\n          user_request_count: getOrDefault(f: r.user_request_count, d: 0) + accumulator.user_request_count,\r\n          prompt_tokens: getOrDefault(f: r.prompt_tokens, d: 0) + accumulator.prompt_tokens,\r\n          completion_tokens: getOrDefault(f: r.completion_tokens, d: 0) + accumulator.completion_tokens,\r\n          price: getOrDefault(f: r.price, d: 0.0) + accumulator.price,\r\n      \r\n        }),\r\n        identity: { prompt_tokens: 0, completion_tokens: 0, price:0.0,user_request_count:0}\r\n    )\r\n\r\nresult1 = join(\r\n  tables: {data: result, users: users},\r\n  on: [\"deployment\",\"title\"],\r\n\r\n)\r\n\r\nresult1\r\n|> group()",
+          "refId": "A"
+        }
+      ],
+      "title": "Application Stats",
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "api": true,
+              "request_class": false,
+              "request_count": true
+            },
+            "includeByName": {},
+            "indexByName": {
+              "completion_tokens": 4,
+              "deployment": 0,
+              "price": 5,
+              "prompt_tokens": 3,
+              "title": 1,
+              "user_count": 6,
+              "user_request_count": 2
+            },
+            "renameByName": {
+              "_value": "Unique Users",
+              "all_models": "All Models",
+              "api": "Api Request Count",
+              "api_request_count": "Api Request",
+              "completion_tokens": "Completion tokens",
+              "deployment": "Application",
+              "model": "All Models Used",
+              "model_top": "Top Model Used",
+              "parent_deployment": "Application",
+              "price": "Cost ($)",
+              "project_id": "",
+              "prompt_tokens": "Prompt tokens",
+              "request_count": "Request",
+              "title": "Title",
+              "user": "User Request Count",
+              "user_count": "Unique Users",
+              "user_hash": "Unique Users",
+              "user_request_count": "User Request"
+            }
+          }
+        }
+      ],
+      "type": "table"
+    },
+    {
+      "datasource": {
+        "type": "influxdb",
+        "uid": "${datasource}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "custom": {
+            "align": "left",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "filterable": true,
+            "inspect": false
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green"
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Prompt tokens"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 142
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Deployment"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 281
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Request count"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 192
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Cost ($)"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 143
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Model"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 232
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Completion tokens"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 166
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "All Models Used"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 216
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Top Model Used"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 191
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Request"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 112
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Application"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 511
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Request Count"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 184
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 11,
+        "w": 23,
+        "x": 0,
+        "y": 42
+      },
+      "id": 68,
+      "options": {
+        "cellHeight": "sm",
+        "footer": {
+          "countRows": false,
+          "enablePagination": true,
+          "fields": [
+            "request_count",
+            "prompt_tokens",
+            "completion_tokens",
+            "price"
+          ],
+          "reducer": [
+            "sum"
+          ],
+          "show": true
+        },
+        "showHeader": true,
+        "sortBy": [
+          {
+            "desc": true,
+            "displayName": "Request Count"
+          }
+        ]
+      },
+      "pluginVersion": "10.4.0",
+      "targets": [
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "${datasource}"
+          },
+          "query": "import \"influxdata/influxdb/schema\"\r\nimport \"experimental\"\r\nimport \"array\"\r\n\r\ngetOrDefault = (f, d) => if exists f then f else d\r\n\r\n// Aggregate request counts per group\r\ndata_request = from(bucket: \"default_agg_application\")\r\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\r\n|> filter(fn: (r) => (r._field == \"prompt_tokens\" or r._field == \"completion_tokens\" or r._field == \"user_request_count\"or r._field == \"api_request_count\" or r._field == \"price\" or r._field == \"deployment_price\"or r._field == \"user_hash\"  ) )\r\n|> filter(fn: (r) => (r.parent_deployment != \"undefined\"  ) )\r\n\r\n    |> schema.fieldsAsCols()\r\n\r\n\r\n|> group(columns: [\"deployment\",\"parent_deployment\",\"user_hash\"])\r\n    |> reduce(\r\n        fn: (r, accumulator) => ({\r\n          user_request_count: getOrDefault(f: r.user_request_count, d: 0) + accumulator.user_request_count,\r\n          api_request_count: getOrDefault(f: r.api_request_count, d: 0) + accumulator.api_request_count,\r\n          prompt_tokens: getOrDefault(f: r.prompt_tokens, d: 0) + accumulator.prompt_tokens,\r\n          completion_tokens: getOrDefault(f: r.completion_tokens, d: 0) + accumulator.completion_tokens,\r\n          price: getOrDefault(f: r.price, d: 0.0) + accumulator.price,\r\n          deployment_price: getOrDefault(f: r.deployment_price, d: 0) + accumulator.deployment_price\r\n        }),\r\n        identity: {user_request_count: 0,api_request_count: 0, prompt_tokens: 0, completion_tokens: 0, price:0.0, deployment_price:0}\r\n    )\r\n\r\n    |> map(fn: (r) => ({ r with\r\n\r\n      request_count : r.user_request_count + r.api_request_count\r\n  }))\r\n// Determine the top model per title\r\ntop_models = data_request\r\n\r\n  |> group(columns: [\"parent_deployment\"])\r\n  |> top(n: 1, columns: [\"request_count\"])\r\n  |> keep(columns: [\"parent_deployment\",\"deployment\"])\r\n  |> map(fn: (r) => ({ \r\n\r\n      model_top: r.deployment,\r\n      parent_deployment: r.parent_deployment\r\n  }))\r\n\r\n\r\n\r\nresult = join(\r\n  tables: {data: data_request, top: top_models},\r\n  on: [\"parent_deployment\"]\r\n)\r\n|> group(columns: [\"parent_deployment\",\"deployment\",\"model_top\"])\r\n    |> reduce(\r\n        fn: (r, accumulator) => ({\r\n          request_count: getOrDefault(f: r.request_count, d: 0) + accumulator.request_count,\r\n          prompt_tokens: getOrDefault(f: r.prompt_tokens, d: 0) + accumulator.prompt_tokens,\r\n          completion_tokens: getOrDefault(f: r.completion_tokens, d: 0) + accumulator.completion_tokens,\r\n          price: getOrDefault(f: r.price, d: 0.0) + accumulator.price\r\n        }),\r\n        identity: {request_count: 0, prompt_tokens: 0, completion_tokens: 0, price:0.0}\r\n    )\r\n\r\n\r\nresult\r\n|> group()",
+          "refId": "A"
+        }
+      ],
+      "title": "Application Insights",
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "all_models": true,
+              "model_top": true,
+              "request_count": false
+            },
+            "includeByName": {},
+            "indexByName": {
+              "completion_tokens": 5,
+              "deployment": 1,
+              "model": 2,
+              "model_top": 7,
+              "parent_deployment": 0,
+              "price": 6,
+              "prompt_tokens": 4,
+              "request_count": 3
+            },
+            "renameByName": {
+              "all_models": "All Models",
+              "api_request_count": "Api Request",
+              "completion_tokens": "Completion tokens",
+              "deployment": "Model",
+              "model": "Model",
+              "model_top": "Top Model Used",
+              "parent_deployment": "Application",
+              "price": "Cost ($)",
+              "project_id": "",
+              "prompt_tokens": "Prompt tokens",
+              "request_count": "Request Count",
+              "user_count": "Unique Users",
+              "user_hash": "Unique Users",
+              "user_numeric": "Unique Users",
+              "user_request_count": "User Request"
+            }
+          }
+        }
+      ],
+      "type": "table"
+    }
+  ],
+  "refresh": "",
+  "schemaVersion": 39,
+  "tags": [
+    "DIAL",
+    "Aggregated data",
+    "ai-dial-analytics-realtime"
+  ],
+  "templating": {
+    "list": [
+      {
+        "current": {
+          "selected": false,
+          "text": "InfluxDB_EPAM",
+          "value": "P3DF0C308D9792AAA"
+        },
+        "description": "InfluxDB datasource",
+        "hide": 0,
+        "includeAll": false,
+        "label": "Data source",
+        "multi": false,
+        "name": "datasource",
+        "options": [],
+        "query": "influxdb",
+        "queryValue": "",
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "type": "datasource"
+      },
+      {
+        "current": {
+          "selected": false,
+          "text": "default",
+          "value": "default"
+        },
+        "datasource": {
+          "type": "influxdb",
+          "uid": "${datasource}"
+        },
+        "definition": "buckets()",
+        "description": "A InfluxDB bucket name",
+        "hide": 0,
+        "includeAll": false,
+        "multi": false,
+        "name": "INFLUX_BUCKET",
+        "options": [],
+        "query": "buckets()",
+        "refresh": 1,
+        "regex": "/^(default)$/",
+        "skipUrlSync": false,
+        "sort": 0,
+        "type": "query"
+      },
+      {
+        "current": {
+          "selected": false,
+          "text": "en:English",
+          "value": "en:English"
+        },
+        "hide": 2,
+        "includeAll": false,
+        "multi": false,
+        "name": "language_map",
+        "options": [
+          {
+            "selected": true,
+            "text": "en:English",
+            "value": "en:English"
+          },
+          {
+            "selected": false,
+            "text": "ru:Russian",
+            "value": "ru:Russian"
+          },
+          {
+            "selected": false,
+            "text": "uk:Ukrainian",
+            "value": "uk:Ukrainian"
+          },
+          {
+            "selected": false,
+            "text": "fr:French",
+            "value": "fr:French"
+          },
+          {
+            "selected": false,
+            "text": "de:German",
+            "value": "de:German"
+          },
+          {
+            "selected": false,
+            "text": "es:Spanish",
+            "value": "es:Spanish"
+          },
+          {
+            "selected": false,
+            "text": "it:Italian",
+            "value": "it:Italian"
+          },
+          {
+            "selected": false,
+            "text": "zh:Chinese",
+            "value": "zh:Chinese"
+          },
+          {
+            "selected": false,
+            "text": "ja:Japanese",
+            "value": "ja:Japanese"
+          },
+          {
+            "selected": false,
+            "text": "nl:Dutch",
+            "value": "nl:Dutch"
+          },
+          {
+            "selected": false,
+            "text": "pl:Polish",
+            "value": "pl:Polish"
+          },
+          {
+            "selected": false,
+            "text": "pt:Portuguese",
+            "value": "pt:Portuguese"
+          },
+          {
+            "selected": false,
+            "text": "ar:Arabic",
+            "value": "ar:Arabic"
+          },
+          {
+            "selected": false,
+            "text": "hi:Hindi",
+            "value": "hi:Hindi"
+          },
+          {
+            "selected": false,
+            "text": "bn:Bengali",
+            "value": "bn:Bengali"
+          },
+          {
+            "selected": false,
+            "text": "ko:Korean",
+            "value": "ko:Korean"
+          },
+          {
+            "selected": false,
+            "text": "tr:Turkish",
+            "value": "tr:Turkish"
+          },
+          {
+            "selected": false,
+            "text": "vi:Vietnamese",
+            "value": "vi:Vietnamese"
+          },
+          {
+            "selected": false,
+            "text": "th:Thai",
+            "value": "th:Thai"
+          },
+          {
+            "selected": false,
+            "text": "he:Hebrew",
+            "value": "he:Hebrew"
+          },
+          {
+            "selected": false,
+            "text": "id:Indonesian",
+            "value": "id:Indonesian"
+          },
+          {
+            "selected": false,
+            "text": "sv:Swedish",
+            "value": "sv:Swedish"
+          },
+          {
+            "selected": false,
+            "text": "no:Norwegian",
+            "value": "no:Norwegian"
+          },
+          {
+            "selected": false,
+            "text": "da:Danish",
+            "value": "da:Danish"
+          },
+          {
+            "selected": false,
+            "text": "fi:Finnish",
+            "value": "fi:Finnish"
+          },
+          {
+            "selected": false,
+            "text": "hu:Hungarian",
+            "value": "hu:Hungarian"
+          },
+          {
+            "selected": false,
+            "text": "cs:Czech",
+            "value": "cs:Czech"
+          },
+          {
+            "selected": false,
+            "text": "el:Greek",
+            "value": "el:Greek"
+          },
+          {
+            "selected": false,
+            "text": "ro:Romanian",
+            "value": "ro:Romanian"
+          },
+          {
+            "selected": false,
+            "text": "sk:Slovak",
+            "value": "sk:Slovak"
+          },
+          {
+            "selected": false,
+            "text": "bg:Bulgarian",
+            "value": "bg:Bulgarian"
+          },
+          {
+            "selected": false,
+            "text": "sr:Serbian",
+            "value": "sr:Serbian"
+          },
+          {
+            "selected": false,
+            "text": "hr:Croatian",
+            "value": "hr:Croatian"
+          },
+          {
+            "selected": false,
+            "text": "lt:Lithuanian",
+            "value": "lt:Lithuanian"
+          },
+          {
+            "selected": false,
+            "text": "lv:Latvian",
+            "value": "lv:Latvian"
+          },
+          {
+            "selected": false,
+            "text": "et:Estonian",
+            "value": "et:Estonian"
+          },
+          {
+            "selected": false,
+            "text": "sl:Slovenian",
+            "value": "sl:Slovenian"
+          }
+        ],
+        "query": "en:English, ru:Russian, uk:Ukrainian, fr:French, de:German, es:Spanish, it:Italian, zh:Chinese, ja:Japanese, nl:Dutch, pl:Polish, pt:Portuguese, ar:Arabic, hi:Hindi, bn:Bengali, ko:Korean, tr:Turkish, vi:Vietnamese, th:Thai, he:Hebrew, id:Indonesian, sv:Swedish, no:Norwegian, da:Danish, fi:Finnish, hu:Hungarian, cs:Czech, el:Greek, ro:Romanian, sk:Slovak, bg:Bulgarian, sr:Serbian, hr:Croatian, lt:Lithuanian, lv:Latvian, et:Estonian, sl:Slovenian\n",
+        "queryValue": "",
+        "skipUrlSync": false,
+        "type": "custom"
+      }
+    ]
+  },
+  "time": {
+    "from": "now-7d",
+    "to": "now"
+  },
+  "timepicker": {},
+  "timezone": "utc",
+  "title": "DIAL Application Insights",
+  "uid": "fe37iatogssdfdSDFs",
+  "version": 11,
+  "weekStart": ""
+}

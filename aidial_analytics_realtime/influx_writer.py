@@ -23,6 +23,7 @@ def create_influx_writer() -> Tuple[InfluxDBClientAsync, InfluxWriterAsync]:
 
     async def influx_writer_impl(record: Point):
         with Timer(logger.debug, format="influx {elapsed}"):
+            logger.debug(f"influx point: {record}")
             await influx_write_api.write(bucket=influx_bucket, record=record)
 
     return client, influx_writer_impl

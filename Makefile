@@ -2,7 +2,7 @@ PORT ?= 5001
 IMAGE_NAME ?= ai-dial-analytics-realtime
 VENV_DIR ?= .venv
 POETRY ?= $(VENV_DIR)/bin/poetry
-POETRY_VERSION ?= 1.6.1
+POETRY_VERSION ?= 2.1.1
 ARGS =
 
 

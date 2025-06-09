@@ -9,8 +9,8 @@ RUN apt-get update && \
     apt-get install -y python3 \
                     python3-venv \
                     python3-dev \
-                    python3-pip \
-                    python3-poetry
+                    python3-pip
+RUN pip install poetry==2.1.1
 
 RUN python3 -m venv .venv
 
@@ -72,5 +72,4 @@ HEALTHCHECK  --interval=10s --timeout=5s --start-period=30s --retries=6 \
 # Disable syntax warnings in the hdbscan package.
 ENV PYTHONWARNINGS="ignore:invalid escape sequence:SyntaxWarning"
 
-# During debugging, this entry point will be overridden. For more information, please refer to https://aka.ms/vscode-docker-python-debug
 CMD ["uvicorn", "aidial_analytics_realtime.app:app", "--host", "0.0.0.0", "--port", "5000"]

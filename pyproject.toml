@@ -3,16 +3,18 @@ requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
 
 
-[tool.poetry]
+[project]
 name = "aidial-analytics-realtime"
 version = "0.15.0rc"
 description = "Realtime analytics server for AI DIAL"
-authors = ["EPAM RAIL <SpecialEPM-DIALDevTeam@epam.com>"]
-homepage = "https://epam-rail.com"
+authors = [{ name = "EPAM RAIL", email = "SpecialEPM-DIALDevTeam@epam.com" }]
 license = "Apache-2.0"
 readme = "README.md"
-repository = "https://github.com/epam/ai-dial-analytics-realtime"
+requires-python = ">=3.12,<3.13"
 
+[project.urls]
+Homepage = "https://epam-rail.com"
+Repository = "https://github.com/epam/ai-dial-analytics-realtime"
 
 [tool.poetry.dependencies]
 python = "~3.12"

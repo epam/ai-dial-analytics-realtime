@@ -10,6 +10,7 @@ authors = [{ name = "EPAM RAIL", email = "SpecialEPM-DIALDevTeam@epam.com" }]
 license = "Apache-2.0"
 readme = "README.md"
 requires-python = ">=3.12,<3.13"
+dynamic = ["dependencies"]
 
 [project.urls]
 Homepage = "https://epam-rail.com"

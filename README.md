@@ -79,6 +79,7 @@ This project includes optional **aggregated Grafana dashboards** that visualize 
 To enable these dashboards, you must **manually create the required InfluxDB buckets and tasks**. These steps are **not automated** via Helm and must be applied manually.
 
 See [influxdb/README.md](dashboards/customized/influxdb/README.md) for full instructions.
+
 ### Other configuration
 
 Also, following environment valuables can be used to configure the service behavior:
@@ -123,7 +124,7 @@ Example of the MODEL_RATES configuration:
 
 ## Developer environment
 
-This project uses [Python>=3.11](https://www.python.org/downloads/) and [Poetry>=1.6.1](https://python-poetry.org/) as a dependency manager.
+This project uses [Python>=3.11](https://www.python.org/downloads/) and [Poetry>=2.1.1](https://python-poetry.org/) as a dependency manager.
 Check out Poetry's [documentation on how to install it](https://python-poetry.org/docs/#installation) on your system before proceeding.
 
 To install requirements:

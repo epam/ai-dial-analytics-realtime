@@ -6,11 +6,15 @@ ENV PYTHONUNBUFFERED=1
 WORKDIR /app
 
 RUN apt-get update && \
-    apt-get install -y python3 \
-                    python3-venv \
-                    python3-dev \
-                    python3-pip \
-                    python3-poetry
+    apt-get install -y \
+        build-essential \
+        python3 \
+        python3-venv \
+        python3-dev \
+        pipx
+
+RUN pipx install poetry==2.1.1
+ENV POETRY=/root/.local/bin/poetry
 
 RUN python3 -m venv .venv
 
@@ -22,11 +26,11 @@ RUN pip install setuptools==70.0.0 --quiet
 # Install split into two steps (the dependencies and the sources)
 # in order to leverage the Docker caching
 COPY pyproject.toml poetry.lock poetry.toml README.md ./
-RUN poetry install --no-interaction --no-ansi --no-cache --only main \
+RUN ${POETRY} install --no-interaction --no-ansi --no-cache --only main \
     --no-root --no-directory
 
 COPY aidial_analytics_realtime aidial_analytics_realtime
-RUN poetry install --no-interaction --no-ansi --no-cache --only main
+RUN ${POETRY} install --no-interaction --no-ansi --no-cache --only main
 
 FROM ubuntu:24.04
 
@@ -72,5 +76,4 @@ HEALTHCHECK  --interval=10s --timeout=5s --start-period=30s --retries=6 \
 # Disable syntax warnings in the hdbscan package.
 ENV PYTHONWARNINGS="ignore:invalid escape sequence:SyntaxWarning"
 
-# During debugging, this entry point will be overridden. For more information, please refer to https://aka.ms/vscode-docker-python-debug
 CMD ["uvicorn", "aidial_analytics_realtime.app:app", "--host", "0.0.0.0", "--port", "5000"]

@@ -79,6 +79,7 @@ This project includes optional **aggregated Grafana dashboards** that visualize 
 To enable these dashboards, you must **manually create the required InfluxDB buckets and tasks**. These steps are **not automated** via Helm and must be applied manually.
 
 See [influxdb/README.md](dashboards/customized/influxdb/README.md) for full instructions.
+
 ### Other configuration
 
 Also, following environment valuables can be used to configure the service behavior:

@@ -6,10 +6,12 @@ ENV PYTHONUNBUFFERED=1
 WORKDIR /app
 
 RUN apt-get update && \
-    apt-get install -y python3 \
-                    python3-venv \
-                    python3-dev \
-                    pipx
+    apt-get install -y \
+        build-essential \
+        python3 \
+        python3-venv \
+        python3-dev \
+        pipx
 
 RUN pipx install poetry==2.1.1
 ENV POETRY=/root/.local/bin/poetry

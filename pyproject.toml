@@ -2,7 +2,6 @@
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
 
-
 [project]
 name = "aidial-analytics-realtime"
 version = "0.15.0rc"
@@ -49,11 +48,9 @@ name = "pytorch"
 url = "https://download.pytorch.org/whl/cpu"
 priority = "explicit"
 
-
 [tool.poetry.group.test.dependencies]
 pytest = "^7.4.1"
 httpx = "^0.25.2"
-
 
 [tool.poetry.group.dev.dependencies]
 black = "^24.3.0"
@@ -63,10 +60,8 @@ autoflake = "^2.2.1"
 pyright = "^1.1.325"
 nox = "^2023.4.22"
 
-
 [tool.poetry.group.nox.dependencies]
 nox = "^2023.4.22"
-
 
 [tool.pyright]
 typeCheckingMode = "basic"

@@ -2,7 +2,7 @@
 
 Realtime analytics server for [AI DIAL](https://epam-rail.com). The service consumes the logs stream from [AI DIAL Core](https://github.com/epam/ai-dial-core), analyzes the conversation and writes the analytics to the [InfluxDB](https://www.influxdata.com/).
 
-Refer to [Documentation](https://github.com/epam/ai-dial/blob/main/docs/tutorials/realtime-analytics.md) to learn how to configure AI DAL Core and other necessary components.
+Refer to [Documentation](https://github.com/epam/ai-dial/blob/main/docs/tutorials/2.devops/1.configuration/2.realtime-analytics-config.md) to learn how to configure AI DAL Core and other necessary components.
 
 ## Usage
 

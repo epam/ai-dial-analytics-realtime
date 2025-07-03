@@ -62,7 +62,7 @@ Once the buckets are created, you can import and activate the Flux tasks that po
 The project provides pre-defined Flux tasks that perform automatic aggregation on a schedule.
 
 
-### 📦 Task Files
+### 📦 Tasks template File
 The following **Flux tasks** perform periodic aggregation of data from:
 
 - the main **`default`** bucket (containing raw analytics data), and  
@@ -81,7 +81,7 @@ into their respective **target aggregation buckets** used for Grafana dashboards
 
 ### 📥 Importing a Task via CLI
 
-To import a task JSON file using the `influx` CLI:
+To import a task YML file using the `influx` CLI:
 
 ```bash
 influx apply --org <your-org> --file influxdb/tasks/tasks_template.yml --force yes
@@ -89,7 +89,7 @@ influx apply --org <your-org> --file influxdb/tasks/tasks_template.yml --force y
 🛠 Make sure you've already authenticated via influx auth login, and replace <your-org> with your actual organization name.
 
 
-You can verify successful import by listing tasks:
+You can verify a successful import by listing tasks:
 ```bash
 influx task list --org <your-org>
 ```

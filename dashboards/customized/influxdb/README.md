@@ -30,22 +30,23 @@ into their respective **target aggregation buckets** used for Grafana dashboards
 
 ### 📥 Importing an InfluxDB template via CLI
 The project provides pre-defined Flux tasks that perform automatic aggregation on a schedule.
-Once the templates are imported, will automatically create the necessary buckets and tasks.
+Once a template is imported, InfluxDB will automatically create the necessary buckets and tasks.
 
-👉 Task definitions are located in the influxdb/tasks/ folder.
+👉 Template definitions are located in the influxdb/tasks/ folder.
 
-To import a task YML file using the `influx` CLI:
+To import a template YML file using the `influx` CLI:
 
 ```bash
-influx apply --org <your-org> --file influxdb/tasks/tasks_template.yml --force yes
+influx apply --org <your-org> --file influxdb/tasks/tasks_template.yml --force yes --token <your-token>
 ```
 🛠 Make sure you've already authenticated via influx auth login, and replace <your-org> with your actual organization name.
 
 
 You can verify a successful import by listing tasks:
 ```bash
-influx task list --org <your-org>
+influx task list --org <your-org> --token <your-token>
 ```
+🛠 Make sure you've already authenticated via influx auth login, and replace <your-org> with your actual organization name.
 ---
 
 

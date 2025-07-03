@@ -23,6 +23,8 @@ This document explains how to create InfluxDB secrets, InfluxDB buckets manually
 | `default_agg_month`    | infinite (0s)     | Stores monthly summaries used in monthly KPI dashboards.                   |
 
 ### 📦 Tasks template File
+👉 For more details about InfluxDB templates features, please visit [Official Doc`s](https://docs.influxdata.com/influxdb/v2/tools/influxdb-templates/)
+
 The following **Flux tasks** perform periodic aggregation of data from:
 
 - the main **`default`** bucket (containing raw analytics data), and  

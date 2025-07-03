@@ -1,9 +1,11 @@
 # InfluxDB Buckets and Tasks for Aggregated Dashboards
 
-This document explains how to manually create InfluxDB buckets and import Flux tasks to support the optional aggregated Grafana dashboards for AI DIAL Realtime Analytics.
+This document explains how to create InfluxDB secrets, InfluxDB buckets manually, and import an InfluxDB Flux template to support the optional aggregated Grafana dashboards for AI DIAL Realtime Analytics.
 
 ## 📦 Required Secrets
-👉 As part of this project, the storage of values for the Organization name and the default bucket is implemented using the InfluxDB kind: Secret.
+
+👉 As part of this project, the storage of values for the Organization name and the default bucket is implemented using the InfluxDB kind: `Secret`.
+
 | Secret Name | Description |
 |------------------------|-----------------------------------------------------------------------------|
 | `org` | Stores your organization name. |

@@ -40,9 +40,10 @@ Secret for the store organization name:
 ```bash
 influx secret update -k org -v <your-org> --token <your-token>
 ```
+
 Secret for the store default bucket name:
 ```bash
-influx secret update -k bucket -v <your-default-bucket-name>
+influx secret update -k bucket -v <your-default-bucket-name> --token <your-token>
 ```
 
 ### 📥 Importing an InfluxDB template via CLI

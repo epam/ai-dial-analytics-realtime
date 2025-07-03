@@ -52,12 +52,12 @@ influx secret update -k bucket -v <your-default-bucket-name> --token <your-token
 The project provides pre-defined Flux tasks that perform automatic aggregation on a schedule.
 Once a template is imported, InfluxDB will automatically create the necessary buckets and tasks.
 
-👉 Template definitions are located in the influxdb/tasks/ folder.
+👉 Template definitions are located in the influxdb/templates/ folder.
 
 To import a template YML file using the `influx` CLI:
 
 ```bash
-influx apply --org <your-org> --file influxdb/tasks/tasks_template.yml --force yes --token <your-token>
+influx apply --org <your-org> --file influxdb/templates/tasks_template.yml --force yes --token <your-token>
 ```
 🛠 Make sure you've already authenticated via influx auth login, and replace <your-org> with your actual organization name.
 

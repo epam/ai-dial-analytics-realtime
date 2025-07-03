@@ -84,8 +84,7 @@ into their respective **target aggregation buckets** used for Grafana dashboards
 To import a task JSON file using the `influx` CLI:
 
 ```bash
-influx apply --org <your-org> --file influxdb/tasks/aggregate_data.json
-influx apply --org <your-org> --file influxdb/tasks/monthly_agg.json
+influx apply --org <your-org> --file influxdb/tasks/tasks_template.yml --force yes
 ```
 🛠 Make sure you've already authenticated via influx auth login, and replace <your-org> with your actual organization name.
 

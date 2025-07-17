@@ -47,16 +47,7 @@ ENV TOPIC_EMBEDDINGS_MODEL="all-mpnet-base-v2"
 
 # Install ca-certificates is required for https connection to InfluxDB
 RUN apt-get update && \
-    apt-get install -y python3 ca-certificates \
-    # Install security fixes
-    gpgv=2.4.4-2ubuntu17.2 \
-    libc6=2.39-0ubuntu8.4 \
-    libcap2=1:2.66-5ubuntu2.2 \
-    libc-bin=2.39-0ubuntu8.4 \
-    libexpat1=2.6.1-2ubuntu0.3 \
-    libgnutls30t64=3.8.3-1.1ubuntu3.3 \
-    liblzma5=5.6.1+really5.4.5-1ubuntu0.2 \
-    libtasn1-6=4.19.0-3ubuntu0.24.04.1
+    apt-get install -y python3 ca-certificates
 
 WORKDIR /app
 

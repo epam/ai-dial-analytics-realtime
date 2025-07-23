@@ -68,7 +68,7 @@ You need to specify the connection options to the InfluxDB instance using the en
 |INFLUX_URL|Url to the InfluxDB to write the analytics data |
 |INFLUX_ORG| Name of the InfluxDB organization to write the analytics data |
 |INFLUX_BUCKET| Name of the bucket to write the analytics data  |
-|INFLUX_API_TOKEN| InfluxDB API Token |
+|INFLUX_TOKEN| InfluxDB API Token |
 
 You can follow the [InfluxDB documentation](https://docs.influxdata.com/influxdb/v2/get-started/) to setup InfluxDB locally and acquire the required configuration parameters.
 

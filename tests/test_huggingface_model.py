@@ -12,7 +12,7 @@ def test_data_request():
     write_api_mock = InfluxWriterMock()
     app.app.dependency_overrides[app.InfluxWriterAsync] = lambda: write_api_mock
 
-    topic_model = app.TopicModel("davanstrien/chat_topics")
+    topic_model = app.create_topic_model(topic_model="davanstrien/chat_topics")
     app.app.dependency_overrides[app.TopicModel] = lambda: topic_model
 
     client = TestClient(app.app)
@@ -89,7 +89,7 @@ def test_data_request_with_new_format():
     write_api_mock = InfluxWriterMock()
     app.app.dependency_overrides[app.InfluxWriterAsync] = lambda: write_api_mock
 
-    topic_model = app.TopicModel("davanstrien/chat_topics")
+    topic_model = app.create_topic_model(topic_model="davanstrien/chat_topics")
     app.app.dependency_overrides[app.TopicModel] = lambda: topic_model
 
     client = TestClient(app.app)

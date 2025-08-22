@@ -1,4 +1,5 @@
 import os
+from typing import Protocol
 
 from bertopic import BERTopic
 
@@ -9,27 +10,35 @@ from aidial_analytics_realtime.utils.logging import app_logger as logger
 from aidial_analytics_realtime.utils.timer import Timer
 
 
-class TopicModel:
-    def __init__(
-        self,
-        topic_model_name: str | None = None,
-        topic_embeddings_model_name: str | None = None,
-    ):
-        if not topic_model_name:
-            topic_model_name = os.environ.get("TOPIC_MODEL", "./topic_model")
-            topic_embeddings_model_name = os.environ.get(
-                "TOPIC_EMBEDDINGS_MODEL", None
-            )
-        assert topic_model_name is not None
-        self.model = BERTopic.load(
-            topic_model_name, topic_embeddings_model_name
-        )
+class TopicModel(Protocol):
+    async def get_topic_by_text(self, text: str) -> str | None: ...
+
+
+class TopicModelNoOp:
+    async def get_topic_by_text(self, text: str) -> str | None:
+        return None
+
+
+class TopicModelBERT:
+    model: BERTopic
+
+    def __init__(self, model: BERTopic):
+        self.model = model
+
+    @classmethod
+    def create(
+        cls, *, topic_model: str, topic_embeddings_model: str | None
+    ) -> "TopicModelBERT":
+
+        model = BERTopic.load(topic_model, topic_embeddings_model)
 
         # Disable tqdm progress bars on batch encoding
-        self.model.verbose = False
+        model.verbose = False
 
         # Make sure the model is loaded
-        self.model.transform(["test"])
+        model.transform(["test"])
+
+        return cls(model=model)
 
     async def get_topic_by_text(self, text: str) -> str | None:
         try:
@@ -54,3 +63,23 @@ class TopicModel:
                 return topic["GeneratedName"][0][0][0]  # type: ignore
 
             return topic["Name"][0]  # type: ignore
+
+
+def create_topic_model(
+    *,
+    topic_model: str | None = None,
+    topic_embeddings_model: str | None = None,
+) -> TopicModel:
+    topic_model = topic_model or os.getenv("TOPIC_MODEL")
+
+    if topic_model is None:
+        return TopicModelNoOp()
+
+    topic_embeddings_model = topic_embeddings_model or os.getenv(
+        "TOPIC_EMBEDDINGS_MODEL"
+    )
+
+    return TopicModelBERT.create(
+        topic_model=topic_model,
+        topic_embeddings_model=topic_embeddings_model,
+    )

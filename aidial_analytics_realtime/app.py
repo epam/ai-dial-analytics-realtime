@@ -25,7 +25,7 @@ from aidial_analytics_realtime.influx_writer import (
 from aidial_analytics_realtime.log_request.message import get_assembled_response
 from aidial_analytics_realtime.rates import RatesCalculator
 from aidial_analytics_realtime.time import parse_time
-from aidial_analytics_realtime.topic_model import TopicModel
+from aidial_analytics_realtime.topic_model import TopicModel, create_topic_model
 from aidial_analytics_realtime.utils.concurrency import cpu_task_executor
 from aidial_analytics_realtime.utils.logging import add_logger_prefix
 from aidial_analytics_realtime.utils.logging import app_logger as logger
@@ -44,7 +44,7 @@ async def lifespan(app: FastAPI):
         async with influx_client:
             app.dependency_overrides[InfluxWriterAsync] = lambda: influx_writer
 
-            topic_model = TopicModel()
+            topic_model = create_topic_model()
             app.dependency_overrides[TopicModel] = lambda: topic_model
 
             rates_calculator = RatesCalculator()

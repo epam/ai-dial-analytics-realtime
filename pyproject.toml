@@ -105,6 +105,7 @@ exclude = [
 ]
 
 [tool.pytest.ini_options]
+testpaths = ["tests"]
 markers = [
     "with_external: marks tests may require external resources, like the download models (deselect with '-m \"not with_external\"')",
 ]

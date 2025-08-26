@@ -70,13 +70,13 @@ def create_topic_model(
     topic_model: str | None = None,
     topic_embeddings_model: str | None = None,
 ) -> TopicModel:
-    topic_model = topic_model or os.getenv("TOPIC_MODEL")
+    topic_model = topic_model or os.getenv("TOPIC_MODEL") or None
 
     if topic_model is None:
         return TopicModelNoOp()
 
-    topic_embeddings_model = topic_embeddings_model or os.getenv(
-        "TOPIC_EMBEDDINGS_MODEL"
+    topic_embeddings_model = (
+        topic_embeddings_model or os.getenv("TOPIC_EMBEDDINGS_MODEL") or None
     )
 
     return TopicModelBERT.create(

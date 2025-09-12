@@ -889,3 +889,75 @@ def test_chat_completion_invalid_assembled_response(assembled_response):
         r'analytics,core_parent_span_id=undefined,core_span_id=undefined,deployment=gpt-4,execution_path=undefined,language=undefined,model=gpt-4,parent_deployment=undefined,project_id=PROJECT-KEY,response_id=(.+?),title=undefined,topic=ping,trace_id=undefined,upstream=undefined cached_prompt_tokens=0i,chat_id="chat-1",completion_tokens=189i,deployment_price=0.001,number_request_messages=2i,price=0.001,prompt_tokens=22i,user_hash="undefined" 1692214959997000000',
         write_api_mock.points[0],
     )
+
+
+def test_invalid_data_message():
+    write_api_mock = InfluxWriterMock()
+    app.app.dependency_overrides[app.InfluxWriterAsync] = lambda: write_api_mock
+    app.app.dependency_overrides[app.TopicModel] = lambda: TestTopicModel()
+
+    client = TestClient(app.app)
+    response = client.post(
+        "/data",
+        json=[
+            "invalid message",
+            {"message": "invalid message JSON"},
+        ],
+    )
+    assert response.status_code == 200
+    assert response.json() == [
+        {
+            "status": "error",
+            "error": "1 validation error for Message\n__root__\n  Message expected dict not str (type=type_error)",
+            "reason": "invalid request message",
+        },
+        {
+            "status": "error",
+            "error": "Expecting value: line 1 column 1 (char 0)",
+            "reason": "invalid JSON in request message",
+        },
+    ]
+
+
+def test_invalid_data_request_json():
+    write_api_mock = InfluxWriterMock()
+    app.app.dependency_overrides[app.InfluxWriterAsync] = lambda: write_api_mock
+    app.app.dependency_overrides[app.TopicModel] = lambda: TestTopicModel()
+
+    client = TestClient(app.app, raise_server_exceptions=False)
+    response = client.post(
+        "/data",
+        content="invalid json",
+        headers={"content-type": "application/json"},
+    )
+    assert response.status_code == 422
+    assert response.json() == {
+        "detail": [
+            {
+                "type": "json_invalid",
+                "loc": ["body", 0],
+                "msg": "JSON decode error",
+                "input": {},
+                "ctx": {"error": "Expecting value"},
+            }
+        ]
+    }
+
+
+def test_invalid_data_request_type():
+    write_api_mock = InfluxWriterMock()
+    app.app.dependency_overrides[app.InfluxWriterAsync] = lambda: write_api_mock
+    app.app.dependency_overrides[app.TopicModel] = lambda: TestTopicModel()
+
+    client = TestClient(app.app, raise_server_exceptions=False)
+    response = client.post("/data", json={"foo": "bar"})
+    assert response.status_code == 422
+    assert response.json() == {
+        "detail": [
+            {
+                "loc": ["body", "__root__"],
+                "msg": "value is not a valid list",
+                "type": "type_error.list",
+            }
+        ]
+    }

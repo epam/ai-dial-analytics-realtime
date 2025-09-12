@@ -335,12 +335,12 @@ async def process_message(
 
     try:
         message_str = Message.parse_obj(request_message).message
-    except:
+    except Exception:
         return _error("invalid request message")
 
     try:
         message_dict = json.loads(message_str)
-    except:
+    except Exception:
         return _error("invalid JSON in request message")
 
     try:

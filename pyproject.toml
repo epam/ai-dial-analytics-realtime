@@ -21,7 +21,7 @@ package-mode = false
 
 [tool.poetry.dependencies]
 aiohttp = "3.12.14"
-fastapi = "0.116.1"
+fastapi = "0.120.2"
 uvicorn = "0.22.0"
 influxdb-client = "1.37.0"
 langid = "1.1.6"

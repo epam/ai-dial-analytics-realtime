@@ -7,6 +7,60 @@ from fastapi.testclient import TestClient
 import aidial_analytics_realtime.app as app
 from tests.mocks import InfluxWriterMock, TestTopicModel
 
+_SAMPLE_MESSAGE = {
+    "apiType": "DialOpenAI",
+    "chat": {"id": "chat-1"},
+    "project": {"id": "PROJECT-KEY"},
+    "user": {"id": "", "title": ""},
+    "deployment": "gpt-4",
+    "request": {
+        "protocol": "HTTP/1.1",
+        "method": "POST",
+        "uri": "/openai/deployments/gpt-4/chat/completions?api-version=2023-03-15-preview",
+        "time": "2023-08-16T19:42:39.997",
+        "body": json.dumps(
+            {
+                "messages": [
+                    {"role": "system", "content": ""},
+                    {"role": "user", "content": "ping"},
+                ],
+                "model": "gpt-4",
+                "max_tokens": 2000,
+                "stream": True,
+                "n": 1,
+                "temperature": 0.0,
+            }
+        ),
+    },
+    "assembled_response": json.dumps(
+        {
+            "id": "chatcmpl-1",
+            "object": "chat.completion",
+            "created": 1692214960,
+            "model": "gpt-4",
+            "choices": [
+                {
+                    "index": 0,
+                    "delta": {
+                        "role": "assistant",
+                        "content": "pong",
+                    },
+                    "finish_reason": "stop",
+                }
+            ],
+            "usage": {
+                "completion_tokens": 189,
+                "prompt_tokens": 22,
+                "total_tokens": 211,
+            },
+        }
+    ),
+    "response": {
+        "status": "200",
+        "body": 'data: {"id":"chatcmpl-1","object":"chat.completion.chunk","created":1692214960,"model":"gpt-4","choices":[{"index":0,"delta":{"role":"assistant","content":"pong"},"finish_reason":null}]}\n\ndata: {"id":"chatcmpl-1","object":"chat.completion.chunk","created":1692214960,"model":"gpt-4","choices":[{"index":0,"delta":{},"finish_reason":"stop"}],"usage":{"completion_tokens":189,"prompt_tokens":22,"total_tokens":211}}\n\ndata: [DONE]\n',
+    },
+}
+
 
 def test_chat_completion_plain_text():
     write_api_mock = InfluxWriterMock()
@@ -17,63 +71,7 @@ def test_chat_completion_plain_text():
     response = client.post(
         "/data",
         json=[
-            {
-                "message": json.dumps(
-                    {
-                        "apiType": "DialOpenAI",
-                        "chat": {"id": "chat-1"},
-                        "project": {"id": "PROJECT-KEY"},
-                        "user": {"id": "", "title": ""},
-                        "deployment": "gpt-4",
-                        "request": {
-                            "protocol": "HTTP/1.1",
-                            "method": "POST",
-                            "uri": "/openai/deployments/gpt-4/chat/completions?api-version=2023-03-15-preview",
-                            "time": "2023-08-16T19:42:39.997",
-                            "body": json.dumps(
-                                {
-                                    "messages": [
-                                        {"role": "system", "content": ""},
-                                        {"role": "user", "content": "ping"},
-                                    ],
-                                    "model": "gpt-4",
-                                    "max_tokens": 2000,
-                                    "stream": True,
-                                    "n": 1,
-                                    "temperature": 0.0,
-                                }
-                            ),
-                        },
-                        "assembled_response": json.dumps(
-                            {
-                                "id": "chatcmpl-1",
-                                "object": "chat.completion",
-                                "created": 1692214960,
-                                "model": "gpt-4",
-                                "choices": [
-                                    {
-                                        "index": 0,
-                                        "delta": {
-                                            "role": "assistant",
-                                            "content": "pong",
-                                        },
-                                        "finish_reason": "stop",
-                                    }
-                                ],
-                                "usage": {
-                                    "completion_tokens": 189,
-                                    "prompt_tokens": 22,
-                                    "total_tokens": 211,
-                                },
-                            }
-                        ),
-                        "response": {
-                            "status": "200",
-                            "body": 'data: {"id":"chatcmpl-1","object":"chat.completion.chunk","created":1692214960,"model":"gpt-4","choices":[{"index":0,"delta":{"role":"assistant","content":"pong"},"finish_reason":null}]}\n\ndata: {"id":"chatcmpl-1","object":"chat.completion.chunk","created":1692214960,"model":"gpt-4","choices":[{"index":0,"delta":{},"finish_reason":"stop"}],"usage":{"completion_tokens":189,"prompt_tokens":22,"total_tokens":211}}\n\ndata: [DONE]\n',
-                        },
-                    }
-                )
-            },
+            {"message": json.dumps(_SAMPLE_MESSAGE)},
             {
                 "message": json.dumps(
                     {
@@ -902,6 +900,7 @@ def test_invalid_data_message():
         json=[
             "invalid message",
             {"message": "invalid message JSON"},
+            {"message": '["\n'},
         ],
     )
     assert response.status_code == 200
@@ -916,6 +915,34 @@ def test_invalid_data_message():
             "error": "Expecting value: line 1 column 1 (char 0)",
             "reason": "invalid JSON in request message",
         },
+        {
+            "status": "error",
+            "error": "Unterminated string starting at: line 1 column 2 (char 1)",
+            "reason": "invalid JSON in request message",
+        },
+    ]
+
+
+def test_unescaped_control_char_in_message():
+    write_api_mock = InfluxWriterMock()
+    app.app.dependency_overrides[app.InfluxWriterAsync] = lambda: write_api_mock
+    app.app.dependency_overrides[app.TopicModel] = lambda: TestTopicModel()
+
+    client = TestClient(app.app)
+    response = client.post(
+        "/data",
+        json=[
+            {
+                "message": json.dumps(_SAMPLE_MESSAGE).replace(
+                    "PROJECT-KEY", "PROJECT-\nKEY"
+                )
+            },
+        ],
+    )
+    assert response.status_code == 200
+    assert response.json() == [{"status": "success"}]
+    assert write_api_mock.points == [
+        'analytics,core_parent_span_id=undefined,core_span_id=undefined,deployment=gpt-4,execution_path=undefined,language=undefined,model=gpt-4,parent_deployment=undefined,project_id=PROJECT-\\nKEY,response_id=chatcmpl-1,title=undefined,topic=ping\\n\\npong,trace_id=undefined,upstream=undefined cached_prompt_tokens=0i,chat_id="chat-1",completion_tokens=189i,deployment_price=0,number_request_messages=2i,price=0,prompt_tokens=22i,user_hash="undefined" 1692214959997000000'
     ]
 
 

@@ -916,9 +916,9 @@ def test_invalid_data_message():
             "reason": "invalid JSON in request message",
         },
         {
-            "error": "Invalid control character at: line 1 column 3 (char 2)",
-            "reason": "invalid JSON in request message",
             "status": "error",
+            "error": "Unterminated string starting at: line 1 column 2 (char 1)",
+            "reason": "invalid JSON in request message",
         },
     ]
 
@@ -940,12 +940,9 @@ def test_unescaped_control_char_in_message():
         ],
     )
     assert response.status_code == 200
-    assert response.json() == [
-        {
-            "status": "error",
-            "error": "Invalid control character at: line 1 column 80 (char 79)",
-            "reason": "invalid JSON in request message",
-        }
+    assert response.json() == [{"status": "success"}]
+    assert write_api_mock.points == [
+        'analytics,core_parent_span_id=undefined,core_span_id=undefined,deployment=gpt-4,execution_path=undefined,language=undefined,model=gpt-4,parent_deployment=undefined,project_id=PROJECT-\\nKEY,response_id=chatcmpl-1,title=undefined,topic=ping\\n\\npong,trace_id=undefined,upstream=undefined cached_prompt_tokens=0i,chat_id="chat-1",completion_tokens=189i,deployment_price=0,number_request_messages=2i,price=0,prompt_tokens=22i,user_hash="undefined" 1692214959997000000'
     ]
 
 

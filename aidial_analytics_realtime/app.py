@@ -339,7 +339,7 @@ async def process_message(
         return _error("invalid request message")
 
     try:
-        message_dict = json.loads(message_str)
+        message_dict = json.JSONDecoder(strict=False).decode(message_str)
     except Exception:
         return _error("invalid JSON in request message")
 

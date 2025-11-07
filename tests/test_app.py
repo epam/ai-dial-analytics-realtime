@@ -17,6 +17,60 @@ from tests.utils.message import (
     create_message,
 )
 
+_SAMPLE_MESSAGE = {
+    "apiType": "DialOpenAI",
+    "chat": {"id": "chat-1"},
+    "project": {"id": "PROJECT-KEY"},
+    "user": {"id": "", "title": ""},
+    "deployment": "gpt-4",
+    "request": {
+        "protocol": "HTTP/1.1",
+        "method": "POST",
+        "uri": "/openai/deployments/gpt-4/chat/completions?api-version=2023-03-15-preview",
+        "time": "2023-08-16T19:42:39.997",
+        "body": json.dumps(
+            {
+                "messages": [
+                    {"role": "system", "content": ""},
+                    {"role": "user", "content": "ping"},
+                ],
+                "model": "gpt-4",
+                "max_tokens": 2000,
+                "stream": True,
+                "n": 1,
+                "temperature": 0.0,
+            }
+        ),
+    },
+    "assembled_response": json.dumps(
+        {
+            "id": "chatcmpl-1",
+            "object": "chat.completion",
+            "created": 1692214960,
+            "model": "gpt-4",
+            "choices": [
+                {
+                    "index": 0,
+                    "delta": {
+                        "role": "assistant",
+                        "content": "pong",
+                    },
+                    "finish_reason": "stop",
+                }
+            ],
+            "usage": {
+                "completion_tokens": 189,
+                "prompt_tokens": 22,
+                "total_tokens": 211,
+            },
+        }
+    ),
+    "response": {
+        "status": "200",
+        "body": 'data: {"id":"chatcmpl-1","object":"chat.completion.chunk","created":1692214960,"model":"gpt-4","choices":[{"index":0,"delta":{"role":"assistant","content":"pong"},"finish_reason":null}]}\n\ndata: {"id":"chatcmpl-1","object":"chat.completion.chunk","created":1692214960,"model":"gpt-4","choices":[{"index":0,"delta":{},"finish_reason":"stop"}],"usage":{"completion_tokens":189,"prompt_tokens":22,"total_tokens":211}}\n\ndata: [DONE]\n',
+    },
+}
+
 
 @pytest.fixture(autouse=True)
 def mock_uuid4():
@@ -83,7 +137,8 @@ def test_chat_completion_plain_text(
 def test_chat_completion_plain_text_no_body(
     client: httpx.Client, write_api_mock: InfluxWriterMock
 ):
-    message = create_message(
+    message1 = create_message(
+        chat_id="chat-1",
         token_usage={
             "completion_tokens": 189,
             "prompt_tokens": 22,
@@ -94,20 +149,48 @@ def test_chat_completion_plain_text_no_body(
         response_assembled=None,
     )
 
-    response = client.post("/data", json=create_data_request(message))
-    assert response.status_code == 200
-    assert len(write_api_mock.points) == 1
+    message2 = create_message(
+        chat_id="chat-2",
+        token_usage={
+            "completion_tokens": 189,
+            "prompt_tokens": 22,
+            "total_tokens": 211,
+            "prompt_tokens_details": {"cached_tokens": 20},
+            "deployment_price": 0.001,
+            "price": 0.002,
+        },
+        response_assembled=None,
+    )
 
-    point = create_point(
+    response = client.post(
+        "/data", json=create_data_request(message1, message2)
+    )
+    assert response.status_code == 200
+    assert len(write_api_mock.points) == 2
+
+    point1 = create_point(
+        chat_id="chat-1",
         response_id="pseudo-uuid-1",
-        topic=None,
+        topic="ping",
         price=0.002,
         deployment_price=0.001,
         completion_tokens=189,
         prompt_tokens=22,
     )
 
-    assert str(write_api_mock.influx_points[0]) == str(point)
+    point2 = create_point(
+        chat_id="chat-2",
+        response_id="pseudo-uuid-2",
+        topic="ping",
+        price=0.002,
+        deployment_price=0.001,
+        completion_tokens=189,
+        prompt_tokens=22,
+        cached_prompt_tokens=20,
+    )
+
+    assert str(write_api_mock.influx_points[0]) == str(point1)
+    assert str(write_api_mock.influx_points[1]) == str(point2)
 
 
 def test_chat_completion_list_content(
@@ -186,7 +269,7 @@ def test_chat_completion_list_content(
     )
     assert response.status_code == 200
     assert write_api_mock.points == [
-        'analytics,core_parent_span_id=undefined,core_span_id=undefined,deployment=gpt-4,execution_path=undefined,language=undefined,model=gpt-4,parent_deployment=undefined,project_id=PROJECT-KEY,response_id=chatcmpl-1,title=undefined,topic=act\\ as\\ a\\ helpful\\ assistant\\n\\nping\\n\\npong,trace_id=undefined,upstream=undefined chat_id="chat-1",completion_tokens=189i,deployment_price=0,number_request_messages=2i,price=0,prompt_tokens=22i,user_hash="undefined" 1692214959997000000',
+        'analytics,core_parent_span_id=undefined,core_span_id=undefined,deployment=gpt-4,execution_path=undefined,language=undefined,model=gpt-4,parent_deployment=undefined,project_id=PROJECT-KEY,response_id=chatcmpl-1,title=undefined,topic=act\\ as\\ a\\ helpful\\ assistant\\n\\nping\\n\\npong,trace_id=undefined,upstream=undefined cached_prompt_tokens=0i,chat_id="chat-1",completion_tokens=189i,deployment_price=0,number_request_messages=2i,price=0,prompt_tokens=22i,user_hash="undefined" 1692214959997000000',
     ]
 
 
@@ -281,7 +364,7 @@ def test_chat_completion_none_content(
     )
     assert response.status_code == 200
     assert write_api_mock.points == [
-        'analytics,core_parent_span_id=undefined,core_span_id=undefined,deployment=gpt-4,execution_path=undefined,language=undefined,model=gpt-4,parent_deployment=undefined,project_id=PROJECT-KEY,response_id=chatcmpl-1,title=undefined,topic=what\'s\\ the\\ weather\\ like?\\n\\nIt\'s\\ sunny\\ today.\\n\\n2+3\\=?\\n\\n5,trace_id=undefined,upstream=undefined chat_id="chat-1",completion_tokens=189i,deployment_price=0,number_request_messages=4i,price=0,prompt_tokens=22i,user_hash="undefined" 1692214959997000000',
+        'analytics,core_parent_span_id=undefined,core_span_id=undefined,deployment=gpt-4,execution_path=undefined,language=undefined,model=gpt-4,parent_deployment=undefined,project_id=PROJECT-KEY,response_id=chatcmpl-1,title=undefined,topic=what\'s\\ the\\ weather\\ like?\\n\\nIt\'s\\ sunny\\ today.\\n\\n2+3\\=?\\n\\n5,trace_id=undefined,upstream=undefined cached_prompt_tokens=0i,chat_id="chat-1",completion_tokens=189i,deployment_price=0,number_request_messages=4i,price=0,prompt_tokens=22i,user_hash="undefined" 1692214959997000000',
     ]
 
 
@@ -353,7 +436,7 @@ def test_embeddings_plain_text(
     assert response.status_code == 200
     assert len(write_api_mock.points) == 1
     assert re.match(
-        r'analytics,core_parent_span_id=20e7e64715abbe97,core_span_id=9ade2b6fef0a716d,deployment=text-embedding-3-small,execution_path=undefined/b/c,language=undefined,model=text-embedding-3-small,parent_deployment=assistant,project_id=PROJECT-KEY,response_id=(.+?),title=undefined,topic=fish\\n\\ncat,trace_id=5dca3d6ed5d22b6ab574f27a6ab5ec14,upstream=undefined chat_id="chat-1",completion_tokens=0i,deployment_price=0.001,number_request_messages=2i,price=0.001,prompt_tokens=2i,user_hash="undefined" 1692214959997000000',
+        r'analytics,core_parent_span_id=20e7e64715abbe97,core_span_id=9ade2b6fef0a716d,deployment=text-embedding-3-small,execution_path=undefined/b/c,language=undefined,model=text-embedding-3-small,parent_deployment=assistant,project_id=PROJECT-KEY,response_id=(.+?),title=undefined,topic=fish\\n\\ncat,trace_id=5dca3d6ed5d22b6ab574f27a6ab5ec14,upstream=undefined cached_prompt_tokens=0i,chat_id="chat-1",completion_tokens=0i,deployment_price=0.001,number_request_messages=2i,price=0.001,prompt_tokens=2i,user_hash="undefined" 1692214959997000000',
         write_api_mock.points[0],
     )
 
@@ -398,10 +481,11 @@ def test_embeddings_no_body(
             },
         ],
     )
+
     assert response.status_code == 200
     assert len(write_api_mock.points) == 1
     assert re.match(
-        r'analytics,core_parent_span_id=20e7e64715abbe97,core_span_id=9ade2b6fef0a716d,deployment=text-embedding-3-small,execution_path=undefined/b/c,language=undefined,model=text-embedding-3-small,parent_deployment=assistant,project_id=PROJECT-KEY,response_id=(.+?),title=undefined,trace_id=5dca3d6ed5d22b6ab574f27a6ab5ec14,upstream=undefined chat_id="chat-1",completion_tokens=0i,deployment_price=0.001,number_request_messages=0i,price=0.001,prompt_tokens=2i,user_hash="undefined" 1692214959997000000',
+        r'analytics,core_parent_span_id=20e7e64715abbe97,core_span_id=9ade2b6fef0a716d,deployment=text-embedding-3-small,execution_path=undefined/b/c,language=undefined,model=text-embedding-3-small,parent_deployment=assistant,project_id=PROJECT-KEY,response_id=(.+?),title=undefined,topic=undefined,trace_id=5dca3d6ed5d22b6ab574f27a6ab5ec14,upstream=undefined cached_prompt_tokens=0i,chat_id="chat-1",completion_tokens=0i,deployment_price=0.001,number_request_messages=0i,price=0.001,prompt_tokens=2i,user_hash="undefined" 1692214959997000000',
         write_api_mock.points[0],
     )
 
@@ -476,7 +560,7 @@ def test_embeddings_tokens(
     assert response.status_code == 200
     assert len(write_api_mock.points) == 1
     assert re.match(
-        r'analytics,core_parent_span_id=20e7e64715abbe97,core_span_id=9ade2b6fef0a716d,deployment=text-embedding-3-small,execution_path=undefined/b/c,language=undefined,model=text-embedding-3-small,parent_deployment=assistant,project_id=PROJECT-KEY,response_id=(.+?),title=undefined,topic=undefined,trace_id=5dca3d6ed5d22b6ab574f27a6ab5ec14,upstream=undefined chat_id="chat-1",completion_tokens=0i,deployment_price=0.001,number_request_messages=2i,price=0.001,prompt_tokens=2i,user_hash="undefined" 1692214959997000000',
+        r'analytics,core_parent_span_id=20e7e64715abbe97,core_span_id=9ade2b6fef0a716d,deployment=text-embedding-3-small,execution_path=undefined/b/c,language=undefined,model=text-embedding-3-small,parent_deployment=assistant,project_id=PROJECT-KEY,response_id=(.+?),title=undefined,topic=undefined,trace_id=5dca3d6ed5d22b6ab574f27a6ab5ec14,upstream=undefined cached_prompt_tokens=0i,chat_id="chat-1",completion_tokens=0i,deployment_price=0.001,number_request_messages=2i,price=0.001,prompt_tokens=2i,user_hash="undefined" 1692214959997000000',
         write_api_mock.points[0],
     )
 
@@ -629,8 +713,8 @@ def test_data_request_with_new_format(
     )
     assert response.status_code == 200
     assert write_api_mock.points == [
-        'analytics,core_parent_span_id=20e7e64715abbe97,core_span_id=9ade2b6fef0a716d,deployment=gpt-4,execution_path=undefined/b/c,language=undefined,model=gpt-4,parent_deployment=assistant,project_id=PROJECT-KEY,response_id=chatcmpl-1,title=undefined,topic=ping\\n\\npong,trace_id=5dca3d6ed5d22b6ab574f27a6ab5ec14,upstream=undefined chat_id="chat-1",completion_tokens=40i,deployment_price=0.001,number_request_messages=2i,price=0.001,prompt_tokens=30i,user_hash="undefined" 1692214959997000000',
-        'analytics,core_parent_span_id=undefined,core_span_id=20e7e64715abbe97,deployment=gpt-4,execution_path=a/b/c,language=undefined,model=gpt-4,parent_deployment=undefined,project_id=PROJECT-KEY-2,response_id=chatcmpl-2,title=undefined,topic=ping\\n\\npong,trace_id=5dca3d6ed5d22b6ab574f27a6ab5ec14,upstream=undefined chat_id="chat-2",completion_tokens=40i,deployment_price=0,number_request_messages=2i,price=0.005,prompt_tokens=30i,user_hash="undefined" 1700796820390000000',
+        'analytics,core_parent_span_id=20e7e64715abbe97,core_span_id=9ade2b6fef0a716d,deployment=gpt-4,execution_path=undefined/b/c,language=undefined,model=gpt-4,parent_deployment=assistant,project_id=PROJECT-KEY,response_id=chatcmpl-1,title=undefined,topic=ping\\n\\npong,trace_id=5dca3d6ed5d22b6ab574f27a6ab5ec14,upstream=undefined cached_prompt_tokens=0i,chat_id="chat-1",completion_tokens=40i,deployment_price=0.001,number_request_messages=2i,price=0.001,prompt_tokens=30i,user_hash="undefined" 1692214959997000000',
+        'analytics,core_parent_span_id=undefined,core_span_id=20e7e64715abbe97,deployment=gpt-4,execution_path=a/b/c,language=undefined,model=gpt-4,parent_deployment=undefined,project_id=PROJECT-KEY-2,response_id=chatcmpl-2,title=undefined,topic=ping\\n\\npong,trace_id=5dca3d6ed5d22b6ab574f27a6ab5ec14,upstream=undefined cached_prompt_tokens=0i,chat_id="chat-2",completion_tokens=40i,deployment_price=0,number_request_messages=2i,price=0.005,prompt_tokens=30i,user_hash="undefined" 1700796820390000000',
     ]
 
 
@@ -701,3 +785,166 @@ def test_rate_request(client: httpx.Client, write_api_mock: InfluxWriterMock):
         "rate_analytics,chat_id=chat-1,deployment=gpt-4,project_id=PROJECT-KEY,response_id=response_123,title=undefined,user_hash=undefined dislike_count=0i,like_count=1i 1692214959997000000",
         "rate_analytics,chat_id=chat-1,deployment=gpt-4,project_id=PROJECT-KEY,response_id=response_124,title=undefined,user_hash=undefined dislike_count=1i,like_count=0i 1700796820390000000",
     ]
+
+
+@pytest.mark.parametrize("assembled_response", [None, "{}", "", "invalid JSON"])
+def test_chat_completion_invalid_assembled_response(assembled_response):
+    write_api_mock = InfluxWriterMock()
+    app.app.dependency_overrides[app.InfluxWriterAsync] = lambda: write_api_mock
+    app.app.dependency_overrides[app.TopicModel] = lambda: TestTopicModel()
+
+    client = TestClient(app.app)
+    response = client.post(
+        "/data",
+        json=[
+            {
+                "message": json.dumps(
+                    {
+                        "apiType": "DialOpenAI",
+                        "chat": {"id": "chat-1"},
+                        "project": {"id": "PROJECT-KEY"},
+                        "user": {"id": "", "title": ""},
+                        "deployment": "gpt-4",
+                        "request": {
+                            "protocol": "HTTP/1.1",
+                            "method": "POST",
+                            "uri": "/openai/deployments/gpt-4/chat/completions?api-version=2023-03-15-preview",
+                            "time": "2023-08-16T19:42:39.997",
+                            "body": json.dumps(
+                                {
+                                    "messages": [
+                                        {"role": "system", "content": ""},
+                                        {"role": "user", "content": "ping"},
+                                    ],
+                                    "model": "gpt-4",
+                                    "max_tokens": 2000,
+                                    "stream": True,
+                                    "n": 1,
+                                    "temperature": 0.0,
+                                }
+                            ),
+                        },
+                        "token_usage": {
+                            "completion_tokens": 189,
+                            "prompt_tokens": 22,
+                            "total_tokens": 211,
+                            "deployment_price": 0.001,
+                            "price": 0.001,
+                        },
+                        "assembled_response": assembled_response,
+                        "response": {
+                            "status": "200",
+                            "body": 'data: {"id":"chatcmpl-1","object":"chat.completion.chunk","created":1692214960,"model":"gpt-4","choices":[{"index":0,"delta":{"role":"assistant","content":"pong"},"finish_reason":null}]}\n\ndata: {"id":"chatcmpl-1","object":"chat.completion.chunk","created":1692214960,"model":"gpt-4","choices":[{"index":0,"delta":{},"finish_reason":"stop"}],"usage":{"completion_tokens":189,"prompt_tokens":22,"total_tokens":211}}\n\ndata: [DONE]\n',
+                        },
+                    }
+                )
+            }
+        ],
+    )
+    assert response.status_code == 200
+    assert len(write_api_mock.points) == 1
+    assert re.match(
+        r'analytics,core_parent_span_id=undefined,core_span_id=undefined,deployment=gpt-4,execution_path=undefined,language=undefined,model=gpt-4,parent_deployment=undefined,project_id=PROJECT-KEY,response_id=(.+?),title=undefined,topic=ping,trace_id=undefined,upstream=undefined cached_prompt_tokens=0i,chat_id="chat-1",completion_tokens=189i,deployment_price=0.001,number_request_messages=2i,price=0.001,prompt_tokens=22i,user_hash="undefined" 1692214959997000000',
+        write_api_mock.points[0],
+    )
+
+
+def test_invalid_data_message():
+    write_api_mock = InfluxWriterMock()
+    app.app.dependency_overrides[app.InfluxWriterAsync] = lambda: write_api_mock
+    app.app.dependency_overrides[app.TopicModel] = lambda: TestTopicModel()
+
+    client = TestClient(app.app)
+    response = client.post(
+        "/data",
+        json=[
+            "invalid message",
+            {"message": "invalid message JSON"},
+            {"message": '["\n'},
+        ],
+    )
+    assert response.status_code == 200
+    assert response.json() == [
+        {
+            "status": "error",
+            "error": "1 validation error for Message\n__root__\n  Message expected dict not str (type=type_error)",
+            "reason": "invalid request message",
+        },
+        {
+            "status": "error",
+            "error": "Expecting value: line 1 column 1 (char 0)",
+            "reason": "invalid JSON in request message",
+        },
+        {
+            "status": "error",
+            "error": "Unterminated string starting at: line 1 column 2 (char 1)",
+            "reason": "invalid JSON in request message",
+        },
+    ]
+
+
+def test_unescaped_control_char_in_message():
+    write_api_mock = InfluxWriterMock()
+    app.app.dependency_overrides[app.InfluxWriterAsync] = lambda: write_api_mock
+    app.app.dependency_overrides[app.TopicModel] = lambda: TestTopicModel()
+
+    client = TestClient(app.app)
+    response = client.post(
+        "/data",
+        json=[
+            {
+                "message": json.dumps(_SAMPLE_MESSAGE).replace(
+                    "PROJECT-KEY", "PROJECT-\nKEY"
+                )
+            },
+        ],
+    )
+    assert response.status_code == 200
+    assert response.json() == [{"status": "success"}]
+    assert write_api_mock.points == [
+        'analytics,core_parent_span_id=undefined,core_span_id=undefined,deployment=gpt-4,execution_path=undefined,language=undefined,model=gpt-4,parent_deployment=undefined,project_id=PROJECT-\\nKEY,response_id=chatcmpl-1,title=undefined,topic=ping\\n\\npong,trace_id=undefined,upstream=undefined cached_prompt_tokens=0i,chat_id="chat-1",completion_tokens=189i,deployment_price=0,number_request_messages=2i,price=0,prompt_tokens=22i,user_hash="undefined" 1692214959997000000'
+    ]
+
+
+def test_invalid_data_request_json():
+    write_api_mock = InfluxWriterMock()
+    app.app.dependency_overrides[app.InfluxWriterAsync] = lambda: write_api_mock
+    app.app.dependency_overrides[app.TopicModel] = lambda: TestTopicModel()
+
+    client = TestClient(app.app, raise_server_exceptions=False)
+    response = client.post(
+        "/data",
+        content="invalid json",
+        headers={"content-type": "application/json"},
+    )
+    assert response.status_code == 422
+    assert response.json() == {
+        "detail": [
+            {
+                "type": "json_invalid",
+                "loc": ["body", 0],
+                "msg": "JSON decode error",
+                "input": {},
+                "ctx": {"error": "Expecting value"},
+            }
+        ]
+    }
+
+
+def test_invalid_data_request_type():
+    write_api_mock = InfluxWriterMock()
+    app.app.dependency_overrides[app.InfluxWriterAsync] = lambda: write_api_mock
+    app.app.dependency_overrides[app.TopicModel] = lambda: TestTopicModel()
+
+    client = TestClient(app.app, raise_server_exceptions=False)
+    response = client.post("/data", json={"foo": "bar"})
+    assert response.status_code == 422
+    assert response.json() == {
+        "detail": [
+            {
+                "loc": ["body", "__root__"],
+                "msg": "value is not a valid list",
+                "type": "type_error.list",
+            }
+        ]
+    }

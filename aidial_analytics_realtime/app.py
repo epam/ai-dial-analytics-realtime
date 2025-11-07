@@ -5,13 +5,15 @@ import logging
 import re
 import sys
 from datetime import datetime
+from typing import Any, List
 
 import aiohttp
 import starlette.requests
 import uvicorn
 from aidial_sdk.telemetry.init import TelemetryConfig, init_telemetry
-from fastapi import Depends, FastAPI, Request
+from fastapi import Depends, FastAPI
 from fastapi.responses import JSONResponse
+from pydantic import BaseModel
 
 from aidial_analytics_realtime.analytics import (
     RequestType,
@@ -25,7 +27,7 @@ from aidial_analytics_realtime.influx_writer import (
 from aidial_analytics_realtime.log_request.message import get_assembled_response
 from aidial_analytics_realtime.rates import RatesCalculator
 from aidial_analytics_realtime.time import parse_time
-from aidial_analytics_realtime.topic_model import TopicModel
+from aidial_analytics_realtime.topic_model import TopicModel, create_topic_model
 from aidial_analytics_realtime.utils.concurrency import cpu_task_executor
 from aidial_analytics_realtime.utils.logging import add_logger_prefix
 from aidial_analytics_realtime.utils.logging import app_logger as logger
@@ -45,7 +47,7 @@ async def lifespan(app: FastAPI):
             # FIXME: rewrite as a native dependency
             app.dependency_overrides[InfluxWriterAsync] = lambda: influx_writer
 
-            topic_model = TopicModel()
+            topic_model = create_topic_model()
             app.dependency_overrides[TopicModel] = lambda: topic_model
 
             rates_calculator = RatesCalculator()
@@ -270,39 +272,36 @@ async def on_log_message(
         logger.warning(f"Unsupported message type: {uri!r}")
 
 
+class DataRequest(BaseModel):
+    __root__: List[Any]
+
+
 @app.post("/data")
 async def on_log_messages(
-    request: Request,
+    data: DataRequest,
     influx_writer: InfluxWriterAsync = Depends(),
     topic_model: TopicModel = Depends(),
     rates_calculator: RatesCalculator = Depends(),
 ):
-
-    data = await request.json()
-
-    n = len(data)
+    messages = data.__root__
+    n = len(messages)
     logger.info(f"number of messages: {n}")
-
-    statuses: list[dict] = []
 
     async with Timer(logger.debug, format="request {elapsed}"):
 
-        async def _task(i: int, message_str: str) -> dict:
+        async def _task(i: int, message: Any) -> dict:
             add_logger_prefix(f"[{i}/{n}]")
 
             async with Timer(logger.debug, format="message {elapsed}"):
                 return await process_message(
-                    json.loads(message_str),
+                    message,
                     influx_writer,
                     topic_model,
                     rates_calculator,
                 )
 
-        statuses = await asyncio.gather(
-            *[
-                _task(i, message["message"])
-                for i, message in enumerate(data, start=1)
-            ]
+        statuses: list[dict] = await asyncio.gather(
+            *[_task(i, message) for i, message in enumerate(messages, start=1)]
         )
 
     if logger.isEnabledFor(logging.DEBUG):
@@ -313,8 +312,12 @@ async def on_log_messages(
     return JSONResponse(content=statuses, status_code=200)
 
 
+class Message(BaseModel):
+    message: str
+
+
 async def process_message(
-    message: dict,
+    request_message: Any,
     influx_writer: InfluxWriterAsync,
     topic_model: TopicModel,
     rates_calculator: RatesCalculator,
@@ -332,8 +335,18 @@ async def process_message(
         return ret
 
     try:
+        message_str = Message.parse_obj(request_message).message
+    except Exception:
+        return _error("invalid request message")
+
+    try:
+        message_dict = json.JSONDecoder(strict=False).decode(message_str)
+    except Exception:
+        return _error("invalid JSON in request message")
+
+    try:
         await on_log_message(
-            message, influx_writer, topic_model, rates_calculator
+            message_dict, influx_writer, topic_model, rates_calculator
         )
         logger.info("success")
         return {"status": "success"}

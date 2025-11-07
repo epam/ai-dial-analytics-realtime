@@ -1,8 +1,10 @@
 # AI DIAL Realtime Analytics Grafana Dashboards
 
-This directory contains the Grafana dashboards for the AI DIAL Realtime Analytics project
+This directory contains the two groups of Grafana dashboards for the AI DIAL Realtime Analytics project.
 
-## Dashboards
+The [Customized](customized/) Grafana dashboards contain widgets that display aggregated data unavailable with the base installation. The data displayed by custom widgets is collected by additional DIAL components and configured exclusively for the specific needs of a particular client. In the absence of additional data, custom widgets will either display distorted metrics or remain empty.
 
-- [DIAL Analytics](dial_analytics.json) - This dashboard contains common metrics and visualizations
-- [DIAL Analytics Raw Data](dial_analytics_raw_data.json) - This dashboard contains simple time-series view
+In the case of a base DIAL installation, [Public](public/) Grafana dashboards should be used, which aggregate and display DIAL's basic metrics.
+
+1. [Public](public/) Grafana dashboards for the AI DIAL Realtime Analytics project appplied for the general cases.
+1. [Customized](customized/) Grafana dashboards for the AI DIAL Realtime Analytics project with the specisific data and widgets.

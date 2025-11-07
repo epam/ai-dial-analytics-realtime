@@ -1,0 +1,1934 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {
+          "type": "grafana",
+          "uid": "-- Grafana --"
+        },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "description": "",
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 0,
+  "id": 6,
+  "links": [],
+  "liveNow": false,
+  "panels": [
+    {
+      "datasource": {
+        "type": "influxdb",
+        "uid": "${datasource}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 3,
+        "x": 0,
+        "y": 0
+      },
+      "id": 52,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "pluginVersion": "10.4.0",
+      "targets": [
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "${datasource}"
+          },
+          "query": "import \"influxdata/influxdb/schema\"\r\n\r\ngetOrDefault = (f, d) => if exists f then f else d\r\n\r\n// Aggregate request counts per chat_id\r\ndata_request = from(bucket: \"default_agg_chatid\")\r\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\r\n  |> filter(fn: (r) =>  r._field == \"request_count\" and r.chat_id != \"undefined\")\r\n  |> group(columns: [\"chat_id\"])\r\n  |> sum(column: \"_value\")\r\n\r\n// Compute the average request count per chat_id\r\ndata_request\r\n    |> keep(columns: [\"_value\"])\r\n |> mean()\r\n  |> group()  // Ensures a single global result is returned\r\n",
+          "refId": "A"
+        }
+      ],
+      "title": "Messages per Conversation",
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {},
+            "includeByName": {},
+            "indexByName": {},
+            "renameByName": {
+              "_value": "Avg Nr of messages per conversation"
+            }
+          }
+        }
+      ],
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "influxdb",
+        "uid": "${datasource}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "fixedColor": "#73BF69",
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            }
+          },
+          "fieldMinMax": false,
+          "mappings": []
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "user"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "super-light-blue",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "project"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "super-light-purple",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 4,
+        "x": 3,
+        "y": 0
+      },
+      "id": 45,
+      "options": {
+        "displayLabels": [
+          "percent"
+        ],
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true,
+          "values": [
+            "value"
+          ]
+        },
+        "pieType": "donut",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "pluginVersion": "10.4.0",
+      "repeatDirection": "v",
+      "targets": [
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "${datasource}"
+          },
+          "query": "import \"influxdata/influxdb/schema\"\r\nimport \"experimental\"\r\nimport \"array\"\r\n\r\ngetOrDefault = (f, d) => if exists f then f else d\r\n\r\n// Aggregate request counts per group\r\ndata_request = from(bucket: \"default_agg_kpi\")\r\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\r\n  |> filter(fn: (r) =>  r._field == \"cost\")\r\n  data_request\r\n  |> group(columns: [\"user_hash\"]) // Group by the new column\r\n  |> sum(column: \"_value\") // Sum cost within the groups\r\n\r\n  |> map(fn: (r) => ({ \r\n      r with \r\n      user_type: if r.user_hash == \"undefined\" then \"project\" else \"user\"\r\n  })) \r\n  |> group(columns: [\"user_type\"]) // Group by the new column\r\n  |> sum(column: \"_value\") // Sum cost within the groups\r\n \r\n  |>group()",
+          "refId": "A"
+        }
+      ],
+      "title": "Distribution of Cost (user/project)",
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {},
+            "includeByName": {},
+            "indexByName": {
+              "Project": 0,
+              "cost($)": 1
+            },
+            "renameByName": {
+              "cost($)": "Cost($)"
+            }
+          }
+        }
+      ],
+      "type": "piechart"
+    },
+    {
+      "datasource": {
+        "type": "influxdb",
+        "uid": "${datasource}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            }
+          },
+          "fieldMinMax": false,
+          "mappings": []
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "user"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "super-light-blue",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "__systemRef": "hideSeriesFrom",
+            "matcher": {
+              "id": "byNames",
+              "options": {
+                "mode": "exclude",
+                "names": [
+                  "_value"
+                ],
+                "prefix": "All except:",
+                "readOnly": true
+              }
+            },
+            "properties": [
+              {
+                "id": "custom.hideFrom",
+                "value": {
+                  "legend": false,
+                  "tooltip": false,
+                  "viz": true
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "project"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "super-light-purple",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 4,
+        "x": 7,
+        "y": 0
+      },
+      "id": 51,
+      "options": {
+        "displayLabels": [
+          "percent"
+        ],
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true,
+          "values": [
+            "value"
+          ]
+        },
+        "pieType": "donut",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "pluginVersion": "10.4.0",
+      "repeatDirection": "v",
+      "targets": [
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "${datasource}"
+          },
+          "query": "import \"influxdata/influxdb/schema\"\r\nimport \"experimental\"\r\nimport \"array\"\r\n\r\ngetOrDefault = (f, d) => if exists f then f else d\r\n\r\n// Aggregate request counts per group\r\ndata_request = from(bucket: \"default_agg_kpi\")\r\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\r\n  |> filter(fn: (r) =>  r._field == \"request_count\")\r\ndata_request\r\n\r\n  |> group(columns: [\"user_hash\"]) // Group by the new column\r\n  |> sum(column: \"_value\") // Sum cost within the groups\r\n    |> map(fn: (r) => ({ \r\n      r with \r\n      user_type: if r.user_hash == \"undefined\" then \"project\" else \"user\"\r\n  })) \r\n    |> group(columns: [\"user_type\"]) // Group by the new column\r\n  |> sum(column: \"_value\") // Sum cost within the groups\r\n   |> group()\r\n",
+          "refId": "A"
+        }
+      ],
+      "title": "Distribution of Requests (user/project)",
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {},
+            "includeByName": {},
+            "indexByName": {
+              "Project": 0,
+              "cost($)": 1
+            },
+            "renameByName": {
+              "cost($)": "Cost($)"
+            }
+          }
+        }
+      ],
+      "type": "piechart"
+    },
+    {
+      "datasource": {
+        "type": "influxdb",
+        "uid": "${datasource}"
+      },
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "fixedColor": "blue",
+            "mode": "fixed"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "fillOpacity": 80,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "lineWidth": 1,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
+          "unit": "none"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 13,
+        "x": 11,
+        "y": 0
+      },
+      "id": 55,
+      "options": {
+        "barRadius": 0,
+        "barWidth": 0.97,
+        "fullHighlight": false,
+        "groupWidth": 0.7,
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "orientation": "auto",
+        "showValue": "auto",
+        "stacking": "none",
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        },
+        "xTickLabelRotation": 0,
+        "xTickLabelSpacing": 0
+      },
+      "pluginVersion": "10.4.0",
+      "targets": [
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "${datasource}"
+          },
+          "query": "import \"influxdata/influxdb/schema\"\r\nimport \"experimental\"\r\nimport \"math\"\r\n\r\ngetOrDefault = (f, d) => if exists f then f else d\r\n\r\n// Aggregate request_count per user\r\ndata_request = from(bucket: \"default_agg_chatid\")\r\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\r\n  |> filter(fn: (r) => r._field == \"request_count\" and r.chat_id != \"undefined\")\r\n  |> group(columns: [\"chat_id\"])\r\n  |> sum()\r\n  |> group()  // Ensures a single global result is returned\r\n\r\nclassified_data = data_request\r\n\r\n    |> map(\r\n        fn: (r) =>\r\n            ({\r\n                request_count: r._value,\r\n                request_count_class:\r\n                    if r._value > 20 then\r\n                        \"20+\"\r\n                    else if r._value > 10 then\r\n                        \"11-20\"\r\n                    else if r._value > 5 then\r\n                        \"6-10\"\r\n                    else if r._value > 2 then\r\n                        \"3-5\"\r\n                    else if r._value > 1 then\r\n                        \"2\"\r\n                    else\r\n                        \"1\",\r\n                    sort:\r\n                    if r._value > 20 then\r\n                        6\r\n                    else if r._value > 10 then\r\n                        5\r\n                    else if r._value > 5 then\r\n                        4\r\n                    else if r._value > 2 then\r\n                        3\r\n                    else if r._value > 1 then\r\n                       2\r\n                    else\r\n                        1,\r\n            }),\r\n    )\r\n     |> group(columns: [\"request_count_class\",\"sort\"])\r\n     |> count(column: \"request_count\")\r\n     |> map(fn: (r) => ({r with join_key: \"cross_join\"})) // Dummy key for joining\r\n     |> group()\r\n  total_data = classified_data\r\n\r\n     |> sum(column: \"request_count\")\r\n      |> map(fn: (r) => ({r with join_key: \"cross_join\",\r\n                              //   total_count: r.request_count\r\n      \r\n                            })) // Dummy key for joining\r\n\r\ncross_joined_data = join(\r\n  tables: {classified: classified_data, total: total_data},\r\n  on: [\"join_key\"]\r\n)\r\ncross_joined_data\r\n|> map(fn: (r) => ({\r\n                    sort: r.sort,\r\n                    request_count_class: r.request_count_class,\r\n                    result: float(v: r.request_count_classified)  / float(v: r.request_count_total) *100.0\r\n      }))",
+          "refId": "A"
+        }
+      ],
+      "title": "Distribution of conversation lenght",
+      "transformations": [
+        {
+          "id": "sortBy",
+          "options": {
+            "fields": {},
+            "sort": [
+              {
+                "field": "sort"
+              }
+            ]
+          }
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "sort": true
+            },
+            "includeByName": {},
+            "indexByName": {},
+            "renameByName": {
+              "percent_of_prompt_tokens": "Percent of prompt tokens",
+              "request_count_class": "",
+              "result": "percent of requests by number of messages in request"
+            }
+          }
+        }
+      ],
+      "type": "barchart"
+    },
+    {
+      "datasource": {
+        "type": "influxdb",
+        "uid": "${datasource}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "fixedColor": "orange",
+            "mode": "fixed"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "fillOpacity": 80,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "lineWidth": 1,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
+          "unit": "percent"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 13,
+        "w": 6,
+        "x": 0,
+        "y": 8
+      },
+      "id": 49,
+      "options": {
+        "barRadius": 0,
+        "barWidth": 0.97,
+        "fullHighlight": false,
+        "groupWidth": 0.7,
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "orientation": "horizontal",
+        "showValue": "never",
+        "stacking": "none",
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        },
+        "xTickLabelRotation": 0,
+        "xTickLabelSpacing": 0
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "${datasource}"
+          },
+          "query": "import \"influxdata/influxdb/schema\"\r\nimport \"experimental\"\r\nimport \"math\"\r\n\r\ngetOrDefault = (f, d) => if exists f then f else d\r\n\r\n// Aggregate cost per user\r\ndata_request = from(bucket: \"default_agg_kpi\")\r\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\r\n  |> filter(fn: (r) =>  r._field == \"cost\" and r.user_hash != \"undefined\")\r\n  |> group(columns: [\"user_hash\"])\r\n  |> sum(column: \"_value\")\r\n  |> group()\r\n\r\n// Sort users by total cost in descending order and assign row IDs\r\nsorted_users = data_request\r\n  |> sort(columns: [\"_value\"], desc: true)\r\n  |> map(fn: (r) => ({r with rowId: 1}))\r\n  |> cumulativeSum(columns: [\"rowId\"])\r\n\r\n// Compute min and max rowId values\r\nrowId_max = sorted_users |> max(column: \"rowId\") |> findRecord(fn: (key) => true, idx: 0)\r\nrowId_min = sorted_users |> min(column: \"rowId\") |> findRecord(fn: (key) => true, idx: 0)\r\n\r\n// Compute 10% percentile boundaries using min and max rowId\r\nrowId_range = float(v: rowId_max.rowId - rowId_min.rowId)  \r\n\r\np_90 = int(v: math.ceil(x: float(v: rowId_min.rowId) + (rowId_range * 0.9)))\r\np_80 = int(v: math.ceil(x: float(v: rowId_min.rowId) + (rowId_range * 0.8)))\r\np_70 = int(v: math.ceil(x: float(v: rowId_min.rowId) + (rowId_range * 0.7)))\r\np_60 = int(v: math.ceil(x: float(v: rowId_min.rowId) + (rowId_range * 0.6)))\r\np_50 = int(v: math.ceil(x: float(v: rowId_min.rowId) + (rowId_range * 0.5)))\r\np_40 = int(v: math.ceil(x: float(v: rowId_min.rowId) + (rowId_range * 0.4)))\r\np_30 = int(v: math.ceil(x: float(v: rowId_min.rowId) + (rowId_range * 0.3)))\r\np_20 = int(v: math.ceil(x: float(v: rowId_min.rowId) + (rowId_range * 0.2)))\r\np_10 = int(v: math.ceil(x: float(v: rowId_min.rowId) + (rowId_range * 0.1)))\r\np_01 = int(v: math.ceil(x: float(v: rowId_min.rowId) + (rowId_range * 0.01)))\r\n\r\n// Map percentiles to each user based on request count thresholds\r\ndeterminePercentiles = (sorted_users, topUsers) => \r\n  if topUsers == \"No\" then\r\n  sorted_users\r\n  |> map(fn: (r) => ({\r\n      cost: r._value,\r\n      rowId: r.rowId,\r\n      percentile_user: if r.rowId >= p_90 then \"0-10%\"\r\n                  else if r.rowId >= p_80 then \"11-20%\"\r\n                  else if r.rowId >= p_70 then \"21-30%\"\r\n                  else if r.rowId >= p_60 then \"31-40%\"\r\n                  else if r.rowId >= p_50 then \"41-50%\"\r\n                  else if r.rowId >= p_40 then \"51-60%\"\r\n                  else if r.rowId >= p_30 then \"61-70%\"\r\n                  else if r.rowId >= p_20 then \"71-80%\"\r\n                  else if r.rowId >= p_10 then \"81-90%\"\r\n                  else \"Top 10%\"\r\n  }))\r\n  else\r\n    sorted_users\r\n  |> map(fn: (r) => ({\r\n      cost: r._value,\r\n      rowId: r.rowId,\r\n      percentile_user: if r.rowId >= p_90 then \"0-10%\"\r\n                  else if r.rowId >= p_80 then \"11-20%\"\r\n                  else if r.rowId >= p_70 then \"21-30%\"\r\n                  else if r.rowId >= p_60 then \"31-40%\"\r\n                  else if r.rowId >= p_50 then \"41-50%\"\r\n                  else if r.rowId >= p_40 then \"51-60%\"\r\n                  else if r.rowId >= p_30 then \"61-70%\"\r\n                  else if r.rowId >= p_20 then \"71-80%\"\r\n                  else if r.rowId >= p_10 then \"81-90%\"\r\n                  else if r.rowId >= p_01 then \"91-99%\"\r\n                  else \"Top 1%\"\r\n  }))\r\n// Define the bucket and call the function\r\ntopUsers = \"${Show_Top1_percent}\" // Replace with your actual bucket variable\r\npercentiles = determinePercentiles(sorted_users: sorted_users, topUsers: topUsers)\r\n// Aggregate total cost per percentile\r\npercentile_data = percentiles\r\n  |> group(columns: [\"percentile_user\"])\r\n  |> sum(column: \"cost\")\r\n  |> map(fn: (r) => ({r with join_key: \"cross_join\"})) // Dummy key for joining\r\n  |> group()\r\n\r\n// Compute total cost across all users\r\ntotal_cost_data = percentiles\r\n  |> sum(column: \"cost\")\r\n  |> map(fn: (r) => ({total_cost: r.cost, join_key: \"cross_join\"})) // Dummy key for joining\r\n\r\n// Join total and percentile cost data\r\ncross_joined_data = join(\r\n  tables: {percentile: percentile_data, total: total_cost_data},\r\n  on: [\"join_key\"]\r\n)\r\n|> map(fn: (r) => ({\r\n      percent_of_cost: r.cost / r.total_cost * 100.0,\r\n      percentile_user: r.percentile_user,\r\n      sort: if r.percentile_user == \"0-10%\" then 0\r\n             else if r.percentile_user == \"11-20%\" then 1\r\n             else if r.percentile_user == \"21-30%\" then 2\r\n             else if r.percentile_user == \"31-40%\" then 3\r\n             else if r.percentile_user == \"41-50%\" then 4\r\n             else if r.percentile_user == \"51-60%\" then 5\r\n             else if r.percentile_user == \"61-70%\" then 6\r\n             else if r.percentile_user == \"71-80%\" then 7\r\n             else if r.percentile_user == \"81-90%\" then 8\r\n             else if r.percentile_user == \"91-99%\" then 9\r\n             else if r.percentile_user == \"91-99%\" then 10\r\n             else 11\r\n  }))\r\n\r\n// Return sorted output\r\ncross_joined_data\r\n  |> group()\r\n  |> sort(columns: [\"sort\"], desc: true)\r\n",
+          "refId": "A"
+        }
+      ],
+      "title": "Cost share by deciles of Users in chat",
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "sort": true
+            },
+            "includeByName": {},
+            "indexByName": {},
+            "renameByName": {}
+          }
+        }
+      ],
+      "type": "barchart"
+    },
+    {
+      "datasource": {
+        "type": "influxdb",
+        "uid": "${datasource}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "inspect": false
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Percentile_user"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 127
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Cost($)"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "currencyUSD"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Percent of Cost"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "percent"
+              },
+              {
+                "id": "decimals",
+                "value": 2
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Cost(%)"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 92
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 13,
+        "w": 5,
+        "x": 6,
+        "y": 8
+      },
+      "id": 42,
+      "options": {
+        "cellHeight": "sm",
+        "footer": {
+          "countRows": false,
+          "fields": "",
+          "reducer": [
+            "sum"
+          ],
+          "show": true
+        },
+        "showHeader": true,
+        "sortBy": []
+      },
+      "pluginVersion": "10.4.0",
+      "targets": [
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "${datasource}"
+          },
+          "query": "import \"influxdata/influxdb/schema\"\r\nimport \"experimental\"\r\nimport \"math\"\r\n\r\ngetOrDefault = (f, d) => if exists f then f else d\r\n\r\n// Aggregate cost per user\r\ndata_request = from(bucket: \"default_agg_kpi\")\r\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\r\n  |> filter(fn: (r) =>  r._field == \"cost\" and r.user_hash != \"undefined\")\r\n  |> group(columns: [\"user_hash\"])\r\n  |> sum(column: \"_value\")\r\n  |> group()\r\n\r\n// Sort users by total cost in descending order and assign row IDs\r\nsorted_users = data_request\r\n  |> sort(columns: [\"_value\"], desc: true)\r\n  |> map(fn: (r) => ({r with rowId: 1}))\r\n  |> cumulativeSum(columns: [\"rowId\"])\r\n\r\n// Compute min and max rowId values\r\nrowId_max = sorted_users |> max(column: \"rowId\") |> findRecord(fn: (key) => true, idx: 0)\r\nrowId_min = sorted_users |> min(column: \"rowId\") |> findRecord(fn: (key) => true, idx: 0)\r\n\r\n// Compute 10% percentile boundaries using min and max rowId\r\nrowId_range = float(v: rowId_max.rowId - rowId_min.rowId)  \r\n\r\np_90 = int(v: math.ceil(x: float(v: rowId_min.rowId) + (rowId_range * 0.9)))\r\np_80 = int(v: math.ceil(x: float(v: rowId_min.rowId) + (rowId_range * 0.8)))\r\np_70 = int(v: math.ceil(x: float(v: rowId_min.rowId) + (rowId_range * 0.7)))\r\np_60 = int(v: math.ceil(x: float(v: rowId_min.rowId) + (rowId_range * 0.6)))\r\np_50 = int(v: math.ceil(x: float(v: rowId_min.rowId) + (rowId_range * 0.5)))\r\np_40 = int(v: math.ceil(x: float(v: rowId_min.rowId) + (rowId_range * 0.4)))\r\np_30 = int(v: math.ceil(x: float(v: rowId_min.rowId) + (rowId_range * 0.3)))\r\np_20 = int(v: math.ceil(x: float(v: rowId_min.rowId) + (rowId_range * 0.2)))\r\np_10 = int(v: math.ceil(x: float(v: rowId_min.rowId) + (rowId_range * 0.1)))\r\np_01 = int(v: math.ceil(x: float(v: rowId_min.rowId) + (rowId_range * 0.01)))\r\n\r\n// Map percentiles to each user based on request count thresholds\r\ndeterminePercentiles = (sorted_users, topUsers) => \r\n  if topUsers == \"No\" then\r\n  sorted_users\r\n  |> map(fn: (r) => ({\r\n      cost: r._value,\r\n      rowId: r.rowId,\r\n      percentile_user: if r.rowId >= p_90 then \"0-10%\"\r\n                  else if r.rowId >= p_80 then \"11-20%\"\r\n                  else if r.rowId >= p_70 then \"21-30%\"\r\n                  else if r.rowId >= p_60 then \"31-40%\"\r\n                  else if r.rowId >= p_50 then \"41-50%\"\r\n                  else if r.rowId >= p_40 then \"51-60%\"\r\n                  else if r.rowId >= p_30 then \"61-70%\"\r\n                  else if r.rowId >= p_20 then \"71-80%\"\r\n                  else if r.rowId >= p_10 then \"81-90%\"\r\n                  else \"Top 10%\"\r\n  }))\r\n  else\r\n    sorted_users\r\n  |> map(fn: (r) => ({\r\n      cost: r._value,\r\n      rowId: r.rowId,\r\n      percentile_user: if r.rowId >= p_90 then \"0-10%\"\r\n                  else if r.rowId >= p_80 then \"11-20%\"\r\n                  else if r.rowId >= p_70 then \"21-30%\"\r\n                  else if r.rowId >= p_60 then \"31-40%\"\r\n                  else if r.rowId >= p_50 then \"41-50%\"\r\n                  else if r.rowId >= p_40 then \"51-60%\"\r\n                  else if r.rowId >= p_30 then \"61-70%\"\r\n                  else if r.rowId >= p_20 then \"71-80%\"\r\n                  else if r.rowId >= p_10 then \"81-90%\"\r\n                  else if r.rowId >= p_01 then \"91-99%\"\r\n                  else \"Top 1%\"\r\n  }))\r\n// Define the bucket and call the function\r\ntopUsers = \"${Show_Top1_percent}\" // Replace with your actual bucket variable\r\npercentiles = determinePercentiles(sorted_users: sorted_users, topUsers: topUsers)\r\n// Aggregate total cost per percentile\r\npercentile_data = percentiles\r\n  |> group(columns: [\"percentile_user\"])\r\n  |> sum(column: \"cost\")\r\n  |> map(fn: (r) => ({r with join_key: \"cross_join\"})) // Dummy key for joining\r\n  |> group()\r\n\r\n// Compute total cost across all users\r\ntotal_cost_data = percentiles\r\n  |> sum(column: \"cost\")\r\n  |> map(fn: (r) => ({total_cost: r.cost, join_key: \"cross_join\"})) // Dummy key for joining\r\n\r\n// Join total and percentile cost data\r\ncross_joined_data = join(\r\n  tables: {percentile: percentile_data, total: total_cost_data},\r\n  on: [\"join_key\"]\r\n)\r\n|> map(fn: (r) => ({\r\n      percent_of_cost: r.cost / r.total_cost * 100.0,\r\n              cost:r.cost,\r\n        Percentile_user: r.percentile_user,\r\n      sort: if r.percentile_user == \"0-10%\" then 0\r\n             else if r.percentile_user == \"11-20%\" then 1\r\n             else if r.percentile_user == \"21-30%\" then 2\r\n             else if r.percentile_user == \"31-40%\" then 3\r\n             else if r.percentile_user == \"41-50%\" then 4\r\n             else if r.percentile_user == \"51-60%\" then 5\r\n             else if r.percentile_user == \"61-70%\" then 6\r\n             else if r.percentile_user == \"71-80%\" then 7\r\n             else if r.percentile_user == \"81-90%\" then 8\r\n             else if r.percentile_user == \"91-99%\" then 9\r\n             else if r.percentile_user == \"91-99%\" then 10\r\n             else 11\r\n  }))\r\n\r\n// Return sorted output\r\ncross_joined_data\r\n  |> group()\r\n   |> rename(columns: {\"percent_of_cost\": \"Percent of Cost\", \"cost\": \"Cost($)\"})\r\n  |> sort(columns: [\"sort\"], desc: true)\r\n",
+          "refId": "A"
+        }
+      ],
+      "title": "Cost share by deciles of Users in chat",
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "sort": true
+            },
+            "includeByName": {},
+            "indexByName": {
+              "Cost($)": 2,
+              "Percent of Cost": 1,
+              "Percentile_user": 0
+            },
+            "renameByName": {
+              "Percent of Cost": "Cost(%)",
+              "Percentile_user": "Percentile"
+            }
+          }
+        }
+      ],
+      "type": "table"
+    },
+    {
+      "datasource": {
+        "type": "influxdb",
+        "uid": "${datasource}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "filterable": true,
+            "inspect": false
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Cost ($)"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "currencyUSD"
+              },
+              {
+                "id": "custom.width",
+                "value": 115
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Most used model"
+            },
+            "properties": [
+              {
+                "id": "custom.align",
+                "value": "right"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Title"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 298
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Request count"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 136
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 17,
+        "w": 13,
+        "x": 11,
+        "y": 8
+      },
+      "id": 54,
+      "options": {
+        "cellHeight": "sm",
+        "footer": {
+          "countRows": false,
+          "enablePagination": true,
+          "fields": "",
+          "reducer": [
+            "sum"
+          ],
+          "show": true
+        },
+        "showHeader": true,
+        "sortBy": [
+          {
+            "desc": true,
+            "displayName": "Request count"
+          }
+        ]
+      },
+      "pluginVersion": "10.4.0",
+      "targets": [
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "${datasource}"
+          },
+          "query": "import \"influxdata/influxdb/schema\"\r\nimport \"experimental\"\r\nimport \"array\"\r\n\r\ngetOrDefault = (f, d) => if exists f then f else d\r\n\r\n// Aggregate request counts per group\r\ndata_request = from(bucket: \"default_agg_topic_2\")\r\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\r\n      |> filter(fn: (r) => (r._field == \"prompt_tokens\" or r._field == \"completion_tokens\" or r._field == \"topic_count\" or r._field == \"price\" ) )\r\n         |> filter(fn: (r) => exists r.title)\r\n         //|> filter(fn: (r) => (r.title != \"undefined\"))\r\n          |> filter(fn: (r) => (r.topic != \"\"))\r\n    |> schema.fieldsAsCols()\r\n |> group(columns: [\"title\",\"model\"])\r\n    |> reduce(\r\n        fn: (r, accumulator) => ({\r\n          topic_count: getOrDefault(f: r.topic_count, d: 0) + accumulator.topic_count,\r\n          prompt_tokens: getOrDefault(f: r.prompt_tokens, d: 0) + accumulator.prompt_tokens,\r\n          completion_tokens: getOrDefault(f: r.completion_tokens, d: 0) + accumulator.completion_tokens,\r\n          price: getOrDefault(f: r.price, d: 0.0) + accumulator.price\r\n        }),\r\n        identity: {topic_count: 0, prompt_tokens: 0, completion_tokens: 0, price:0.0}\r\n    )\r\n\r\n|> filter(fn: (r) => (r.model != \"\"))\r\n\r\n\r\n// Determine the top model per title\r\ntop_models = data_request\r\n  //|> filter(fn: (r) => (r.model != \"\"))\r\n  |> group(columns: [\"title\"])\r\n  |> top(n: 1, columns: [\"topic_count\"])\r\n  |> keep(columns: [\"title\", \"model\"])\r\n  |> map(fn: (r) => ({\r\n      title: r.title,\r\n      model_top: r.model\r\n  }))\r\n\r\n// Merge top model information into the main dataset\r\nresult = join(\r\n  tables: {data: data_request, top: top_models},\r\n  on: [\"title\"]\r\n)\r\n|> group(columns: [\"title\",\"model_top\"])\r\n    |> reduce(\r\n        fn: (r, accumulator) => ({\r\n          topic_count: getOrDefault(f: r.topic_count, d: 0) + accumulator.topic_count,\r\n          prompt_tokens: getOrDefault(f: r.prompt_tokens, d: 0) + accumulator.prompt_tokens,\r\n          completion_tokens: getOrDefault(f: r.completion_tokens, d: 0) + accumulator.completion_tokens,\r\n          price: getOrDefault(f: r.price, d: 0.0) + accumulator.price\r\n        }),\r\n        identity: {topic_count: 0, prompt_tokens: 0, completion_tokens: 0, price:0.0}\r\n    )\r\n\r\n\r\n\r\nresult\r\n |> group()\r\n\r\n",
+          "refId": "A"
+        }
+      ],
+      "title": "Chat Usage by Title",
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {},
+            "includeByName": {},
+            "indexByName": {
+              "completion_tokens": 2,
+              "price": 4,
+              "prompt_tokens": 3,
+              "title": 0,
+              "top_model": 5,
+              "topic_count": 1
+            },
+            "renameByName": {
+              "completion_tokens": "Completion tokens",
+              "model_top": "Most used model",
+              "price": "Cost ($)",
+              "prompt_tokens": "Prompt tokens",
+              "title": "Title",
+              "top_model": "Top model based on request count",
+              "topic_count": "Request count"
+            }
+          }
+        }
+      ],
+      "type": "table"
+    },
+    {
+      "datasource": {
+        "type": "influxdb",
+        "uid": "${datasource}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "fillOpacity": 80,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "lineWidth": 1,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
+          "unit": "percent"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 14,
+        "w": 6,
+        "x": 0,
+        "y": 21
+      },
+      "id": 50,
+      "options": {
+        "barRadius": 0,
+        "barWidth": 0.97,
+        "fullHighlight": false,
+        "groupWidth": 0.7,
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "orientation": "horizontal",
+        "showValue": "never",
+        "stacking": "none",
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        },
+        "xTickLabelRotation": 0,
+        "xTickLabelSpacing": 0
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "${datasource}"
+          },
+          "query": "import \"influxdata/influxdb/schema\"\r\nimport \"experimental\"\r\nimport \"math\"\r\n\r\ngetOrDefault = (f, d) => if exists f then f else d\r\n\r\n// Aggregate request_count per user\r\ndata_request = from(bucket: \"default_agg_kpi\")\r\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\r\n  |> filter(fn: (r) => r._field == \"request_count\" and r.user_hash != \"undefined\")\r\n    |> filter(fn: (r) => r._field == \"request_count\"  and r.user_hash != \"undefined\")\r\n  |> group(columns: [\"user_hash\"])\r\n  |> sum(column: \"_value\")\r\n  |> group()\r\n\r\n// Sort users by total request_count in descending order and assign row IDs\r\nsorted_users = data_request\r\n  |> sort(columns: [\"_value\"], desc: true)\r\n  |> map(fn: (r) => ({r with rowId: 1}))\r\n  |> cumulativeSum(columns: [\"rowId\"])\r\n\r\n// Compute min and max rowId values\r\nrowId_max = sorted_users |> max(column: \"rowId\") |> findRecord(fn: (key) => true, idx: 0)\r\nrowId_min = sorted_users |> min(column: \"rowId\") |> findRecord(fn: (key) => true, idx: 0)\r\n\r\n// Compute 10% percentile boundaries using min and max rowId\r\nrowId_range = float(v: rowId_max.rowId - rowId_min.rowId)  \r\n\r\np_90 = int(v: math.ceil(x: float(v: rowId_min.rowId) + (rowId_range * 0.9)))\r\np_80 = int(v: math.ceil(x: float(v: rowId_min.rowId) + (rowId_range * 0.8)))\r\np_70 = int(v: math.ceil(x: float(v: rowId_min.rowId) + (rowId_range * 0.7)))\r\np_60 = int(v: math.ceil(x: float(v: rowId_min.rowId) + (rowId_range * 0.6)))\r\np_50 = int(v: math.ceil(x: float(v: rowId_min.rowId) + (rowId_range * 0.5)))\r\np_40 = int(v: math.ceil(x: float(v: rowId_min.rowId) + (rowId_range * 0.4)))\r\np_30 = int(v: math.ceil(x: float(v: rowId_min.rowId) + (rowId_range * 0.3)))\r\np_20 = int(v: math.ceil(x: float(v: rowId_min.rowId) + (rowId_range * 0.2)))\r\np_10 = int(v: math.ceil(x: float(v: rowId_min.rowId) + (rowId_range * 0.1)))\r\np_01 = int(v: math.ceil(x: float(v: rowId_min.rowId) + (rowId_range * 0.01)))\r\n\r\n// Map percentiles to each user based on request count thresholds\r\ndeterminePercentiles = (sorted_users, topUsers) => \r\n  if topUsers == \"No\" then\r\n  sorted_users\r\n  |> map(fn: (r) => ({\r\n      request_count: r._value,\r\n      rowId: r.rowId,\r\n      percentile_user: if r.rowId >= p_90 then \"0-10%\"\r\n                  else if r.rowId >= p_80 then \"11-20%\"\r\n                  else if r.rowId >= p_70 then \"21-30%\"\r\n                  else if r.rowId >= p_60 then \"31-40%\"\r\n                  else if r.rowId >= p_50 then \"41-50%\"\r\n                  else if r.rowId >= p_40 then \"51-60%\"\r\n                  else if r.rowId >= p_30 then \"61-70%\"\r\n                  else if r.rowId >= p_20 then \"71-80%\"\r\n                  else if r.rowId >= p_10 then \"81-90%\"\r\n                  else \"Top 10%\"\r\n  }))\r\n  else\r\n    sorted_users\r\n  |> map(fn: (r) => ({\r\n      request_count: r._value,\r\n      rowId: r.rowId,\r\n      percentile_user: if r.rowId >= p_90 then \"0-10%\"\r\n                  else if r.rowId >= p_80 then \"11-20%\"\r\n                  else if r.rowId >= p_70 then \"21-30%\"\r\n                  else if r.rowId >= p_60 then \"31-40%\"\r\n                  else if r.rowId >= p_50 then \"41-50%\"\r\n                  else if r.rowId >= p_40 then \"51-60%\"\r\n                  else if r.rowId >= p_30 then \"61-70%\"\r\n                  else if r.rowId >= p_20 then \"71-80%\"\r\n                  else if r.rowId >= p_10 then \"81-90%\"\r\n                  else if r.rowId >= p_01 then \"91-99%\"\r\n                  else \"Top 1%\"\r\n  }))\r\n// Define the bucket and call the function\r\ntopUsers = \"${Show_Top1_percent}\" // Replace with your actual bucket variable\r\npercentiles = determinePercentiles(sorted_users: sorted_users, topUsers: topUsers)\r\n// Aggregate total request_count per percentile\r\npercentile_data = percentiles\r\n  |> group(columns: [\"percentile_user\"])\r\n  |> sum(column: \"request_count\")\r\n  |> map(fn: (r) => ({r with join_key: \"cross_join\"})) // Dummy key for joining\r\n  |> group()\r\n\r\n// Compute total request_count across all users\r\ntotal_request_count_data = percentiles\r\n  |> sum(column: \"request_count\")\r\n  |> map(fn: (r) => ({total_request_count: r.request_count, join_key: \"cross_join\"})) // Dummy key for joining\r\n\r\n// Join total and percentile request_count data\r\ncross_joined_data = join(\r\n  tables: {percentile: percentile_data, total: total_request_count_data},\r\n  on: [\"join_key\"]\r\n)\r\n|> map(fn: (r) => ({\r\n      percent_of_request_count:float(v: r.request_count) / float(v: r.total_request_count)*100.0,  \r\n      percentile_user: r.percentile_user,\r\n      sort: if r.percentile_user == \"0-10%\" then 0\r\n             else if r.percentile_user == \"11-20%\" then 1\r\n             else if r.percentile_user == \"21-30%\" then 2\r\n             else if r.percentile_user == \"31-40%\" then 3\r\n             else if r.percentile_user == \"41-50%\" then 4\r\n             else if r.percentile_user == \"51-60%\" then 5\r\n             else if r.percentile_user == \"61-70%\" then 6\r\n             else if r.percentile_user == \"71-80%\" then 7\r\n             else if r.percentile_user == \"81-90%\" then 8\r\n             else if r.percentile_user == \"91-99%\" then 9\r\n             else if r.percentile_user == \"91-99%\" then 10\r\n             else 11\r\n  }))\r\n\r\n// Return sorted output\r\ncross_joined_data\r\n  |> group()\r\n  |> sort(columns: [\"sort\"], desc: true)\r\n|> drop(columns:[\"sort\"] )",
+          "refId": "A"
+        }
+      ],
+      "title": "Reqests share by deciles of Users in chat",
+      "type": "barchart"
+    },
+    {
+      "datasource": {
+        "type": "influxdb",
+        "uid": "${datasource}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "inspect": false
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Percentile_user"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 121
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Percent of request"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "percent"
+              },
+              {
+                "id": "decimals",
+                "value": 2
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Request(%)"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 104
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 14,
+        "w": 5,
+        "x": 6,
+        "y": 21
+      },
+      "id": 39,
+      "options": {
+        "cellHeight": "sm",
+        "footer": {
+          "countRows": false,
+          "fields": "",
+          "reducer": [
+            "sum"
+          ],
+          "show": true
+        },
+        "showHeader": true,
+        "sortBy": []
+      },
+      "pluginVersion": "10.4.0",
+      "targets": [
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "${datasource}"
+          },
+          "query": "import \"influxdata/influxdb/schema\"\r\nimport \"experimental\"\r\nimport \"math\"\r\n\r\ngetOrDefault = (f, d) => if exists f then f else d\r\n\r\n// Aggregate request_count per user\r\ndata_request = from(bucket: \"default_agg_kpi\")\r\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\r\n  |> filter(fn: (r) => r._field == \"request_count\" and r.user_hash != \"undefined\")\r\n  |> group(columns: [\"user_hash\"])\r\n  |> sum(column: \"_value\")\r\n  |> group()\r\n\r\n// Sort users by total request_count in descending order and assign row IDs\r\nsorted_users = data_request\r\n  |> sort(columns: [\"_value\"], desc: true)\r\n  |> map(fn: (r) => ({r with rowId: 1}))\r\n  |> cumulativeSum(columns: [\"rowId\"])\r\n\r\n// Compute min and max rowId values\r\nrowId_max = sorted_users |> max(column: \"rowId\") |> findRecord(fn: (key) => true, idx: 0)\r\nrowId_min = sorted_users |> min(column: \"rowId\") |> findRecord(fn: (key) => true, idx: 0)\r\n\r\n// Compute 10% percentile boundaries using min and max rowId\r\nrowId_range = float(v: rowId_max.rowId - rowId_min.rowId)  \r\n\r\np_90 = int(v: math.ceil(x: float(v: rowId_min.rowId) + (rowId_range * 0.9)))\r\np_80 = int(v: math.ceil(x: float(v: rowId_min.rowId) + (rowId_range * 0.8)))\r\np_70 = int(v: math.ceil(x: float(v: rowId_min.rowId) + (rowId_range * 0.7)))\r\np_60 = int(v: math.ceil(x: float(v: rowId_min.rowId) + (rowId_range * 0.6)))\r\np_50 = int(v: math.ceil(x: float(v: rowId_min.rowId) + (rowId_range * 0.5)))\r\np_40 = int(v: math.ceil(x: float(v: rowId_min.rowId) + (rowId_range * 0.4)))\r\np_30 = int(v: math.ceil(x: float(v: rowId_min.rowId) + (rowId_range * 0.3)))\r\np_20 = int(v: math.ceil(x: float(v: rowId_min.rowId) + (rowId_range * 0.2)))\r\np_10 = int(v: math.ceil(x: float(v: rowId_min.rowId) + (rowId_range * 0.1)))\r\np_01 = int(v: math.ceil(x: float(v: rowId_min.rowId) + (rowId_range * 0.01)))\r\n\r\n// Map percentiles to each user based on request count thresholds\r\ndeterminePercentiles = (sorted_users, topUsers) => \r\n  if topUsers == \"No\" then\r\n  sorted_users\r\n  |> map(fn: (r) => ({\r\n      request_count: r._value,\r\n      rowId: r.rowId,\r\n      percentile_user: if r.rowId >= p_90 then \"0-10%\"\r\n                  else if r.rowId >= p_80 then \"11-20%\"\r\n                  else if r.rowId >= p_70 then \"21-30%\"\r\n                  else if r.rowId >= p_60 then \"31-40%\"\r\n                  else if r.rowId >= p_50 then \"41-50%\"\r\n                  else if r.rowId >= p_40 then \"51-60%\"\r\n                  else if r.rowId >= p_30 then \"61-70%\"\r\n                  else if r.rowId >= p_20 then \"71-80%\"\r\n                  else if r.rowId >= p_10 then \"81-90%\"\r\n                  else \"Top 10%\"\r\n  }))\r\n  else\r\n    sorted_users\r\n  |> map(fn: (r) => ({\r\n      request_count: r._value,\r\n      rowId: r.rowId,\r\n      percentile_user: if r.rowId >= p_90 then \"0-10%\"\r\n                  else if r.rowId >= p_80 then \"11-20%\"\r\n                  else if r.rowId >= p_70 then \"21-30%\"\r\n                  else if r.rowId >= p_60 then \"31-40%\"\r\n                  else if r.rowId >= p_50 then \"41-50%\"\r\n                  else if r.rowId >= p_40 then \"51-60%\"\r\n                  else if r.rowId >= p_30 then \"61-70%\"\r\n                  else if r.rowId >= p_20 then \"71-80%\"\r\n                  else if r.rowId >= p_10 then \"81-90%\"\r\n                  else if r.rowId >= p_01 then \"91-99%\"\r\n                  else \"Top 1%\"\r\n  }))\r\n// Define the bucket and call the function\r\ntopUsers = \"${Show_Top1_percent}\" // Replace with your actual bucket variable\r\npercentiles = determinePercentiles(sorted_users: sorted_users, topUsers: topUsers)\r\n// Aggregate total request_count per percentile\r\npercentile_data = percentiles\r\n  |> group(columns: [\"percentile_user\"])\r\n  |> sum(column: \"request_count\")\r\n  |> map(fn: (r) => ({r with join_key: \"cross_join\"})) // Dummy key for joining\r\n  |> group()\r\n\r\n// Compute total request_count across all users\r\ntotal_request_count_data = percentiles\r\n  |> sum(column: \"request_count\")\r\n  |> map(fn: (r) => ({total_request_count: r.request_count, join_key: \"cross_join\"})) // Dummy key for joining\r\n\r\n// Join total and percentile request_count data\r\ncross_joined_data = join(\r\n  tables: {percentile: percentile_data, total: total_request_count_data},\r\n  on: [\"join_key\"]\r\n)\r\n|> map(fn: (r) => ({\r\n  request_count:r.request_count,\r\n      percent_of_request:float(v: r.request_count) / float(v: r.total_request_count)*100.0,  \r\n      Percentile_user: r.percentile_user,\r\n      sort: if r.percentile_user == \"0-10%\" then 0\r\n             else if r.percentile_user == \"11-20%\" then 1\r\n             else if r.percentile_user == \"21-30%\" then 2\r\n             else if r.percentile_user == \"31-40%\" then 3\r\n             else if r.percentile_user == \"41-50%\" then 4\r\n             else if r.percentile_user == \"51-60%\" then 5\r\n             else if r.percentile_user == \"61-70%\" then 6\r\n             else if r.percentile_user == \"71-80%\" then 7\r\n             else if r.percentile_user == \"81-90%\" then 8\r\n             else if r.percentile_user == \"91-99%\" then 9\r\n             else if r.percentile_user == \"91-99%\" then 10\r\n             else 11\r\n  }))\r\n\r\n// Return sorted output\r\ncross_joined_data\r\n  |> group()\r\n   |> rename(columns: {\"percent_of_request\": \"Percent of request\", \"request_count\": \"Request count\"})\r\n  |> sort(columns: [\"sort\"], desc: true)\r\n|> drop(columns:[\"sort\"] )",
+          "refId": "A"
+        }
+      ],
+      "title": "Reqests share by deciles of Users in chat",
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {},
+            "includeByName": {},
+            "indexByName": {},
+            "renameByName": {
+              "Percent of request": "Request(%)",
+              "Percentile_user": "Percentile"
+            }
+          }
+        }
+      ],
+      "type": "table"
+    },
+    {
+      "datasource": {
+        "type": "influxdb",
+        "uid": "${datasource}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "filterable": true,
+            "inspect": false
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Cost ($)"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "currencyUSD"
+              },
+              {
+                "id": "custom.width",
+                "value": 120
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Model"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 240
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Request count"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 173
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Prompt tokens"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 170
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Deployment"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 236
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 18,
+        "w": 13,
+        "x": 11,
+        "y": 25
+      },
+      "id": 48,
+      "options": {
+        "cellHeight": "sm",
+        "footer": {
+          "countRows": false,
+          "enablePagination": true,
+          "fields": "",
+          "reducer": [
+            "sum"
+          ],
+          "show": true
+        },
+        "showHeader": true,
+        "sortBy": [
+          {
+            "desc": true,
+            "displayName": "Request count"
+          }
+        ]
+      },
+      "pluginVersion": "10.4.0",
+      "targets": [
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "${datasource}"
+          },
+          "query": "import \"influxdata/influxdb/schema\"\r\nimport \"experimental\"\r\nimport \"array\"\r\n\r\ngetOrDefault = (f, d) => if exists f then f else d\r\n\r\n// Aggregate request counts per group\r\ndata_request = from(bucket: \"default_agg_stats\")\r\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\r\n      |> filter(fn: (r) => (r._field == \"prompt_tokens\" or r._field == \"request_count\" or r._field == \"price\" ))\r\n    |> filter(fn: (r) => not exists r.project_id)\r\n    |> schema.fieldsAsCols()\r\n    |> group(columns: [\"deployment\", \"model\"])\r\n    |> reduce(\r\n        fn: (r, accumulator) => ({\r\n          request_count: getOrDefault(f: r.request_count, d: 0) + accumulator.request_count,\r\n          prompt_tokens: getOrDefault(f: r.prompt_tokens, d: 0) + accumulator.prompt_tokens,\r\n          price: getOrDefault(f: r.price, d: 0.0) + accumulator.price\r\n        }),\r\n        identity: {request_count: 0, prompt_tokens: 0, price:0.0}\r\n    )\r\n\r\n    data_request\r\n    |> group()\r\n    |> sort(columns: [\"request_count\"], desc: true)",
+          "refId": "A"
+        }
+      ],
+      "title": "Chat Usage by Deployment/Model",
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {},
+            "includeByName": {},
+            "indexByName": {
+              "deployment": 1,
+              "model": 0,
+              "parent_deployment": 2,
+              "price": 5,
+              "prompt_tokens": 4,
+              "request_count": 3
+            },
+            "renameByName": {
+              "deployment": "Deployment",
+              "model": "Model",
+              "parent_deployment": "Application",
+              "price": "Cost ($)",
+              "project_id": "",
+              "prompt_tokens": "Prompt tokens",
+              "request_count": "Request count"
+            }
+          }
+        }
+      ],
+      "type": "table"
+    },
+    {
+      "datasource": {
+        "type": "influxdb",
+        "uid": "${datasource}"
+      },
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "fixedColor": "blue",
+            "mode": "fixed"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "fillOpacity": 80,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "lineWidth": 1,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green"
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
+          "unit": "none"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 11,
+        "x": 0,
+        "y": 35
+      },
+      "id": 37,
+      "options": {
+        "barRadius": 0,
+        "barWidth": 0.97,
+        "fullHighlight": false,
+        "groupWidth": 0.7,
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "orientation": "auto",
+        "showValue": "auto",
+        "stacking": "none",
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        },
+        "xTickLabelRotation": 0,
+        "xTickLabelSpacing": 0
+      },
+      "pluginVersion": "10.4.0",
+      "targets": [
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "${datasource}"
+          },
+          "query": "import \"influxdata/influxdb/schema\"\r\nimport \"experimental\"\r\nimport \"array\"\r\n\r\ngetOrDefault = (f, d) => if exists f then f else d\r\n\r\ndata_request = from(bucket: \"default_agg_topic\")\r\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\r\n  |> filter(fn: (r) => r.user_type != \"project\" and \r\n   ( r._field == \"class_1\" or r._field == \"class_2\" or r._field == \"class_3\" or r._field == \"class_4\" or r._field == \"class_5\" or r._field == \"class_6\")\r\n  )\r\n  |> map(fn: (r) => ({\r\n      _value: r._value,\r\n      classification: if r._field == \"class_1\" then \"> 50000\"\r\n                  else if r._field == \"class_2\" then \"10001 - 50000\"\r\n                  else if r._field == \"class_3\" then \"5001 - 10000\"\r\n                  else if r._field == \"class_4\" then \"1001 - 5000\"\r\n                  else if r._field == \"class_5\" then \"101 - 1000\"\r\n                  else \"< 101\",\r\n      sorting: if r._field == \"class_1\" then \"1\"\r\n                  else if r._field == \"class_2\" then \"2\"\r\n                  else if r._field == \"class_3\" then \"3\"\r\n                  else if r._field == \"class_4\" then \"4\"\r\n                  else if r._field == \"class_5\" then \"5\"\r\n                  else \"6\"\r\n  }))\r\n |>group(columns: [\"classification\",\"sorting\"])\r\n   |>sum(column: \"_value\")\r\n   |> map(fn: (r) => ({join_col: \"key\",\r\n                        _value: r._value,\r\n                        sorting: r.sorting,\r\n                        classification: r.classification\r\n\r\n   }))\r\n   |>group()\r\n\r\n\r\nsum_tokens = data_request\r\n     |>sum(column: \"_value\")\r\n     |> map(fn: (r) => ({join_col: \"key\",\r\n                          total_tokens: r._value\r\n     }))\r\n\r\ncross_joined_data = join(\r\n  tables: {tokens: data_request, total: sum_tokens},\r\n on: [\"join_col\"]\r\n)\r\ncross_joined_data\r\n  \r\n     |> map(fn: (r) => ({\r\n   percent_of_prompt_tokens: float(v: r._value)/float(v: r.total_tokens)*100.0, \r\n    classification: r.classification,\r\n     sorting: r.sorting\r\n     \r\n     })) \r\n     |> sort(columns: [\"sorting\"], desc: true)",
+          "refId": "A"
+        }
+      ],
+      "title": "Distribution of messages length in tokens",
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {},
+            "includeByName": {},
+            "indexByName": {},
+            "renameByName": {
+              "percent_of_prompt_tokens": "Percent of prompt tokens"
+            }
+          }
+        }
+      ],
+      "type": "barchart"
+    },
+    {
+      "datasource": {
+        "type": "influxdb",
+        "uid": "${datasource}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "filterable": true,
+            "inspect": false
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green"
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Topic"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 452
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Cost ($)"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "currencyUSD"
+              },
+              {
+                "id": "custom.width",
+                "value": 93
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Request count"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 142
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Completion tokens"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 180
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Prompt tokens"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 136
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 13,
+        "w": 13,
+        "x": 11,
+        "y": 43
+      },
+      "id": 53,
+      "options": {
+        "cellHeight": "sm",
+        "footer": {
+          "countRows": false,
+          "enablePagination": true,
+          "fields": "",
+          "reducer": [
+            "sum"
+          ],
+          "show": true
+        },
+        "showHeader": true,
+        "sortBy": [
+          {
+            "desc": true,
+            "displayName": "Request count"
+          }
+        ]
+      },
+      "pluginVersion": "10.4.0",
+      "targets": [
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "${datasource}"
+          },
+          "query": "import \"influxdata/influxdb/schema\"\r\nimport \"experimental\"\r\nimport \"array\"\r\n\r\ngetOrDefault = (f, d) => if exists f then f else d\r\n\r\n// Aggregate request counts per group\r\ndata_request = from(bucket: \"default_agg_topic_2\")\r\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\r\n  |> filter(fn: (r) => exists r.topic)\r\n      |> filter(fn: (r) => (r._field == \"prompt_tokens\" or r._field == \"completion_tokens\" or r._field == \"topic_count\" or r._field == \"price\" ) )\r\n        \r\n    |> schema.fieldsAsCols()\r\n    |> group(columns:[\"topic\"])\r\n    |> reduce(\r\n        fn: (r, accumulator) => ({\r\n          topic_count: getOrDefault(f: r.topic_count, d: 0) + accumulator.topic_count,\r\n          prompt_tokens: getOrDefault(f: r.prompt_tokens, d: 0) + accumulator.prompt_tokens,\r\n          completion_tokens: getOrDefault(f: r.completion_tokens, d: 0) + accumulator.completion_tokens,\r\n          price: getOrDefault(f: r.price, d: 0.0) + accumulator.price\r\n        }),\r\n     \r\n        identity: {topic_count: 0, prompt_tokens: 0, completion_tokens: 0, price: 0.0}\r\n    )\r\n    data_request\r\n|> group()",
+          "refId": "A"
+        }
+      ],
+      "title": "Chat Usage by Topic",
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {},
+            "includeByName": {},
+            "indexByName": {
+              "completion_tokens": 2,
+              "price": 4,
+              "prompt_tokens": 3,
+              "topic": 0,
+              "topic_count": 1
+            },
+            "renameByName": {
+              "completion_tokens": "Completion tokens",
+              "price": "Cost ($)",
+              "prompt_tokens": "Prompt tokens",
+              "topic": "Topic",
+              "topic_count": "Request count"
+            }
+          }
+        }
+      ],
+      "type": "table"
+    },
+    {
+      "datasource": {
+        "type": "influxdb",
+        "uid": "${datasource}"
+      },
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "fixedColor": "blue",
+            "mode": "fixed"
+          },
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "inspect": false
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green"
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
+          "unit": "none"
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Percent of messages"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "percent"
+              },
+              {
+                "id": "decimals",
+                "value": 2
+              },
+              {
+                "id": "custom.width",
+                "value": 203
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "classification"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 208
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Number of messages"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 383
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 12,
+        "w": 11,
+        "x": 0,
+        "y": 44
+      },
+      "id": 38,
+      "options": {
+        "cellHeight": "sm",
+        "footer": {
+          "countRows": false,
+          "fields": "",
+          "reducer": [
+            "sum"
+          ],
+          "show": true
+        },
+        "showHeader": true,
+        "sortBy": []
+      },
+      "pluginVersion": "10.4.0",
+      "targets": [
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "${datasource}"
+          },
+          "query": "import \"influxdata/influxdb/schema\"\r\nimport \"experimental\"\r\nimport \"array\"\r\n\r\ngetOrDefault = (f, d) => if exists f then f else d\r\n\r\n// Aggregate request counts per group\r\ndata_request = from(bucket: \"default_agg_topic\")\r\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\r\n  |> filter(fn: (r) =>  r.user_type == \"user\" and \r\n  (r._field == \"class_1\" or r._field == \"class_2\" or r._field == \"class_3\" or r._field == \"class_4\" or r._field == \"class_5\" or r._field == \"class_6\")\r\n  )\r\n  |> map(fn: (r) => ({\r\n      _value: r._value,\r\n      classification: if r._field == \"class_1\" then \"> 50000\"\r\n                  else if r._field == \"class_2\" then \"10001 - 50000\"\r\n                  else if r._field == \"class_3\" then \"5001 - 10000\"\r\n                  else if r._field == \"class_4\" then \"1001 - 5000\"\r\n                  else if r._field == \"class_5\" then \"101 - 1000\"\r\n                  else \"< 101\",\r\n      sorting: if r._field == \"class_1\" then \"1\"\r\n                  else if r._field == \"class_2\" then \"2\"\r\n                  else if r._field == \"class_3\" then \"3\"\r\n                  else if r._field == \"class_4\" then \"4\"\r\n                  else if r._field == \"class_5\" then \"5\"\r\n                  else \"6\"\r\n  }))\r\n   |>group(columns: [\"classification\",\"sorting\"])\r\n   |>sum(column: \"_value\")\r\n   |> map(fn: (r) => ({join_col: \"key\",\r\n                        prompt_tokens: r._value,\r\n                        sorting: r.sorting,\r\n                        classification: r.classification\r\n\r\n   }))\r\n   |>group()\r\n\r\n\r\nsum_tokens = data_request\r\n     |>sum(column: \"prompt_tokens\")\r\n     |> map(fn: (r) => ({join_col: \"key\",\r\n                          total_tokens: r.prompt_tokens\r\n     }))\r\n\r\ncross_joined_data = join(\r\n  tables: {tokens: data_request, total: sum_tokens},\r\n on: [\"join_col\"]\r\n)\r\ncross_joined_data\r\n  \r\n     |> map(fn: (r) => ({\r\n   percent_of_prompt_tokens: float(v: r.prompt_tokens)/float(v: r.total_tokens)*100.0, \r\n    classification: r.classification,\r\n     sorting: r.sorting,\r\n    prompt_tokens: r.prompt_tokens\r\n     \r\n     })) \r\n     |> rename(columns: {\"percent_of_prompt_tokens\": \"Percent of messages\", \"prompt_tokens\": \"Number of messages\"})\r\n     |> sort(columns: [\"sorting\"], desc: true)\r\n      |> drop(columns: [\"sorting\"])",
+          "refId": "A"
+        }
+      ],
+      "title": "Distribution of messages length in tokens",
+      "type": "table"
+    },
+    {
+      "datasource": {
+        "type": "influxdb",
+        "uid": "${datasource}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "filterable": true,
+            "inspect": false
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green"
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Topic"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 300
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Cost ($)"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "currencyUSD"
+              },
+              {
+                "id": "custom.width",
+                "value": 97
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Request count"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 171
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Completion tokens"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 161
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Prompt tokens"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 146
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Request"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 92
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Language"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 112
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 25,
+        "w": 11,
+        "x": 0,
+        "y": 56
+      },
+      "id": 56,
+      "options": {
+        "cellHeight": "sm",
+        "footer": {
+          "countRows": false,
+          "enablePagination": true,
+          "fields": [
+            "request_count",
+            "completion_tokens",
+            "price",
+            "prompt_tokens",
+            "user_count"
+          ],
+          "reducer": [
+            "sum"
+          ],
+          "show": true
+        },
+        "showHeader": true,
+        "sortBy": [
+          {
+            "desc": true,
+            "displayName": "Unique Users"
+          }
+        ]
+      },
+      "pluginVersion": "10.4.0",
+      "targets": [
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "${datasource}"
+          },
+          "query": "import \"influxdata/influxdb/schema\"\r\nimport \"array\"\r\nimport \"experimental\"\r\n\r\n// Function to handle missing values\r\ngetOrDefault = (f, d) => if exists f then f else d\r\n\r\n// Convert language mapping into an array of key-value pairs\r\nlang_map = array.from(rows: [\r\n    {language: \"en\", full_name: \"English\"},\r\n    {language: \"ru\", full_name: \"Russian\"},\r\n    {language: \"uk\", full_name: \"Ukrainian\"},\r\n    {language: \"fr\", full_name: \"French\"},\r\n    {language: \"de\", full_name: \"German\"},\r\n    {language: \"es\", full_name: \"Spanish\"},\r\n    {language: \"it\", full_name: \"Italian\"},\r\n    {language: \"zh\", full_name: \"Chinese\"},\r\n    {language: \"ja\", full_name: \"Japanese\"},\r\n    {language: \"pt\", full_name: \"Portuguese\"},\r\n    {language: \"ar\", full_name: \"Arabic\"},\r\n    {language: \"hi\", full_name: \"Hindi\"},\r\n    {language: \"bn\", full_name: \"Bengali\"},\r\n    {language: \"ko\", full_name: \"Korean\"},\r\n    {language: \"tr\", full_name: \"Turkish\"},\r\n    {language: \"vi\", full_name: \"Vietnamese\"},\r\n    {language: \"th\", full_name: \"Thai\"},\r\n    {language: \"pl\", full_name: \"Polish\"},\r\n    {language: \"nl\", full_name: \"Dutch\"},\r\n    {language: \"he\", full_name: \"Hebrew\"},\r\n    {language: \"id\", full_name: \"Indonesian\"},\r\n    {language: \"sv\", full_name: \"Swedish\"},\r\n    {language: \"no\", full_name: \"Norwegian\"},\r\n    {language: \"da\", full_name: \"Danish\"},\r\n    {language: \"fi\", full_name: \"Finnish\"},\r\n    {language: \"hu\", full_name: \"Hungarian\"},\r\n    {language: \"cs\", full_name: \"Czech\"},\r\n    {language: \"el\", full_name: \"Greek\"},\r\n    {language: \"ro\", full_name: \"Romanian\"},\r\n    {language: \"sk\", full_name: \"Slovak\"},\r\n    {language: \"bg\", full_name: \"Bulgarian\"},\r\n    {language: \"sr\", full_name: \"Serbian\"},\r\n    {language: \"hr\", full_name: \"Croatian\"},\r\n    {language: \"lt\", full_name: \"Lithuanian\"},\r\n    {language: \"lv\", full_name: \"Latvian\"},\r\n    {language: \"et\", full_name: \"Estonian\"},\r\n    {language: \"sl\", full_name: \"Slovenian\"}\r\n\r\n])\r\n\r\n// Aggregate request counts per group\r\ndata_request = from(bucket: \"default_agg_stats\")\r\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\r\n  |> filter(fn: (r) => (r._field == \"prompt_tokens\" or r._field == \"completion_tokens\" or r._field == \"request_count\" or r._field == \"price\" or r._field == \"user_hash\"))\r\n  |> filter(fn: (r) => exists r.language)\r\n  |> schema.fieldsAsCols()\r\n  |> group(columns: [\"language\",\"user_hash\"])\r\n  |> reduce(\r\n      fn: (r, accumulator) => ({\r\n        request_count: getOrDefault(f: r.request_count, d: 0) + accumulator.request_count,\r\n        prompt_tokens: getOrDefault(f: r.prompt_tokens, d: 0) + accumulator.prompt_tokens,\r\n        completion_tokens: getOrDefault(f: r.completion_tokens, d: 0) + accumulator.completion_tokens,\r\n        price: getOrDefault(f: r.price, d: 0.0) + accumulator.price,\r\n        user_count: accumulator.user_count + 1,\r\n      }),\r\n      identity: {request_count: 0, prompt_tokens: 0, completion_tokens: 0, price: 0.0, user_count: 0}\r\n  )\r\n    |> group(columns: [\"language\"])\r\n  |> reduce(\r\n      fn: (r, accumulator) => ({\r\n        request_count: getOrDefault(f: r.request_count, d: 0) + accumulator.request_count,\r\n        prompt_tokens: getOrDefault(f: r.prompt_tokens, d: 0) + accumulator.prompt_tokens,\r\n        completion_tokens: getOrDefault(f: r.completion_tokens, d: 0) + accumulator.completion_tokens,\r\n        price: getOrDefault(f: r.price, d: 0.0) + accumulator.price,\r\n        user_count: accumulator.user_count + 1,\r\n      }),\r\n      identity: {request_count: 0, prompt_tokens: 0, completion_tokens: 0, price: 0.0, user_count: 0}\r\n  )\r\n\r\n// Correctly join language names\r\ndata_with_lang_names = join(\r\n    tables: {data: data_request, mapping: lang_map},\r\n    on: [\"language\"]  // Corrected join condition\r\n)\r\n|> map(fn: (r) => ({\r\n    language: getOrDefault(f: r.full_name, d: r.language), // Replace language code with full name\r\n    request_count: r.request_count,\r\n    prompt_tokens: r.prompt_tokens,\r\n    completion_tokens: r.completion_tokens,\r\n    price: r.price,\r\n    cost_per_request: if r.request_count > 0 then float(v: r.price) / float(v: r.request_count) * 1000.0 else 0.0 , // Safe division\r\n    prompt_per_request: if r.request_count > 0 then float(v: r.prompt_tokens) / float(v: r.request_count) else 0.0, // Safe division\r\n    user_count: r.user_count\r\n}))\r\n\r\n// Sort and display results\r\ndata_with_lang_names\r\n  |> group()\r\n  |> sort(columns: [\"request_count\"], desc: true)\r\n",
+          "refId": "A"
+        }
+      ],
+      "title": "Language Stats table",
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "cost_per_request": true,
+              "price": true,
+              "prompt_per_request": true
+            },
+            "includeByName": {},
+            "indexByName": {
+              "completion_tokens": 4,
+              "cost_per_request": 6,
+              "language": 0,
+              "price": 5,
+              "prompt_per_request": 7,
+              "prompt_tokens": 3,
+              "request_count": 2,
+              "user_count": 1
+            },
+            "renameByName": {
+              "completion_tokens": "Completion tokens",
+              "cost_per_request": "Avg Cost per 1k request",
+              "language": "Language",
+              "price": "Cost ($)",
+              "prompt_per_request": "",
+              "prompt_tokens": "Prompt tokens",
+              "request_count": "Request",
+              "topic": "Topic",
+              "topic_count": "Request count",
+              "user_count": "Unique Users"
+            }
+          }
+        }
+      ],
+      "type": "table"
+    }
+  ],
+  "refresh": "",
+  "schemaVersion": 39,
+  "tags": [
+    "DIAL",
+    "Aggregated data",
+    "ai-dial-analytics-realtime"
+  ],
+  "templating": {
+    "list": [
+      {
+        "current": {
+          "selected": false,
+          "text": "InfluxDB_EPAM",
+          "value": "${datasource}"
+        },
+        "description": "InfluxDB datasource",
+        "hide": 0,
+        "includeAll": false,
+        "label": "Data source",
+        "multi": false,
+        "name": "datasource",
+        "options": [],
+        "query": "influxdb",
+        "queryValue": "",
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "type": "datasource"
+      },
+      {
+        "current": {
+          "selected": false,
+          "text": "default",
+          "value": "default"
+        },
+        "datasource": {
+          "type": "influxdb",
+          "uid": "${datasource}"
+        },
+        "definition": "buckets()",
+        "description": "A InfluxDB bucket name",
+        "hide": 0,
+        "includeAll": false,
+        "multi": false,
+        "name": "INFLUX_BUCKET",
+        "options": [],
+        "query": "buckets()",
+        "refresh": 1,
+        "regex": "/^(default)$/",
+        "skipUrlSync": false,
+        "sort": 0,
+        "type": "query"
+      },
+      {
+        "current": {
+          "selected": false,
+          "text": "No",
+          "value": "No"
+        },
+        "hide": 0,
+        "includeAll": false,
+        "multi": false,
+        "name": "Show_Top1_percent",
+        "options": [
+          {
+            "selected": true,
+            "text": "No",
+            "value": "No"
+          },
+          {
+            "selected": false,
+            "text": "Yes",
+            "value": "Yes"
+          }
+        ],
+        "query": "No, Yes",
+        "queryValue": "",
+        "skipUrlSync": false,
+        "type": "custom"
+      }
+    ]
+  },
+  "time": {
+    "from": "now-7d",
+    "to": "now"
+  },
+  "timepicker": {},
+  "timezone": "utc",
+  "title": "DIAL User insights",
+  "uid": "fe37iatogssdfd",
+  "version": 10,
+  "weekStart": ""
+}

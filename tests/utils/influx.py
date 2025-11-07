@@ -24,6 +24,7 @@ def create_point(
     deployment_price: float = 0.0,
     completion_tokens: int = 189,
     prompt_tokens: int = 22,
+    cached_prompt_tokens: int = 0,
 ) -> Point:
     return (
         Point("analytics")
@@ -47,5 +48,6 @@ def create_point(
         .field("chat_id", chat_id)
         .field("completion_tokens", completion_tokens)
         .field("prompt_tokens", prompt_tokens)
+        .field("cached_prompt_tokens", cached_prompt_tokens)
         .time(timestamp)
     )

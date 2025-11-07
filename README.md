@@ -2,7 +2,7 @@
 
 Realtime analytics server for [AI DIAL](https://epam-rail.com). The service consumes the logs stream from [AI DIAL Core](https://github.com/epam/ai-dial-core), analyzes the conversation and writes the analytics to the [InfluxDB](https://www.influxdata.com/).
 
-Refer to [Documentation](https://github.com/epam/ai-dial/blob/main/docs/tutorials/realtime-analytics.md) to learn how to configure AI DAL Core and other necessary components.
+Refer to [Documentation](https://github.com/epam/ai-dial/blob/main/docs/tutorials/2.devops/1.configuration/2.realtime-analytics-config.md) to learn how to configure AI DAL Core and other necessary components.
 
 ## Usage
 
@@ -36,6 +36,7 @@ The logs for `/chat/completions` and `/embeddings` endpoints are saved to the `a
 |number_request_messages| The total number of messages in the request. For chat completion requests it's number of messages in the chat history. For embedding requests it's number of inputs. |
 |chat_id| The unique identifier for the conversation that this request is part of. |
 |prompt_tokens| The number of tokens in the request. |
+|cached_prompt_tokens| The number of tokens read from the model cache. `cached_prompt_tokens` <= `prompt_tokens`|
 |completion_tokens| The number of tokens in the response. |
 
 The logs for the `/rate` endpoint are saved to the `rate_analytics` measurement:
@@ -71,6 +72,14 @@ You need to specify the connection options to the InfluxDB instance using the en
 
 You can follow the [InfluxDB documentation](https://docs.influxdata.com/influxdb/v2/get-started/) to setup InfluxDB locally and acquire the required configuration parameters.
 
+### Aggregated Dashboards (Optional)
+
+This project includes optional **aggregated Grafana dashboards** that visualize 6-hours and monthly trends.
+
+To enable these dashboards, you must **manually create the required InfluxDB buckets and tasks**. These steps are **not automated** via Helm and must be applied manually.
+
+See [influxdb/README.md](dashboards/customized/influxdb/README.md) for full instructions.
+
 ### Other configuration
 
 Also, following environment valuables can be used to configure the service behavior:
@@ -78,8 +87,8 @@ Also, following environment valuables can be used to configure the service behav
 |Variable|Default|Description|
 |---|---|---|
 |MODEL_RATES| {} | Specifies per-token price rates for models in JSON format|
-|TOPIC_MODEL| ./topic_model | Specifies the name or path for the topic model. If the model is specified by name, it will be downloaded from, the [Huggingface]( https://huggingface.co/).|
-|TOPIC_EMBEDDINGS_MODEL| None | Specifies the name or path for the embeddings model used with the topic model. If the model is specified by name, it will be downloaded from, the [Huggingface]( https://huggingface.co/). If None, the name will be used from the topic model config.|
+|TOPIC_MODEL||Specifies the name or path for the topic model. If the model is specified by name, it will be downloaded from the [Huggingface]( https://huggingface.co/). When unset or set to an empty string, the topic classification feature is disabled.|
+|TOPIC_EMBEDDINGS_MODEL||Specifies the name or path for the embeddings model used with the topic model. If the model is specified by name, it will be downloaded from the [Huggingface]( https://huggingface.co/). When unset or set to an empty string, the name will be used from the topic model config.|
 |LOG_LEVEL|INFO|The server logging level. Use DEBUG for dev purposes and INFO in prod|
 
 Example of the MODEL_RATES configuration:
@@ -115,7 +124,7 @@ Example of the MODEL_RATES configuration:
 
 ## Developer environment
 
-This project uses [Python>=3.11](https://www.python.org/downloads/) and [Poetry>=1.6.1](https://python-poetry.org/) as a dependency manager.
+This project uses [Python>=3.11](https://www.python.org/downloads/) and [Poetry>=2.1.1](https://python-poetry.org/) as a dependency manager.
 Check out Poetry's [documentation on how to install it](https://python-poetry.org/docs/#installation) on your system before proceeding.
 
 To install requirements:

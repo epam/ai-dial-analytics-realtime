@@ -568,52 +568,19 @@ def test_chat_completion_invalid_assembled_response(
     influx: InfluxWriterMock,
     assembled_response: str | None,
 ):
-    client(
-        {
-            "apiType": "DialOpenAI",
-            "chat": {"id": "chat-1"},
-            "project": {"id": "PROJECT-KEY"},
-            "user": {"id": "", "title": ""},
-            "deployment": "gpt-4",
-            "request": {
-                "protocol": "HTTP/1.1",
-                "method": "POST",
-                "uri": "/openai/deployments/gpt-4/chat/completions?api-version=2023-03-15-preview",
-                "time": "2023-08-16T19:42:39.997",
-                "body": json.dumps(
-                    {
-                        "messages": [
-                            {"role": "system", "content": ""},
-                            {"role": "user", "content": "ping"},
-                        ],
-                        "model": "gpt-4",
-                        "max_tokens": 2000,
-                        "stream": True,
-                        "n": 1,
-                        "temperature": 0.0,
-                    }
-                ),
-            },
-            "token_usage": {
-                "completion_tokens": 189,
-                "prompt_tokens": 22,
-                "total_tokens": 211,
-                "deployment_price": 0.001,
-                "price": 0.001,
-            },
-            "assembled_response": assembled_response,
-            "response": {
-                "status": "200",
-                "body": 'data: {"id":"chatcmpl-1","object":"chat.completion.chunk","created":1692214960,"model":"gpt-4","choices":[{"index":0,"delta":{"role":"assistant","content":"pong"},"finish_reason":null}]}\n\ndata: {"id":"chatcmpl-1","object":"chat.completion.chunk","created":1692214960,"model":"gpt-4","choices":[{"index":0,"delta":{},"finish_reason":"stop"}],"usage":{"completion_tokens":189,"prompt_tokens":22,"total_tokens":211}}\n\ndata: [DONE]\n',
-            },
-        }
-    ).raise_for_status()
+    message = create_message(response_assembled=assembled_response)
+    client(message).raise_for_status()
 
-    assert len(influx.points) == 1
-    assert re.match(
-        r'analytics,core_parent_span_id=undefined,core_span_id=undefined,deployment=gpt-4,execution_path=undefined,language=undefined,model=gpt-4,parent_deployment=undefined,project_id=PROJECT-KEY,response_id=(.+?),title=undefined,topic=ping,trace_id=undefined,upstream=undefined cached_prompt_tokens=0i,chat_id="chat-1",completion_tokens=189i,deployment_price=0.001,number_request_messages=2i,price=0.001,prompt_tokens=22i,user_hash="undefined" 1692214959997000000',
-        influx.points[0],
+    point = create_point(
+        # Since there is no response.id, the response_id is auto-generated
+        response_id="pseudo-uuid-1",
+        topic="ping?",
+        prompt_tokens=0,
+        completion_tokens=0,
+        deployment_price=0.0,
+        price=0.0,
     )
+    influx.match_points(point)
 
 
 def test_invalid_data_message(client: Client):

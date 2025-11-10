@@ -57,8 +57,12 @@ def create_message(
     token_usage: dict | None = None,
     request_time: str = DEFAULT_RESPONSE_TIME,
     request_body: dict = create_chat_completion_request(),
-    response_assembled: dict | None = create_chat_completion_response(),
+    response_assembled: str | dict | None = create_chat_completion_response(),
 ):
+    assembled_response = response_assembled
+    if isinstance(response_assembled, dict):
+        assembled_response = json.dumps(response_assembled)
+
     return {
         "apiType": "DialOpenAI",
         "chat": {"id": chat_id},
@@ -73,11 +77,7 @@ def create_message(
             "time": request_time,
             "body": json.dumps(request_body),
         },
-        "assembled_response": (
-            None
-            if response_assembled is None
-            else json.dumps(response_assembled)
-        ),
+        "assembled_response": assembled_response,
         # response.body is never inspected by the analytics for chat completion requests,
         # therefore, no need to make it realistic.
         "response": {"status": "200", "body": "whatever"},

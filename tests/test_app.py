@@ -1,15 +1,14 @@
 import json
 import re
-from typing import Any
 from unittest.mock import patch
 
-import httpx
 import pytest
 from fastapi.testclient import TestClient
 
 import aidial_analytics_realtime.app as app
 from aidial_analytics_realtime.time import parse_time
 from tests.mocks import InfluxWriterMock, TestTopicModel
+from tests.utils.client import Client
 from tests.utils.influx import create_point
 from tests.utils.message import (
     create_chat_completion_request,
@@ -36,20 +35,6 @@ def mock_uuid4():
 @pytest.fixture
 def influx():
     return InfluxWriterMock()
-
-
-class Client:
-    http_client: httpx.Client
-
-    def __init__(self, http_client: httpx.Client) -> None:
-        self.http_client = http_client
-
-    def post_json(self, payload: Any) -> httpx.Response:
-        return self.http_client.post(url="/data", json=payload)
-
-    def __call__(self, *messages: dict) -> httpx.Response:
-        payload = [{"message": json.dumps(m)} for m in messages]
-        return self.post_json(payload)
 
 
 @pytest.fixture

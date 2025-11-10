@@ -1,5 +1,6 @@
 import json
 import re
+from typing import Any
 from unittest.mock import patch
 
 import httpx
@@ -9,7 +10,6 @@ from fastapi.testclient import TestClient
 import aidial_analytics_realtime.app as app
 from aidial_analytics_realtime.time import parse_time
 from tests.mocks import InfluxWriterMock, TestTopicModel
-from tests.utils.data import create_data_request
 from tests.utils.influx import create_point
 from tests.utils.message import (
     create_chat_completion_request,
@@ -34,20 +34,34 @@ def mock_uuid4():
 
 
 @pytest.fixture
-def write_api_mock():
+def influx():
     return InfluxWriterMock()
 
 
+class Client:
+    http_client: httpx.Client
+
+    def __init__(self, http_client: httpx.Client) -> None:
+        self.http_client = http_client
+
+    def post_json(self, payload: Any) -> httpx.Response:
+        return self.http_client.post(url="/data", json=payload)
+
+    def __call__(self, *messages: dict) -> httpx.Response:
+        payload = [{"message": json.dumps(m)} for m in messages]
+        return self.post_json(payload)
+
+
 @pytest.fixture
-def client(write_api_mock):
-    app.app.dependency_overrides[app.InfluxWriterAsync] = lambda: write_api_mock  # type: ignore
+def client(influx) -> Client:
+    app.app.dependency_overrides[app.InfluxWriterAsync] = lambda: influx  # type: ignore
     app.app.dependency_overrides[app.TopicModel] = lambda: TestTopicModel()
-    return TestClient(app.app, raise_server_exceptions=False)
+    return Client(
+        http_client=TestClient(app.app, raise_server_exceptions=False)
+    )
 
 
-def test_chat_completion_plain_text(
-    client: httpx.Client, write_api_mock: InfluxWriterMock
-):
+def test_chat_completion_plain_text(client: Client, influx: InfluxWriterMock):
     message1 = create_message()
     message2 = create_message(
         chat_id="chat-2",
@@ -59,10 +73,7 @@ def test_chat_completion_plain_text(
         ),
     )
 
-    client = TestClient(app.app)
-    response = client.post(
-        "/data", json=create_data_request(message1, message2)
-    )
+    response = client(message1, message2)
     assert response.status_code == 200
 
     point1 = create_point()
@@ -74,12 +85,12 @@ def test_chat_completion_plain_text(
         timestamp=parse_time(message2["request"]["time"]),
     )
 
-    assert str(write_api_mock.influx_points[0]) == str(point1)
-    assert str(write_api_mock.influx_points[1]) == str(point2)
+    assert str(influx.influx_points[0]) == str(point1)
+    assert str(influx.influx_points[1]) == str(point2)
 
 
 def test_chat_completion_plain_text_no_body(
-    client: httpx.Client, write_api_mock: InfluxWriterMock
+    client: Client, influx: InfluxWriterMock
 ):
     message1 = create_message(
         chat_id="chat-1",
@@ -106,11 +117,9 @@ def test_chat_completion_plain_text_no_body(
         response_assembled=None,
     )
 
-    response = client.post(
-        "/data", json=create_data_request(message1, message2)
-    )
+    response = client(message1, message2)
     assert response.status_code == 200
-    assert len(write_api_mock.points) == 2
+    assert len(influx.points) == 2
 
     point1 = create_point(
         chat_id="chat-1",
@@ -133,599 +142,528 @@ def test_chat_completion_plain_text_no_body(
         cached_prompt_tokens=20,
     )
 
-    assert str(write_api_mock.influx_points[0]) == str(point1)
-    assert str(write_api_mock.influx_points[1]) == str(point2)
+    assert str(influx.influx_points[0]) == str(point1)
+    assert str(influx.influx_points[1]) == str(point2)
 
 
-def test_chat_completion_list_content(
-    client: httpx.Client, write_api_mock: InfluxWriterMock
-):
-
-    response = client.post(
-        "/data",
-        json=[
-            {
-                "message": json.dumps(
+def test_chat_completion_list_content(client: Client, influx: InfluxWriterMock):
+    response = client(
+        {
+            "apiType": "DialOpenAI",
+            "chat": {"id": "chat-1"},
+            "project": {"id": "PROJECT-KEY"},
+            "user": {"id": "", "title": ""},
+            "deployment": "gpt-4",
+            "request": {
+                "protocol": "HTTP/1.1",
+                "method": "POST",
+                "uri": "/openai/deployments/gpt-4/chat/completions?api-version=2023-03-15-preview",
+                "time": "2023-08-16T19:42:39.997",
+                "body": json.dumps(
                     {
-                        "apiType": "DialOpenAI",
-                        "chat": {"id": "chat-1"},
-                        "project": {"id": "PROJECT-KEY"},
-                        "user": {"id": "", "title": ""},
-                        "deployment": "gpt-4",
-                        "request": {
-                            "protocol": "HTTP/1.1",
-                            "method": "POST",
-                            "uri": "/openai/deployments/gpt-4/chat/completions?api-version=2023-03-15-preview",
-                            "time": "2023-08-16T19:42:39.997",
-                            "body": json.dumps(
-                                {
-                                    "messages": [
-                                        {
-                                            "role": "system",
-                                            "content": [
-                                                {
-                                                    "type": "text",
-                                                    "text": "act as a helpful assistant",
-                                                }
-                                            ],
-                                        },
-                                        {"role": "user", "content": "ping"},
-                                    ],
-                                    "model": "gpt-4",
-                                    "max_tokens": 2000,
-                                    "stream": True,
-                                    "n": 1,
-                                    "temperature": 0.0,
-                                }
-                            ),
-                        },
-                        "assembled_response": json.dumps(
+                        "messages": [
                             {
-                                "id": "chatcmpl-1",
-                                "object": "chat.completion",
-                                "created": 1692214960,
-                                "model": "gpt-4",
-                                "choices": [
+                                "role": "system",
+                                "content": [
                                     {
-                                        "index": 0,
-                                        "delta": {
-                                            "role": "assistant",
-                                            "content": "pong",
-                                        },
-                                        "finish_reason": "stop",
+                                        "type": "text",
+                                        "text": "act as a helpful assistant",
                                     }
                                 ],
-                                "usage": {
-                                    "completion_tokens": 189,
-                                    "prompt_tokens": 22,
-                                    "total_tokens": 211,
-                                },
-                            }
-                        ),
-                        "response": {
-                            "status": "200",
-                            "body": 'data: {"id":"chatcmpl-1","object":"chat.completion.chunk","created":1692214960,"model":"gpt-4","choices":[{"index":0,"delta":{"role":"assistant","content":"pong"},"finish_reason":null}]}\n\ndata: {"id":"chatcmpl-1","object":"chat.completion.chunk","created":1692214960,"model":"gpt-4","choices":[{"index":0,"delta":{},"finish_reason":"stop"}],"usage":{"completion_tokens":189,"prompt_tokens":22,"total_tokens":211}}\n\ndata: [DONE]\n',
-                        },
+                            },
+                            {"role": "user", "content": "ping"},
+                        ],
+                        "model": "gpt-4",
+                        "max_tokens": 2000,
+                        "stream": True,
+                        "n": 1,
+                        "temperature": 0.0,
                     }
-                )
+                ),
             },
-        ],
+            "assembled_response": json.dumps(
+                {
+                    "id": "chatcmpl-1",
+                    "object": "chat.completion",
+                    "created": 1692214960,
+                    "model": "gpt-4",
+                    "choices": [
+                        {
+                            "index": 0,
+                            "delta": {
+                                "role": "assistant",
+                                "content": "pong",
+                            },
+                            "finish_reason": "stop",
+                        }
+                    ],
+                    "usage": {
+                        "completion_tokens": 189,
+                        "prompt_tokens": 22,
+                        "total_tokens": 211,
+                    },
+                }
+            ),
+            "response": {
+                "status": "200",
+                "body": 'data: {"id":"chatcmpl-1","object":"chat.completion.chunk","created":1692214960,"model":"gpt-4","choices":[{"index":0,"delta":{"role":"assistant","content":"pong"},"finish_reason":null}]}\n\ndata: {"id":"chatcmpl-1","object":"chat.completion.chunk","created":1692214960,"model":"gpt-4","choices":[{"index":0,"delta":{},"finish_reason":"stop"}],"usage":{"completion_tokens":189,"prompt_tokens":22,"total_tokens":211}}\n\ndata: [DONE]\n',
+            },
+        }
     )
+
     assert response.status_code == 200
-    assert write_api_mock.points == [
+    assert influx.points == [
         'analytics,core_parent_span_id=undefined,core_span_id=undefined,deployment=gpt-4,execution_path=undefined,language=undefined,model=gpt-4,parent_deployment=undefined,project_id=PROJECT-KEY,response_id=chatcmpl-1,title=undefined,topic=act\\ as\\ a\\ helpful\\ assistant\\n\\nping\\n\\npong,trace_id=undefined,upstream=undefined cached_prompt_tokens=0i,chat_id="chat-1",completion_tokens=189i,deployment_price=0,number_request_messages=2i,price=0,prompt_tokens=22i,user_hash="undefined" 1692214959997000000',
     ]
 
 
-def test_chat_completion_none_content(
-    client: httpx.Client, write_api_mock: InfluxWriterMock
-):
-    response = client.post(
-        "/data",
-        json=[
-            {
-                "message": json.dumps(
+def test_chat_completion_none_content(client: Client, influx: InfluxWriterMock):
+    response = client(
+        {
+            "apiType": "DialOpenAI",
+            "chat": {"id": "chat-1"},
+            "project": {"id": "PROJECT-KEY"},
+            "user": {"id": "", "title": ""},
+            "deployment": "gpt-4",
+            "request": {
+                "protocol": "HTTP/1.1",
+                "method": "POST",
+                "uri": "/openai/deployments/gpt-4/chat/completions?api-version=2023-03-15-preview",
+                "time": "2023-08-16T19:42:39.997",
+                "body": json.dumps(
                     {
-                        "apiType": "DialOpenAI",
-                        "chat": {"id": "chat-1"},
-                        "project": {"id": "PROJECT-KEY"},
-                        "user": {"id": "", "title": ""},
-                        "deployment": "gpt-4",
-                        "request": {
-                            "protocol": "HTTP/1.1",
-                            "method": "POST",
-                            "uri": "/openai/deployments/gpt-4/chat/completions?api-version=2023-03-15-preview",
-                            "time": "2023-08-16T19:42:39.997",
-                            "body": json.dumps(
-                                {
-                                    "messages": [
-                                        {
-                                            "role": "user",
-                                            "content": "what's the weather like?",
-                                        },
-                                        {
-                                            "role": "assistant",
-                                            "tool_calls": [
-                                                {
-                                                    "id": "xyz",
-                                                    "type": "function",
-                                                    "function": {
-                                                        "name": "get_weather",
-                                                        "arguments": {},
-                                                    },
-                                                }
-                                            ],
-                                        },
-                                        {
-                                            "role": "tool",
-                                            "id": "xyz",
-                                            "content": "It's sunny today.",
-                                        },
-                                        {
-                                            "role": "user",
-                                            "content": "2+3=?",
-                                        },
-                                    ],
-                                    "model": "gpt-4",
-                                    "max_tokens": 2000,
-                                    "stream": True,
-                                    "n": 1,
-                                    "temperature": 0.0,
-                                }
-                            ),
-                        },
-                        "assembled_response": json.dumps(
+                        "messages": [
                             {
-                                "id": "chatcmpl-1",
-                                "object": "chat.completion",
-                                "created": 1692214960,
-                                "model": "gpt-4",
-                                "choices": [
+                                "role": "user",
+                                "content": "what's the weather like?",
+                            },
+                            {
+                                "role": "assistant",
+                                "tool_calls": [
                                     {
-                                        "index": 0,
-                                        "delta": {
-                                            "role": "assistant",
-                                            "content": "5",
+                                        "id": "xyz",
+                                        "type": "function",
+                                        "function": {
+                                            "name": "get_weather",
+                                            "arguments": {},
                                         },
-                                        "finish_reason": "stop",
                                     }
                                 ],
-                                "usage": {
-                                    "completion_tokens": 189,
-                                    "prompt_tokens": 22,
-                                    "total_tokens": 211,
-                                },
-                            }
-                        ),
-                        "response": {
-                            "status": "200",
-                            "body": 'data: {"id":"chatcmpl-1","object":"chat.completion.chunk","created":1692214960,"model":"gpt-4","choices":[{"index":0,"delta":{"role":"assistant","content":"5"},"finish_reason":null}]}\n\ndata: {"id":"chatcmpl-1","object":"chat.completion.chunk","created":1692214960,"model":"gpt-4","choices":[{"index":0,"delta":{},"finish_reason":"stop"}],"usage":{"completion_tokens":189,"prompt_tokens":22,"total_tokens":211}}\n\ndata: [DONE]\n',
-                        },
+                            },
+                            {
+                                "role": "tool",
+                                "id": "xyz",
+                                "content": "It's sunny today.",
+                            },
+                            {
+                                "role": "user",
+                                "content": "2+3=?",
+                            },
+                        ],
+                        "model": "gpt-4",
+                        "max_tokens": 2000,
+                        "stream": True,
+                        "n": 1,
+                        "temperature": 0.0,
                     }
-                )
+                ),
             },
-        ],
+            "assembled_response": json.dumps(
+                {
+                    "id": "chatcmpl-1",
+                    "object": "chat.completion",
+                    "created": 1692214960,
+                    "model": "gpt-4",
+                    "choices": [
+                        {
+                            "index": 0,
+                            "delta": {
+                                "role": "assistant",
+                                "content": "5",
+                            },
+                            "finish_reason": "stop",
+                        }
+                    ],
+                    "usage": {
+                        "completion_tokens": 189,
+                        "prompt_tokens": 22,
+                        "total_tokens": 211,
+                    },
+                }
+            ),
+            "response": {
+                "status": "200",
+                "body": 'data: {"id":"chatcmpl-1","object":"chat.completion.chunk","created":1692214960,"model":"gpt-4","choices":[{"index":0,"delta":{"role":"assistant","content":"5"},"finish_reason":null}]}\n\ndata: {"id":"chatcmpl-1","object":"chat.completion.chunk","created":1692214960,"model":"gpt-4","choices":[{"index":0,"delta":{},"finish_reason":"stop"}],"usage":{"completion_tokens":189,"prompt_tokens":22,"total_tokens":211}}\n\ndata: [DONE]\n',
+            },
+        }
     )
     assert response.status_code == 200
-    assert write_api_mock.points == [
+    assert influx.points == [
         'analytics,core_parent_span_id=undefined,core_span_id=undefined,deployment=gpt-4,execution_path=undefined,language=undefined,model=gpt-4,parent_deployment=undefined,project_id=PROJECT-KEY,response_id=chatcmpl-1,title=undefined,topic=what\'s\\ the\\ weather\\ like?\\n\\nIt\'s\\ sunny\\ today.\\n\\n2+3\\=?\\n\\n5,trace_id=undefined,upstream=undefined cached_prompt_tokens=0i,chat_id="chat-1",completion_tokens=189i,deployment_price=0,number_request_messages=4i,price=0,prompt_tokens=22i,user_hash="undefined" 1692214959997000000',
     ]
 
 
-def test_embeddings_plain_text(
-    client: httpx.Client, write_api_mock: InfluxWriterMock
-):
-    response = client.post(
-        "/data",
-        json=[
-            {
-                "message": json.dumps(
+def test_embeddings_plain_text(client: Client, influx: InfluxWriterMock):
+    response = client(
+        {
+            "apiType": "DialOpenAI",
+            "chat": {"id": "chat-1"},
+            "project": {"id": "PROJECT-KEY"},
+            "user": {"id": "", "title": ""},
+            "deployment": "text-embedding-3-small",
+            "token_usage": {
+                "completion_tokens": 0,
+                "prompt_tokens": 2,
+                "total_tokens": 2,
+                "deployment_price": 0.001,
+                "price": 0.001,
+            },
+            "parent_deployment": "assistant",
+            "trace": {
+                "trace_id": "5dca3d6ed5d22b6ab574f27a6ab5ec14",
+                "core_span_id": "9ade2b6fef0a716d",
+                "core_parent_span_id": "20e7e64715abbe97",
+            },
+            "execution_path": [None, "b", "c"],
+            "request": {
+                "protocol": "HTTP/1.1",
+                "method": "POST",
+                "uri": "/openai/deployments/text-embedding-3-small/embeddings?api-version=2023-03-15-preview",
+                "time": "2023-08-16T19:42:39.997",
+                "body": json.dumps({"input": ["fish", "cat"]}),
+            },
+            "response": {
+                "status": "200",
+                "body": json.dumps(
                     {
-                        "apiType": "DialOpenAI",
-                        "chat": {"id": "chat-1"},
-                        "project": {"id": "PROJECT-KEY"},
-                        "user": {"id": "", "title": ""},
-                        "deployment": "text-embedding-3-small",
-                        "token_usage": {
-                            "completion_tokens": 0,
-                            "prompt_tokens": 2,
-                            "total_tokens": 2,
-                            "deployment_price": 0.001,
-                            "price": 0.001,
-                        },
-                        "parent_deployment": "assistant",
-                        "trace": {
-                            "trace_id": "5dca3d6ed5d22b6ab574f27a6ab5ec14",
-                            "core_span_id": "9ade2b6fef0a716d",
-                            "core_parent_span_id": "20e7e64715abbe97",
-                        },
-                        "execution_path": [None, "b", "c"],
-                        "request": {
-                            "protocol": "HTTP/1.1",
-                            "method": "POST",
-                            "uri": "/openai/deployments/text-embedding-3-small/embeddings?api-version=2023-03-15-preview",
-                            "time": "2023-08-16T19:42:39.997",
-                            "body": json.dumps({"input": ["fish", "cat"]}),
-                        },
-                        "response": {
-                            "status": "200",
-                            "body": json.dumps(
-                                {
-                                    "data": [
-                                        {
-                                            "embedding": [0.1, 0.2],
-                                            "index": 0,
-                                            "object": "embedding",
-                                        },
-                                        {
-                                            "embedding": [0.3, 0.4],
-                                            "index": 1,
-                                            "object": "embedding",
-                                        },
-                                    ],
-                                    "model": "text-embedding-3-small",
-                                    "object": "list",
-                                    "usage": {
-                                        "prompt_tokens": 43,
-                                        "total_tokens": 43,
-                                    },
-                                }
-                            ),
+                        "data": [
+                            {
+                                "embedding": [0.1, 0.2],
+                                "index": 0,
+                                "object": "embedding",
+                            },
+                            {
+                                "embedding": [0.3, 0.4],
+                                "index": 1,
+                                "object": "embedding",
+                            },
+                        ],
+                        "model": "text-embedding-3-small",
+                        "object": "list",
+                        "usage": {
+                            "prompt_tokens": 43,
+                            "total_tokens": 43,
                         },
                     }
-                )
+                ),
             },
-        ],
+        }
     )
     assert response.status_code == 200
-    assert len(write_api_mock.points) == 1
+    assert len(influx.points) == 1
     assert re.match(
         r'analytics,core_parent_span_id=20e7e64715abbe97,core_span_id=9ade2b6fef0a716d,deployment=text-embedding-3-small,execution_path=undefined/b/c,language=undefined,model=text-embedding-3-small,parent_deployment=assistant,project_id=PROJECT-KEY,response_id=(.+?),title=undefined,topic=fish\\n\\ncat,trace_id=5dca3d6ed5d22b6ab574f27a6ab5ec14,upstream=undefined cached_prompt_tokens=0i,chat_id="chat-1",completion_tokens=0i,deployment_price=0.001,number_request_messages=2i,price=0.001,prompt_tokens=2i,user_hash="undefined" 1692214959997000000',
-        write_api_mock.points[0],
+        influx.points[0],
     )
 
 
-def test_embeddings_no_body(
-    client: httpx.Client, write_api_mock: InfluxWriterMock
-):
-    response = client.post(
-        "/data",
-        json=[
-            {
-                "message": json.dumps(
-                    {
-                        "apiType": "DialOpenAI",
-                        "chat": {"id": "chat-1"},
-                        "project": {"id": "PROJECT-KEY"},
-                        "user": {"id": "", "title": ""},
-                        "deployment": "text-embedding-3-small",
-                        "token_usage": {
-                            "completion_tokens": 0,
-                            "prompt_tokens": 2,
-                            "total_tokens": 2,
-                            "deployment_price": 0.001,
-                            "price": 0.001,
-                        },
-                        "parent_deployment": "assistant",
-                        "trace": {
-                            "trace_id": "5dca3d6ed5d22b6ab574f27a6ab5ec14",
-                            "core_span_id": "9ade2b6fef0a716d",
-                            "core_parent_span_id": "20e7e64715abbe97",
-                        },
-                        "execution_path": [None, "b", "c"],
-                        "request": {
-                            "protocol": "HTTP/1.1",
-                            "method": "POST",
-                            "uri": "/openai/deployments/text-embedding-3-small/embeddings?api-version=2023-03-15-preview",
-                            "time": "2023-08-16T19:42:39.997",
-                        },
-                        "response": {"status": "200"},
-                    }
-                )
+def test_embeddings_no_body(client: Client, influx: InfluxWriterMock):
+    response = client(
+        {
+            "apiType": "DialOpenAI",
+            "chat": {"id": "chat-1"},
+            "project": {"id": "PROJECT-KEY"},
+            "user": {"id": "", "title": ""},
+            "deployment": "text-embedding-3-small",
+            "token_usage": {
+                "completion_tokens": 0,
+                "prompt_tokens": 2,
+                "total_tokens": 2,
+                "deployment_price": 0.001,
+                "price": 0.001,
             },
-        ],
+            "parent_deployment": "assistant",
+            "trace": {
+                "trace_id": "5dca3d6ed5d22b6ab574f27a6ab5ec14",
+                "core_span_id": "9ade2b6fef0a716d",
+                "core_parent_span_id": "20e7e64715abbe97",
+            },
+            "execution_path": [None, "b", "c"],
+            "request": {
+                "protocol": "HTTP/1.1",
+                "method": "POST",
+                "uri": "/openai/deployments/text-embedding-3-small/embeddings?api-version=2023-03-15-preview",
+                "time": "2023-08-16T19:42:39.997",
+            },
+            "response": {"status": "200"},
+        }
     )
 
     assert response.status_code == 200
-    assert len(write_api_mock.points) == 1
+    assert len(influx.points) == 1
     assert re.match(
         r'analytics,core_parent_span_id=20e7e64715abbe97,core_span_id=9ade2b6fef0a716d,deployment=text-embedding-3-small,execution_path=undefined/b/c,language=undefined,model=text-embedding-3-small,parent_deployment=assistant,project_id=PROJECT-KEY,response_id=(.+?),title=undefined,topic=undefined,trace_id=5dca3d6ed5d22b6ab574f27a6ab5ec14,upstream=undefined cached_prompt_tokens=0i,chat_id="chat-1",completion_tokens=0i,deployment_price=0.001,number_request_messages=0i,price=0.001,prompt_tokens=2i,user_hash="undefined" 1692214959997000000',
-        write_api_mock.points[0],
+        influx.points[0],
     )
 
 
-def test_embeddings_tokens(
-    client: httpx.Client, write_api_mock: InfluxWriterMock
-):
-    response = client.post(
-        "/data",
-        json=[
-            {
-                "message": json.dumps(
+def test_embeddings_tokens(client: Client, influx: InfluxWriterMock):
+    response = client(
+        {
+            "apiType": "DialOpenAI",
+            "chat": {"id": "chat-1"},
+            "project": {"id": "PROJECT-KEY"},
+            "user": {"id": "", "title": ""},
+            "deployment": "text-embedding-3-small",
+            "token_usage": {
+                "completion_tokens": 0,
+                "prompt_tokens": 2,
+                "total_tokens": 2,
+                "deployment_price": 0.001,
+                "price": 0.001,
+            },
+            "parent_deployment": "assistant",
+            "trace": {
+                "trace_id": "5dca3d6ed5d22b6ab574f27a6ab5ec14",
+                "core_span_id": "9ade2b6fef0a716d",
+                "core_parent_span_id": "20e7e64715abbe97",
+            },
+            "execution_path": [None, "b", "c"],
+            "request": {
+                "protocol": "HTTP/1.1",
+                "method": "POST",
+                "uri": "/openai/deployments/text-embedding-3-small/embeddings?api-version=2023-03-15-preview",
+                "time": "2023-08-16T19:42:39.997",
+                "body": json.dumps({"input": [[1, 3, 4, 5], [6, 7, 8, 9]]}),
+            },
+            "response": {
+                "status": "200",
+                "body": json.dumps(
                     {
-                        "apiType": "DialOpenAI",
-                        "chat": {"id": "chat-1"},
-                        "project": {"id": "PROJECT-KEY"},
-                        "user": {"id": "", "title": ""},
-                        "deployment": "text-embedding-3-small",
-                        "token_usage": {
-                            "completion_tokens": 0,
-                            "prompt_tokens": 2,
-                            "total_tokens": 2,
-                            "deployment_price": 0.001,
-                            "price": 0.001,
-                        },
-                        "parent_deployment": "assistant",
-                        "trace": {
-                            "trace_id": "5dca3d6ed5d22b6ab574f27a6ab5ec14",
-                            "core_span_id": "9ade2b6fef0a716d",
-                            "core_parent_span_id": "20e7e64715abbe97",
-                        },
-                        "execution_path": [None, "b", "c"],
-                        "request": {
-                            "protocol": "HTTP/1.1",
-                            "method": "POST",
-                            "uri": "/openai/deployments/text-embedding-3-small/embeddings?api-version=2023-03-15-preview",
-                            "time": "2023-08-16T19:42:39.997",
-                            "body": json.dumps(
-                                {"input": [[1, 3, 4, 5], [6, 7, 8, 9]]}
-                            ),
-                        },
-                        "response": {
-                            "status": "200",
-                            "body": json.dumps(
-                                {
-                                    "data": [
-                                        {
-                                            "embedding": [0.1, 0.2],
-                                            "index": 0,
-                                            "object": "embedding",
-                                        },
-                                        {
-                                            "embedding": [0.3, 0.4],
-                                            "index": 1,
-                                            "object": "embedding",
-                                        },
-                                    ],
-                                    "model": "text-embedding-3-small",
-                                    "object": "list",
-                                    "usage": {
-                                        "prompt_tokens": 43,
-                                        "total_tokens": 43,
-                                    },
-                                }
-                            ),
+                        "data": [
+                            {
+                                "embedding": [0.1, 0.2],
+                                "index": 0,
+                                "object": "embedding",
+                            },
+                            {
+                                "embedding": [0.3, 0.4],
+                                "index": 1,
+                                "object": "embedding",
+                            },
+                        ],
+                        "model": "text-embedding-3-small",
+                        "object": "list",
+                        "usage": {
+                            "prompt_tokens": 43,
+                            "total_tokens": 43,
                         },
                     }
-                )
+                ),
             },
-        ],
+        }
     )
     assert response.status_code == 200
-    assert len(write_api_mock.points) == 1
+    assert len(influx.points) == 1
     assert re.match(
         r'analytics,core_parent_span_id=20e7e64715abbe97,core_span_id=9ade2b6fef0a716d,deployment=text-embedding-3-small,execution_path=undefined/b/c,language=undefined,model=text-embedding-3-small,parent_deployment=assistant,project_id=PROJECT-KEY,response_id=(.+?),title=undefined,topic=undefined,trace_id=5dca3d6ed5d22b6ab574f27a6ab5ec14,upstream=undefined cached_prompt_tokens=0i,chat_id="chat-1",completion_tokens=0i,deployment_price=0.001,number_request_messages=2i,price=0.001,prompt_tokens=2i,user_hash="undefined" 1692214959997000000',
-        write_api_mock.points[0],
+        influx.points[0],
     )
 
 
-def test_data_request_with_new_format(
-    client: httpx.Client, write_api_mock: InfluxWriterMock
-):
+def test_data_request_with_new_format(client: Client, influx: InfluxWriterMock):
 
-    response = client.post(
-        "/data",
-        json=[
-            {
-                "message": json.dumps(
-                    {
-                        "apiType": "DialOpenAI",
-                        "chat": {"id": "chat-1"},
-                        "project": {"id": "PROJECT-KEY"},
-                        "user": {"id": "", "title": ""},
-                        "deployment": "gpt-4",
-                        "token_usage": {
-                            "completion_tokens": 40,
-                            "prompt_tokens": 30,
-                            "deployment_price": 0.001,
-                            "price": 0.001,
-                        },
-                        "parent_deployment": "assistant",
-                        "trace": {
-                            "trace_id": "5dca3d6ed5d22b6ab574f27a6ab5ec14",
-                            "core_span_id": "9ade2b6fef0a716d",
-                            "core_parent_span_id": "20e7e64715abbe97",
-                        },
-                        "execution_path": [None, "b", "c"],
-                        "request": {
-                            "protocol": "HTTP/1.1",
-                            "method": "POST",
-                            "uri": "/openai/deployments/gpt-4/chat/completions?api-version=2023-03-15-preview",
-                            "time": "2023-08-16T19:42:39.997",
-                            "body": json.dumps(
-                                {
-                                    "messages": [
-                                        {"role": "system", "content": ""},
-                                        {"role": "user", "content": "ping"},
-                                    ],
-                                    "model": "gpt-4",
-                                    "max_tokens": 2000,
-                                    "stream": True,
-                                    "n": 1,
-                                    "temperature": 0.0,
-                                }
-                            ),
-                        },
-                        "assembled_response": json.dumps(
-                            {
-                                "id": "chatcmpl-1",
-                                "object": "chat.completion",
-                                "created": 1692214960,
-                                "model": "gpt-4",
-                                "choices": [
-                                    {
-                                        "index": 0,
-                                        "delta": {
-                                            "role": "assistant",
-                                            "content": "pong",
-                                        },
-                                        "finish_reason": "stop",
-                                    }
-                                ],
-                                "usage": {
-                                    "completion_tokens": 189,
-                                    "prompt_tokens": 22,
-                                    "total_tokens": 211,
-                                },
-                            }
-                        ),
-                        "response": {
-                            "status": "200",
-                            "body": 'data: {"id":"chatcmpl-1","object":"chat.completion.chunk","created":1692214960,"model":"gpt-4","choices":[{"index":0,"delta":{"role":"assistant","content":"pong"},"finish_reason":null}]}\n\ndata: {"id":"chatcmpl-1","object":"chat.completion.chunk","created":1692214960,"model":"gpt-4","choices":[{"index":0,"delta":{},"finish_reason":"stop"}],"usage":{"completion_tokens":189,"prompt_tokens":22,"total_tokens":211}}\n\ndata: [DONE]\n',
-                        },
-                    }
-                )
+    response = client(
+        {
+            "apiType": "DialOpenAI",
+            "chat": {"id": "chat-1"},
+            "project": {"id": "PROJECT-KEY"},
+            "user": {"id": "", "title": ""},
+            "deployment": "gpt-4",
+            "token_usage": {
+                "completion_tokens": 40,
+                "prompt_tokens": 30,
+                "deployment_price": 0.001,
+                "price": 0.001,
             },
-            {
-                "message": json.dumps(
-                    {
-                        "apiType": "DialOpenAI",
-                        "chat": {"id": "chat-2"},
-                        "project": {"id": "PROJECT-KEY-2"},
-                        "user": {"id": "", "title": ""},
-                        "deployment": "gpt-4",
-                        "token_usage": {
-                            "completion_tokens": 40,
-                            "prompt_tokens": 30,
-                            "price": 0.005,
-                        },
-                        "trace": {
-                            "trace_id": "5dca3d6ed5d22b6ab574f27a6ab5ec14",
-                            "core_span_id": "20e7e64715abbe97",
-                        },
-                        "execution_path": ["a", "b", "c"],
-                        "request": {
-                            "protocol": "HTTP/1.1",
-                            "method": "POST",
-                            "uri": "/openai/deployments/gpt-4/chat/completions",
-                            "time": "2023-11-24T03:33:40.39",
-                            "body": json.dumps(
-                                {
-                                    "messages": [
-                                        {"role": "system", "content": ""},
-                                        {"role": "user", "content": "ping"},
-                                    ],
-                                    "model": "gpt-4",
-                                    "max_tokens": 2000,
-                                    "stream": True,
-                                    "n": 1,
-                                    "temperature": 0.0,
-                                }
-                            ),
-                        },
-                        "assembled_response": json.dumps(
-                            {
-                                "id": "chatcmpl-2",
-                                "object": "chat.completion",
-                                "created": 1700828102,
-                                "model": "gpt-4",
-                                "choices": [
-                                    {
-                                        "index": 0,
-                                        "delta": {
-                                            "role": "assistant",
-                                            "content": "pong",
-                                        },
-                                        "finish_reason": "stop",
-                                    }
-                                ],
-                                "usage": {
-                                    "completion_tokens": 189,
-                                    "prompt_tokens": 22,
-                                    "total_tokens": 211,
-                                },
-                            }
-                        ),
-                        "response": {
-                            "status": "200",
-                            "body": 'data: {"id":"chatcmpl-2","object":"chat.completion.chunk","created":1700828102,"model":"gpt-4","choices":[{"index":0,"delta":{"role":"assistant","content":"pong"},"finish_reason":null}]}\n\ndata: {"id":"chatcmpl-2","object":"chat.completion.chunk","created":1700828102,"model":"gpt-4","choices":[{"index":0,"delta":{},"finish_reason":"stop"}],"usage":{"completion_tokens":189,"prompt_tokens":22,"total_tokens":211}}\n\ndata: [DONE]\n',
-                        },
-                    }
-                )
+            "parent_deployment": "assistant",
+            "trace": {
+                "trace_id": "5dca3d6ed5d22b6ab574f27a6ab5ec14",
+                "core_span_id": "9ade2b6fef0a716d",
+                "core_parent_span_id": "20e7e64715abbe97",
             },
-        ],
+            "execution_path": [None, "b", "c"],
+            "request": {
+                "protocol": "HTTP/1.1",
+                "method": "POST",
+                "uri": "/openai/deployments/gpt-4/chat/completions?api-version=2023-03-15-preview",
+                "time": "2023-08-16T19:42:39.997",
+                "body": json.dumps(
+                    {
+                        "messages": [
+                            {"role": "system", "content": ""},
+                            {"role": "user", "content": "ping"},
+                        ],
+                        "model": "gpt-4",
+                        "max_tokens": 2000,
+                        "stream": True,
+                        "n": 1,
+                        "temperature": 0.0,
+                    }
+                ),
+            },
+            "assembled_response": json.dumps(
+                {
+                    "id": "chatcmpl-1",
+                    "object": "chat.completion",
+                    "created": 1692214960,
+                    "model": "gpt-4",
+                    "choices": [
+                        {
+                            "index": 0,
+                            "delta": {
+                                "role": "assistant",
+                                "content": "pong",
+                            },
+                            "finish_reason": "stop",
+                        }
+                    ],
+                    "usage": {
+                        "completion_tokens": 189,
+                        "prompt_tokens": 22,
+                        "total_tokens": 211,
+                    },
+                }
+            ),
+            "response": {
+                "status": "200",
+                "body": 'data: {"id":"chatcmpl-1","object":"chat.completion.chunk","created":1692214960,"model":"gpt-4","choices":[{"index":0,"delta":{"role":"assistant","content":"pong"},"finish_reason":null}]}\n\ndata: {"id":"chatcmpl-1","object":"chat.completion.chunk","created":1692214960,"model":"gpt-4","choices":[{"index":0,"delta":{},"finish_reason":"stop"}],"usage":{"completion_tokens":189,"prompt_tokens":22,"total_tokens":211}}\n\ndata: [DONE]\n',
+            },
+        },
+        {
+            "apiType": "DialOpenAI",
+            "chat": {"id": "chat-2"},
+            "project": {"id": "PROJECT-KEY-2"},
+            "user": {"id": "", "title": ""},
+            "deployment": "gpt-4",
+            "token_usage": {
+                "completion_tokens": 40,
+                "prompt_tokens": 30,
+                "price": 0.005,
+            },
+            "trace": {
+                "trace_id": "5dca3d6ed5d22b6ab574f27a6ab5ec14",
+                "core_span_id": "20e7e64715abbe97",
+            },
+            "execution_path": ["a", "b", "c"],
+            "request": {
+                "protocol": "HTTP/1.1",
+                "method": "POST",
+                "uri": "/openai/deployments/gpt-4/chat/completions",
+                "time": "2023-11-24T03:33:40.39",
+                "body": json.dumps(
+                    {
+                        "messages": [
+                            {"role": "system", "content": ""},
+                            {"role": "user", "content": "ping"},
+                        ],
+                        "model": "gpt-4",
+                        "max_tokens": 2000,
+                        "stream": True,
+                        "n": 1,
+                        "temperature": 0.0,
+                    }
+                ),
+            },
+            "assembled_response": json.dumps(
+                {
+                    "id": "chatcmpl-2",
+                    "object": "chat.completion",
+                    "created": 1700828102,
+                    "model": "gpt-4",
+                    "choices": [
+                        {
+                            "index": 0,
+                            "delta": {
+                                "role": "assistant",
+                                "content": "pong",
+                            },
+                            "finish_reason": "stop",
+                        }
+                    ],
+                    "usage": {
+                        "completion_tokens": 189,
+                        "prompt_tokens": 22,
+                        "total_tokens": 211,
+                    },
+                }
+            ),
+            "response": {
+                "status": "200",
+                "body": 'data: {"id":"chatcmpl-2","object":"chat.completion.chunk","created":1700828102,"model":"gpt-4","choices":[{"index":0,"delta":{"role":"assistant","content":"pong"},"finish_reason":null}]}\n\ndata: {"id":"chatcmpl-2","object":"chat.completion.chunk","created":1700828102,"model":"gpt-4","choices":[{"index":0,"delta":{},"finish_reason":"stop"}],"usage":{"completion_tokens":189,"prompt_tokens":22,"total_tokens":211}}\n\ndata: [DONE]\n',
+            },
+        },
     )
     assert response.status_code == 200
-    assert write_api_mock.points == [
+    assert influx.points == [
         'analytics,core_parent_span_id=20e7e64715abbe97,core_span_id=9ade2b6fef0a716d,deployment=gpt-4,execution_path=undefined/b/c,language=undefined,model=gpt-4,parent_deployment=assistant,project_id=PROJECT-KEY,response_id=chatcmpl-1,title=undefined,topic=ping\\n\\npong,trace_id=5dca3d6ed5d22b6ab574f27a6ab5ec14,upstream=undefined cached_prompt_tokens=0i,chat_id="chat-1",completion_tokens=40i,deployment_price=0.001,number_request_messages=2i,price=0.001,prompt_tokens=30i,user_hash="undefined" 1692214959997000000',
         'analytics,core_parent_span_id=undefined,core_span_id=20e7e64715abbe97,deployment=gpt-4,execution_path=a/b/c,language=undefined,model=gpt-4,parent_deployment=undefined,project_id=PROJECT-KEY-2,response_id=chatcmpl-2,title=undefined,topic=ping\\n\\npong,trace_id=5dca3d6ed5d22b6ab574f27a6ab5ec14,upstream=undefined cached_prompt_tokens=0i,chat_id="chat-2",completion_tokens=40i,deployment_price=0,number_request_messages=2i,price=0.005,prompt_tokens=30i,user_hash="undefined" 1700796820390000000',
     ]
 
 
-def test_rate_request(client: httpx.Client, write_api_mock: InfluxWriterMock):
+def test_rate_request(client: Client, influx: InfluxWriterMock):
 
-    response = client.post(
-        "/data",
-        json=[
-            {
-                "message": json.dumps(
+    response = client(
+        {
+            "apiType": "DialOpenAI",
+            "chat": {"id": "chat-1"},
+            "project": {"id": "PROJECT-KEY"},
+            "user": {"id": "", "title": ""},
+            "deployment": "gpt-4",
+            "request": {
+                "protocol": "HTTP/1.1",
+                "method": "POST",
+                "uri": "/v1/gpt-4/rate",
+                "time": "2023-08-16T19:42:39.997",
+                "body": json.dumps(
                     {
-                        "apiType": "DialOpenAI",
-                        "chat": {"id": "chat-1"},
-                        "project": {"id": "PROJECT-KEY"},
-                        "user": {"id": "", "title": ""},
-                        "deployment": "gpt-4",
-                        "request": {
-                            "protocol": "HTTP/1.1",
-                            "method": "POST",
-                            "uri": "/v1/gpt-4/rate",
-                            "time": "2023-08-16T19:42:39.997",
-                            "body": json.dumps(
-                                {
-                                    "responseId": "response_123",
-                                    "rate": True,
-                                }
-                            ),
-                        },
-                        "assembled_response": "",
-                        "response": {
-                            "status": "200",
-                            "body": "",
-                        },
+                        "responseId": "response_123",
+                        "rate": True,
                     }
-                )
+                ),
             },
-            {
-                "message": json.dumps(
+            "assembled_response": "",
+            "response": {
+                "status": "200",
+                "body": "",
+            },
+        },
+        {
+            "apiType": "DialOpenAI",
+            "chat": {"id": "chat-1"},
+            "project": {"id": "PROJECT-KEY"},
+            "user": {"id": "", "title": ""},
+            "deployment": "gpt-4",
+            "request": {
+                "protocol": "HTTP/1.1",
+                "method": "POST",
+                "uri": "/v1/gpt-4/rate",
+                "time": "2023-11-24T03:33:40.39",
+                "body": json.dumps(
                     {
-                        "apiType": "DialOpenAI",
-                        "chat": {"id": "chat-1"},
-                        "project": {"id": "PROJECT-KEY"},
-                        "user": {"id": "", "title": ""},
-                        "deployment": "gpt-4",
-                        "request": {
-                            "protocol": "HTTP/1.1",
-                            "method": "POST",
-                            "uri": "/v1/gpt-4/rate",
-                            "time": "2023-11-24T03:33:40.39",
-                            "body": json.dumps(
-                                {
-                                    "responseId": "response_124",
-                                    "rate": False,
-                                }
-                            ),
-                        },
-                        "response": {
-                            "status": "200",
-                            "body": "",
-                        },
+                        "responseId": "response_124",
+                        "rate": False,
                     }
-                )
+                ),
             },
-        ],
+            "response": {
+                "status": "200",
+                "body": "",
+            },
+        },
     )
     assert response.status_code == 200
-    assert write_api_mock.points == [
+    assert influx.points == [
         "rate_analytics,chat_id=chat-1,deployment=gpt-4,project_id=PROJECT-KEY,response_id=response_123,title=undefined,user_hash=undefined dislike_count=0i,like_count=1i 1692214959997000000",
         "rate_analytics,chat_id=chat-1,deployment=gpt-4,project_id=PROJECT-KEY,response_id=response_124,title=undefined,user_hash=undefined dislike_count=1i,like_count=0i 1700796820390000000",
     ]
@@ -733,74 +671,67 @@ def test_rate_request(client: httpx.Client, write_api_mock: InfluxWriterMock):
 
 @pytest.mark.parametrize("assembled_response", [None, "{}", "", "invalid JSON"])
 def test_chat_completion_invalid_assembled_response(
-    client: httpx.Client,
-    write_api_mock: InfluxWriterMock,
+    client: Client,
+    influx: InfluxWriterMock,
     assembled_response: str | None,
 ):
-    response = client.post(
-        "/data",
-        json=[
-            {
-                "message": json.dumps(
+    response = client(
+        {
+            "apiType": "DialOpenAI",
+            "chat": {"id": "chat-1"},
+            "project": {"id": "PROJECT-KEY"},
+            "user": {"id": "", "title": ""},
+            "deployment": "gpt-4",
+            "request": {
+                "protocol": "HTTP/1.1",
+                "method": "POST",
+                "uri": "/openai/deployments/gpt-4/chat/completions?api-version=2023-03-15-preview",
+                "time": "2023-08-16T19:42:39.997",
+                "body": json.dumps(
                     {
-                        "apiType": "DialOpenAI",
-                        "chat": {"id": "chat-1"},
-                        "project": {"id": "PROJECT-KEY"},
-                        "user": {"id": "", "title": ""},
-                        "deployment": "gpt-4",
-                        "request": {
-                            "protocol": "HTTP/1.1",
-                            "method": "POST",
-                            "uri": "/openai/deployments/gpt-4/chat/completions?api-version=2023-03-15-preview",
-                            "time": "2023-08-16T19:42:39.997",
-                            "body": json.dumps(
-                                {
-                                    "messages": [
-                                        {"role": "system", "content": ""},
-                                        {"role": "user", "content": "ping"},
-                                    ],
-                                    "model": "gpt-4",
-                                    "max_tokens": 2000,
-                                    "stream": True,
-                                    "n": 1,
-                                    "temperature": 0.0,
-                                }
-                            ),
-                        },
-                        "token_usage": {
-                            "completion_tokens": 189,
-                            "prompt_tokens": 22,
-                            "total_tokens": 211,
-                            "deployment_price": 0.001,
-                            "price": 0.001,
-                        },
-                        "assembled_response": assembled_response,
-                        "response": {
-                            "status": "200",
-                            "body": 'data: {"id":"chatcmpl-1","object":"chat.completion.chunk","created":1692214960,"model":"gpt-4","choices":[{"index":0,"delta":{"role":"assistant","content":"pong"},"finish_reason":null}]}\n\ndata: {"id":"chatcmpl-1","object":"chat.completion.chunk","created":1692214960,"model":"gpt-4","choices":[{"index":0,"delta":{},"finish_reason":"stop"}],"usage":{"completion_tokens":189,"prompt_tokens":22,"total_tokens":211}}\n\ndata: [DONE]\n',
-                        },
+                        "messages": [
+                            {"role": "system", "content": ""},
+                            {"role": "user", "content": "ping"},
+                        ],
+                        "model": "gpt-4",
+                        "max_tokens": 2000,
+                        "stream": True,
+                        "n": 1,
+                        "temperature": 0.0,
                     }
-                )
-            }
-        ],
+                ),
+            },
+            "token_usage": {
+                "completion_tokens": 189,
+                "prompt_tokens": 22,
+                "total_tokens": 211,
+                "deployment_price": 0.001,
+                "price": 0.001,
+            },
+            "assembled_response": assembled_response,
+            "response": {
+                "status": "200",
+                "body": 'data: {"id":"chatcmpl-1","object":"chat.completion.chunk","created":1692214960,"model":"gpt-4","choices":[{"index":0,"delta":{"role":"assistant","content":"pong"},"finish_reason":null}]}\n\ndata: {"id":"chatcmpl-1","object":"chat.completion.chunk","created":1692214960,"model":"gpt-4","choices":[{"index":0,"delta":{},"finish_reason":"stop"}],"usage":{"completion_tokens":189,"prompt_tokens":22,"total_tokens":211}}\n\ndata: [DONE]\n',
+            },
+        }
     )
     assert response.status_code == 200
-    assert len(write_api_mock.points) == 1
+    assert len(influx.points) == 1
     assert re.match(
         r'analytics,core_parent_span_id=undefined,core_span_id=undefined,deployment=gpt-4,execution_path=undefined,language=undefined,model=gpt-4,parent_deployment=undefined,project_id=PROJECT-KEY,response_id=(.+?),title=undefined,topic=ping,trace_id=undefined,upstream=undefined cached_prompt_tokens=0i,chat_id="chat-1",completion_tokens=189i,deployment_price=0.001,number_request_messages=2i,price=0.001,prompt_tokens=22i,user_hash="undefined" 1692214959997000000',
-        write_api_mock.points[0],
+        influx.points[0],
     )
 
 
-def test_invalid_data_message(client: httpx.Client):
-    response = client.post(
-        "/data",
-        json=[
+def test_invalid_data_message(client: Client):
+    response = client.post_json(
+        [
             "invalid message",
             {"message": "invalid message JSON"},
             {"message": '["\n'},
         ],
     )
+
     assert response.status_code == 200
     assert response.json() == [
         {
@@ -822,23 +753,18 @@ def test_invalid_data_message(client: httpx.Client):
 
 
 def test_unescaped_control_char_in_message(
-    client: httpx.Client, write_api_mock: InfluxWriterMock
+    client: Client, influx: InfluxWriterMock
 ):
-    client = TestClient(app.app)
-    response = client.post(
-        "/data",
-        json=create_data_request(create_message(project_id="PROJECT-\nKEY")),
-    )
-
+    response = client(create_message(project_id="PROJECT-\nKEY"))
     point = create_point(project_id="PROJECT-\nKEY")
 
     assert response.status_code == 200
     assert response.json() == [{"status": "success"}]
-    assert str(write_api_mock.influx_points[0]) == str(point)
+    assert str(influx.influx_points[0]) == str(point)
 
 
-def test_invalid_data_request_json(client: httpx.Client):
-    response = client.post(
+def test_invalid_data_request_json(client: Client):
+    response = client.http_client.post(
         "/data",
         content="invalid json",
         headers={"content-type": "application/json"},
@@ -857,8 +783,8 @@ def test_invalid_data_request_json(client: httpx.Client):
     }
 
 
-def test_invalid_data_request_type(client: httpx.Client):
-    response = client.post("/data", json={"foo": "bar"})
+def test_invalid_data_request_type(client: Client):
+    response = client.post_json({"foo": "bar"})
     assert response.status_code == 422
     assert response.json() == {
         "detail": [

@@ -17,60 +17,6 @@ from tests.utils.message import (
     create_message,
 )
 
-_SAMPLE_MESSAGE = {
-    "apiType": "DialOpenAI",
-    "chat": {"id": "chat-1"},
-    "project": {"id": "PROJECT-KEY"},
-    "user": {"id": "", "title": ""},
-    "deployment": "gpt-4",
-    "request": {
-        "protocol": "HTTP/1.1",
-        "method": "POST",
-        "uri": "/openai/deployments/gpt-4/chat/completions?api-version=2023-03-15-preview",
-        "time": "2023-08-16T19:42:39.997",
-        "body": json.dumps(
-            {
-                "messages": [
-                    {"role": "system", "content": ""},
-                    {"role": "user", "content": "ping"},
-                ],
-                "model": "gpt-4",
-                "max_tokens": 2000,
-                "stream": True,
-                "n": 1,
-                "temperature": 0.0,
-            }
-        ),
-    },
-    "assembled_response": json.dumps(
-        {
-            "id": "chatcmpl-1",
-            "object": "chat.completion",
-            "created": 1692214960,
-            "model": "gpt-4",
-            "choices": [
-                {
-                    "index": 0,
-                    "delta": {
-                        "role": "assistant",
-                        "content": "pong",
-                    },
-                    "finish_reason": "stop",
-                }
-            ],
-            "usage": {
-                "completion_tokens": 189,
-                "prompt_tokens": 22,
-                "total_tokens": 211,
-            },
-        }
-    ),
-    "response": {
-        "status": "200",
-        "body": 'data: {"id":"chatcmpl-1","object":"chat.completion.chunk","created":1692214960,"model":"gpt-4","choices":[{"index":0,"delta":{"role":"assistant","content":"pong"},"finish_reason":null}]}\n\ndata: {"id":"chatcmpl-1","object":"chat.completion.chunk","created":1692214960,"model":"gpt-4","choices":[{"index":0,"delta":{},"finish_reason":"stop"}],"usage":{"completion_tokens":189,"prompt_tokens":22,"total_tokens":211}}\n\ndata: [DONE]\n',
-    },
-}
-
 
 @pytest.fixture(autouse=True)
 def mock_uuid4():
@@ -116,8 +62,7 @@ def test_chat_completion_plain_text(
 
     client = TestClient(app.app)
     response = client.post(
-        "/data",
-        json=create_data_request(message1, message2),
+        "/data", json=create_data_request(message1, message2)
     )
     assert response.status_code == 200
 
@@ -883,27 +828,20 @@ def test_invalid_data_message():
     ]
 
 
-def test_unescaped_control_char_in_message():
-    write_api_mock = InfluxWriterMock()
-    app.app.dependency_overrides[app.InfluxWriterAsync] = lambda: write_api_mock
-    app.app.dependency_overrides[app.TopicModel] = lambda: TestTopicModel()
-
+def test_unescaped_control_char_in_message(
+    client: httpx.Client, write_api_mock: InfluxWriterMock
+):
     client = TestClient(app.app)
     response = client.post(
         "/data",
-        json=[
-            {
-                "message": json.dumps(_SAMPLE_MESSAGE).replace(
-                    "PROJECT-KEY", "PROJECT-\nKEY"
-                )
-            },
-        ],
+        json=create_data_request(create_message(project_id="PROJECT-\nKEY")),
     )
+
+    point = create_point(project_id="PROJECT-\nKEY")
+
     assert response.status_code == 200
     assert response.json() == [{"status": "success"}]
-    assert write_api_mock.points == [
-        'analytics,core_parent_span_id=undefined,core_span_id=undefined,deployment=gpt-4,execution_path=undefined,language=undefined,model=gpt-4,parent_deployment=undefined,project_id=PROJECT-\\nKEY,response_id=chatcmpl-1,title=undefined,topic=ping\\n\\npong,trace_id=undefined,upstream=undefined cached_prompt_tokens=0i,chat_id="chat-1",completion_tokens=189i,deployment_price=0,number_request_messages=2i,price=0,prompt_tokens=22i,user_hash="undefined" 1692214959997000000'
-    ]
+    assert str(write_api_mock.influx_points[0]) == str(point)
 
 
 def test_invalid_data_request_json():

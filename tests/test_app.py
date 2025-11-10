@@ -42,14 +42,13 @@ def write_api_mock():
 def client(write_api_mock):
     app.app.dependency_overrides[app.InfluxWriterAsync] = lambda: write_api_mock  # type: ignore
     app.app.dependency_overrides[app.TopicModel] = lambda: TestTopicModel()
-    return TestClient(app.app)
+    return TestClient(app.app, raise_server_exceptions=False)
 
 
 def test_chat_completion_plain_text(
     client: httpx.Client, write_api_mock: InfluxWriterMock
 ):
     message1 = create_message()
-
     message2 = create_message(
         chat_id="chat-2",
         project_id="PROJECT-KEY-2",
@@ -733,12 +732,11 @@ def test_rate_request(client: httpx.Client, write_api_mock: InfluxWriterMock):
 
 
 @pytest.mark.parametrize("assembled_response", [None, "{}", "", "invalid JSON"])
-def test_chat_completion_invalid_assembled_response(assembled_response):
-    write_api_mock = InfluxWriterMock()
-    app.app.dependency_overrides[app.InfluxWriterAsync] = lambda: write_api_mock
-    app.app.dependency_overrides[app.TopicModel] = lambda: TestTopicModel()
-
-    client = TestClient(app.app)
+def test_chat_completion_invalid_assembled_response(
+    client: httpx.Client,
+    write_api_mock: InfluxWriterMock,
+    assembled_response: str | None,
+):
     response = client.post(
         "/data",
         json=[
@@ -794,12 +792,7 @@ def test_chat_completion_invalid_assembled_response(assembled_response):
     )
 
 
-def test_invalid_data_message():
-    write_api_mock = InfluxWriterMock()
-    app.app.dependency_overrides[app.InfluxWriterAsync] = lambda: write_api_mock
-    app.app.dependency_overrides[app.TopicModel] = lambda: TestTopicModel()
-
-    client = TestClient(app.app)
+def test_invalid_data_message(client: httpx.Client):
     response = client.post(
         "/data",
         json=[
@@ -844,12 +837,7 @@ def test_unescaped_control_char_in_message(
     assert str(write_api_mock.influx_points[0]) == str(point)
 
 
-def test_invalid_data_request_json():
-    write_api_mock = InfluxWriterMock()
-    app.app.dependency_overrides[app.InfluxWriterAsync] = lambda: write_api_mock
-    app.app.dependency_overrides[app.TopicModel] = lambda: TestTopicModel()
-
-    client = TestClient(app.app, raise_server_exceptions=False)
+def test_invalid_data_request_json(client: httpx.Client):
     response = client.post(
         "/data",
         content="invalid json",
@@ -869,12 +857,7 @@ def test_invalid_data_request_json():
     }
 
 
-def test_invalid_data_request_type():
-    write_api_mock = InfluxWriterMock()
-    app.app.dependency_overrides[app.InfluxWriterAsync] = lambda: write_api_mock
-    app.app.dependency_overrides[app.TopicModel] = lambda: TestTopicModel()
-
-    client = TestClient(app.app, raise_server_exceptions=False)
+def test_invalid_data_request_type(client: httpx.Client):
     response = client.post("/data", json={"foo": "bar"})
     assert response.status_code == 422
     assert response.json() == {

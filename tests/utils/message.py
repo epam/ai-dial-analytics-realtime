@@ -13,7 +13,7 @@ def create_chat_completion_request():
         "stream": True,
         "messages": [
             {"role": "system", "content": ""},
-            {"role": "user", "content": "ping"},
+            {"role": "user", "content": "ping?"},
         ],
         "model": "gpt-4",
         "max_tokens": 2000,

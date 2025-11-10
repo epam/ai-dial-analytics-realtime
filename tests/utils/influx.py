@@ -17,6 +17,7 @@ def create_point(
     project_id: str = DEFAULT_PROJECT_ID,
     response_id: str = DEFAULT_RESPONSE_ID,
     chat_id: str = DEFAULT_CHAT_ID,
+    number_request_messages: int = 2,
     topic: str | None = DEFAULT_TOPIC,
     title: str = DEFAULT_TITLE,
     timestamp: datetime = DEFAULT_TIMESTAMP,
@@ -44,7 +45,7 @@ def create_point(
         .field("user_hash", "undefined")
         .field("price", price)
         .field("deployment_price", deployment_price)
-        .field("number_request_messages", 2)
+        .field("number_request_messages", number_request_messages)
         .field("chat_id", chat_id)
         .field("completion_tokens", completion_tokens)
         .field("prompt_tokens", prompt_tokens)

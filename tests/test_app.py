@@ -131,73 +131,28 @@ def test_chat_completion_plain_text_no_body(
 
 
 def test_chat_completion_list_content(client: Client, influx: InfluxWriterMock):
-    client(
-        {
-            "apiType": "DialOpenAI",
-            "chat": {"id": "chat-1"},
-            "project": {"id": "PROJECT-KEY"},
-            "user": {"id": "", "title": ""},
-            "deployment": "gpt-4",
-            "request": {
-                "protocol": "HTTP/1.1",
-                "method": "POST",
-                "uri": "/openai/deployments/gpt-4/chat/completions?api-version=2023-03-15-preview",
-                "time": "2023-08-16T19:42:39.997",
-                "body": json.dumps(
-                    {
-                        "messages": [
-                            {
-                                "role": "system",
-                                "content": [
-                                    {
-                                        "type": "text",
-                                        "text": "act as a helpful assistant",
-                                    }
-                                ],
-                            },
-                            {"role": "user", "content": "ping"},
-                        ],
-                        "model": "gpt-4",
-                        "max_tokens": 2000,
-                        "stream": True,
-                        "n": 1,
-                        "temperature": 0.0,
-                    }
-                ),
-            },
-            "assembled_response": json.dumps(
-                {
-                    "id": "chatcmpl-1",
-                    "object": "chat.completion",
-                    "created": 1692214960,
-                    "model": "gpt-4",
-                    "choices": [
-                        {
-                            "index": 0,
-                            "delta": {
-                                "role": "assistant",
-                                "content": "pong",
-                            },
-                            "finish_reason": "stop",
-                        }
-                    ],
-                    "usage": {
-                        "completion_tokens": 189,
-                        "prompt_tokens": 22,
-                        "total_tokens": 211,
-                    },
-                }
-            ),
-            "response": {
-                "status": "200",
-                "body": 'data: {"id":"chatcmpl-1","object":"chat.completion.chunk","created":1692214960,"model":"gpt-4","choices":[{"index":0,"delta":{"role":"assistant","content":"pong"},"finish_reason":null}]}\n\ndata: {"id":"chatcmpl-1","object":"chat.completion.chunk","created":1692214960,"model":"gpt-4","choices":[{"index":0,"delta":{},"finish_reason":"stop"}],"usage":{"completion_tokens":189,"prompt_tokens":22,"total_tokens":211}}\n\ndata: [DONE]\n',
-            },
-        }
-    ).raise_for_status()
+    """Check that analytics collects text content from text content parts"""
 
-    assert influx.points == [
-        'analytics,core_parent_span_id=undefined,core_span_id=undefined,deployment=gpt-4,execution_path=undefined,language=undefined,model=gpt-4,parent_deployment=undefined,project_id=PROJECT-KEY,response_id=chatcmpl-1,title=undefined,topic=act\\ as\\ a\\ helpful\\ assistant\\n\\nping\\n\\npong,trace_id=undefined,upstream=undefined cached_prompt_tokens=0i,chat_id="chat-1",completion_tokens=189i,deployment_price=0,number_request_messages=2i,price=0,prompt_tokens=22i,user_hash="undefined" 1692214959997000000',
-    ]
+    message = create_message()
+    message["request"]["body"] = json.dumps(
+        {
+            "model": "gpt-4",
+            "messages": [
+                {
+                    "role": "system",
+                    "content": [
+                        {"type": "text", "text": "act as a helpful assistant"}
+                    ],
+                },
+                {"role": "user", "content": "ping"},
+            ],
+        }
+    )
+
+    client(message).raise_for_status()
+
+    point = create_point(topic="act as a helpful assistant\n\nping\n\npong")
+    influx.match_points(point)
 
 
 def test_chat_completion_none_content(client: Client, influx: InfluxWriterMock):

@@ -57,7 +57,6 @@ def create_message(
     token_usage: dict | None = None,
     request_time: str = DEFAULT_RESPONSE_TIME,
     request_body: dict = create_chat_completion_request(),
-    response_body: str | None = None,
     response_assembled: dict | None = create_chat_completion_response(),
 ):
     return {
@@ -79,5 +78,7 @@ def create_message(
             if response_assembled is None
             else json.dumps(response_assembled)
         ),
-        "response": {"status": "200", "body": response_body},
+        # response.body is never inspected by the analytics for chat completion requests,
+        # therefore, no need to make it realistic.
+        "response": {"status": "200", "body": "whatever"},
     }

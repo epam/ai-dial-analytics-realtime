@@ -7,24 +7,25 @@ from tests.utils.constants import (
     DEFAULT_PROJECT_ID,
     DEFAULT_RESPONSE_ID,
     DEFAULT_TIMESTAMP,
-    DEFAULT_TITLE,
     DEFAULT_TOPIC,
 )
 
 
 def create_point(
     *,
-    parent_deployment: str | None = None,
-    execution_path: str | None = None,
-    trace_id: str | None = None,
-    core_span_id: str | None = None,
-    core_parent_span_id: str | None = None,
+    parent_deployment: str | None = "assistant",
+    execution_path: str | None = "app1/app2",
+    trace_id: str | None = "test-trace-id",
+    core_span_id: str | None = "test-core-span-id",
+    core_parent_span_id: str | None = "core-parent-span-id",
     project_id: str = DEFAULT_PROJECT_ID,
     response_id: str = DEFAULT_RESPONSE_ID,
+    user_hash: str | None = "test-user-id",
     chat_id: str = DEFAULT_CHAT_ID,
     number_request_messages: int = 2,
+    upstream: str | None = "http://upstream.domain.com/endpoint",
     topic: str | None = DEFAULT_TOPIC,
-    title: str = DEFAULT_TITLE,
+    title: str | None = "test-user-title",
     timestamp: datetime = DEFAULT_TIMESTAMP,
     prompt_tokens: int = 0,
     completion_tokens: int = 0,
@@ -43,11 +44,11 @@ def create_point(
         .tag("core_parent_span_id", core_parent_span_id or "undefined")
         .tag("project_id", project_id)
         .tag("language", "undefined")
-        .tag("upstream", "undefined")
+        .tag("upstream", upstream or "undefined")
         .tag("topic", topic)
-        .tag("title", title)
+        .tag("title", title or "undefined")
         .tag("response_id", response_id)
-        .field("user_hash", "undefined")
+        .field("user_hash", user_hash or "undefined")
         .field("price", price)
         .field("deployment_price", deployment_price)
         .field("number_request_messages", number_request_messages)

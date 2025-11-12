@@ -142,14 +142,14 @@ def test_embeddings_tokens(client: Client, influx: InfluxWriterMock):
                     {
                         "data": [
                             {
-                                "embedding": [0.1, 0.2],
                                 "index": 0,
                                 "object": "embedding",
+                                "embedding": [0.1, 0.2],
                             },
                             {
-                                "embedding": [0.3, 0.4],
                                 "index": 1,
                                 "object": "embedding",
+                                "embedding": [0.3, 0.4],
                             },
                         ],
                         "model": "text-embedding-3-small",

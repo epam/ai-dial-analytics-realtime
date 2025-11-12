@@ -6,13 +6,35 @@ from aidial_analytics_realtime.time import parse_time
 from tests.mocks import InfluxWriterMock
 from tests.utils.client import Client
 from tests.utils.influx import create_point
-from tests.utils.message import create_chat_completion_response, create_message
+from tests.utils.message import (
+    create_chat_completion_response,
+    create_message,
+    on_request_body,
+)
 
 
 def test_chat_completion_baseline(client: Client, influx: InfluxWriterMock):
     message = create_message()
     client(message).raise_for_status()
     influx.match_points(create_point())
+
+
+def test_chat_completion_deployment(client: Client, influx: InfluxWriterMock):
+    message = create_message(deployment="test-dial-deployment-id")
+    client(message).raise_for_status()
+    influx.match_points(create_point(deployment="test-dial-deployment-id"))
+
+
+def test_chat_completion_model(client: Client, influx: InfluxWriterMock):
+    message = create_message()
+
+    def _set_model(body):
+        body["model"] = "test-model-id"
+
+    on_request_body(message, _set_model)
+
+    client(message).raise_for_status()
+    influx.match_points(create_point(model="test-model-id"))
 
 
 def test_chat_completion_chat_id(client: Client, influx: InfluxWriterMock):

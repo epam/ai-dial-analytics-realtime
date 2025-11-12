@@ -1,4 +1,5 @@
 import json
+from typing import Callable
 
 from tests.utils.constants import (
     DEFAULT_CHAT_ID,
@@ -71,6 +72,7 @@ def create_message(
     project_id: str = DEFAULT_PROJECT_ID,
     user_id: str = "test-user-id",
     user_title: str = "test-user-title",
+    deployment: str = "gpt-4",
     request_uri: str = "/openai/deployments/gpt-4/chat/completions?api-version=2023-03-15-preview",
     token_usage: dict | None = _default_token_usage(),
     parent_deployment: str | None = "assistant",
@@ -80,7 +82,7 @@ def create_message(
     request_body: dict = create_chat_completion_request(),
     response_assembled: str | dict | None = create_chat_completion_response(),
     response_upstream_uri: str | None = "http://upstream.domain.com/endpoint",
-):
+) -> dict:
     assembled_response = response_assembled
     if isinstance(response_assembled, dict):
         assembled_response = json.dumps(response_assembled)
@@ -90,7 +92,7 @@ def create_message(
         "chat": {"id": chat_id},
         "project": {"id": project_id},
         "user": {"id": user_id, "title": user_title},
-        "deployment": "gpt-4",
+        "deployment": deployment,
         "token_usage": token_usage,
         "parent_deployment": parent_deployment,
         "trace": trace,
@@ -111,3 +113,10 @@ def create_message(
             "body": "whatever",
         },
     }
+
+
+def on_request_body(message: dict, f: Callable[[dict], None | dict]) -> dict:
+    body = json.loads(message["request"]["body"])
+    body = f(body) or body
+    message["request"]["body"] = json.dumps(body)
+    return message

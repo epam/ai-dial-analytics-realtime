@@ -15,6 +15,8 @@ def create_point(
     *,
     parent_deployment: str | None = "assistant",
     execution_path: str | None = "app1/app2",
+    model: str = "gpt-4",
+    deployment: str = "gpt-4",
     trace_id: str | None = "test-trace-id",
     core_span_id: str | None = "test-core-span-id",
     core_parent_span_id: str | None = "core-parent-span-id",
@@ -35,8 +37,8 @@ def create_point(
 ) -> Point:
     return (
         Point("analytics")
-        .tag("model", "gpt-4")
-        .tag("deployment", "gpt-4")
+        .tag("model", model)
+        .tag("deployment", deployment)
         .tag("parent_deployment", parent_deployment or "undefined")
         .tag("execution_path", execution_path or "undefined")
         .tag("trace_id", trace_id or "undefined")

@@ -79,13 +79,22 @@ def create_message(
     trace: dict | None = _default_trace(),
     execution_path: list | None = ["app1", "app2"],
     request_time: str = DEFAULT_RESPONSE_TIME,
-    request_body: dict = create_chat_completion_request(),
+    request_body: str | dict | None = create_chat_completion_request(),
     response_assembled: str | dict | None = create_chat_completion_response(),
+    # response.body is never inspected by the analytics for chat completion requests,
+    # therefore, no need to make it realistic.
+    response_body: str | dict | None = "whatever",
     response_upstream_uri: str | None = "http://upstream.domain.com/endpoint",
 ) -> dict:
     assembled_response = response_assembled
     if isinstance(response_assembled, dict):
         assembled_response = json.dumps(response_assembled)
+
+    if isinstance(response_body, dict):
+        response_body = json.dumps(response_body)
+
+    if isinstance(request_body, dict):
+        request_body = json.dumps(request_body)
 
     return {
         "apiType": "DialOpenAI",
@@ -102,15 +111,13 @@ def create_message(
             "method": "POST",
             "uri": request_uri,
             "time": request_time,
-            "body": json.dumps(request_body),
+            "body": request_body,
         },
         "assembled_response": assembled_response,
-        # response.body is never inspected by the analytics for chat completion requests,
-        # therefore, no need to make it realistic.
         "response": {
             "status": "200",
             "upstream_uri": response_upstream_uri,
-            "body": "whatever",
+            "body": response_body,
         },
     }
 

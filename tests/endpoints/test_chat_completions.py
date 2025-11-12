@@ -302,7 +302,7 @@ def test_chat_completion_invalid_assembled_response(
     client(message).raise_for_status()
 
     point = create_point(
-        # Since there is no response.id, it's auto-generated as UUID.
+        # Since there is no assembled_response.id, it's auto-generated as UUID.
         response_id="pseudo-uuid-1",
         topic="ping?",
         prompt_tokens=0,

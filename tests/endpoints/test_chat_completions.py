@@ -37,6 +37,29 @@ def test_chat_completion_model(client: Client, influx: InfluxWriterMock):
     influx.match_points(create_point(model="test-model-id"))
 
 
+def test_chat_completion_missing_model(
+    client: Client, influx: InfluxWriterMock
+):
+    """
+    Testing fallback to deployment when model field is missing.
+    """
+
+    message = create_message(deployment="test-deployment-id")
+
+    def _unset_model(body):
+        body.pop("model")
+
+    on_request_body(message, _unset_model)
+
+    client(message).raise_for_status()
+    influx.match_points(
+        create_point(
+            deployment="test-deployment-id",
+            model="test-deployment-id",
+        )
+    )
+
+
 def test_chat_completion_chat_id(client: Client, influx: InfluxWriterMock):
     message = create_message(chat_id="test-chat-id")
     client(message).raise_for_status()

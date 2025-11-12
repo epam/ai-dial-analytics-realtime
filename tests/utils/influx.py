@@ -11,6 +11,32 @@ from tests.utils.constants import (
 )
 
 
+def create_rate_point(
+    *,
+    deployment: str = "gpt-4",
+    project_id: str = DEFAULT_PROJECT_ID,
+    response_id: str = "rate-response-id",
+    chat_id: str | None = DEFAULT_CHAT_ID,
+    user_hash: str | None = "test-user-id",
+    title: str | None = "test-user-title",
+    timestamp: datetime = DEFAULT_TIMESTAMP,
+    like_count: int = 1,
+    dislike_count: int = 0,
+):
+    return (
+        Point("rate_analytics")
+        .tag("deployment", deployment)
+        .tag("project_id", project_id)
+        .tag("title", title or "undefined")
+        .tag("response_id", response_id)
+        .tag("user_hash", user_hash or "undefined")
+        .tag("chat_id", chat_id or "undefined")
+        .field("dislike_count", dislike_count)
+        .field("like_count", like_count)
+        .time(timestamp)
+    )
+
+
 def create_point(
     *,
     parent_deployment: str | None = "assistant",

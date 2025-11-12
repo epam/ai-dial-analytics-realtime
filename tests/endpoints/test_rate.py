@@ -1,61 +1,65 @@
-import json
-
 from tests.mocks import InfluxWriterMock
 from tests.utils.client import Client
+from tests.utils.influx import create_rate_point
+from tests.utils.message import create_rate_message, on_request_body
 
 
-def test_rate_request(client: Client, influx: InfluxWriterMock):
-    client(
-        {
-            "apiType": "DialOpenAI",
-            "chat": {"id": "chat-1"},
-            "project": {"id": "PROJECT-KEY"},
-            "user": {"id": "", "title": ""},
-            "deployment": "gpt-4",
-            "request": {
-                "protocol": "HTTP/1.1",
-                "method": "POST",
-                "uri": "/v1/gpt-4/rate",
-                "time": "2023-08-16T19:42:39.997",
-                "body": json.dumps(
-                    {
-                        "responseId": "response_123",
-                        "rate": True,
-                    }
-                ),
-            },
-            "assembled_response": "",
-            "response": {
-                "status": "200",
-                "body": "",
-            },
-        },
-        {
-            "apiType": "DialOpenAI",
-            "chat": {"id": "chat-1"},
-            "project": {"id": "PROJECT-KEY"},
-            "user": {"id": "", "title": ""},
-            "deployment": "gpt-4",
-            "request": {
-                "protocol": "HTTP/1.1",
-                "method": "POST",
-                "uri": "/v1/gpt-4/rate",
-                "time": "2023-11-24T03:33:40.39",
-                "body": json.dumps(
-                    {
-                        "responseId": "response_124",
-                        "rate": False,
-                    }
-                ),
-            },
-            "response": {
-                "status": "200",
-                "body": "",
-            },
-        },
-    ).raise_for_status()
+def test_rate_request_baseline(client: Client, influx: InfluxWriterMock):
+    message = create_rate_message()
+    client(message).raise_for_status()
+    point = create_rate_point()
+    influx.match_points(point)
 
-    assert influx.points == [
-        "rate_analytics,chat_id=chat-1,deployment=gpt-4,project_id=PROJECT-KEY,response_id=response_123,title=undefined,user_hash=undefined dislike_count=0i,like_count=1i 1692214959997000000",
-        "rate_analytics,chat_id=chat-1,deployment=gpt-4,project_id=PROJECT-KEY,response_id=response_124,title=undefined,user_hash=undefined dislike_count=1i,like_count=0i 1700796820390000000",
-    ]
+
+def test_rate_request_like(client: Client, influx: InfluxWriterMock):
+    message = create_rate_message()
+
+    def _set_like(body):
+        body["rate"] = True
+
+    client(message).raise_for_status()
+    on_request_body(message, _set_like)
+
+    point = create_rate_point(like_count=1, dislike_count=0)
+    influx.match_points(point)
+
+
+def test_rate_request_dislike(client: Client, influx: InfluxWriterMock):
+    message = create_rate_message()
+
+    def _set_dislike(body):
+        body["rate"] = False
+
+    on_request_body(message, _set_dislike)
+    client(message).raise_for_status()
+
+    point = create_rate_point(like_count=0, dislike_count=1)
+    influx.match_points(point)
+
+
+def test_rate_request_response_id(client: Client, influx: InfluxWriterMock):
+    message = create_rate_message()
+
+    def _set_dislike(body):
+        body["responseId"] = "test-response-id"
+
+    on_request_body(message, _set_dislike)
+    client(message).raise_for_status()
+
+    point = create_rate_point(response_id="test-response-id")
+    influx.match_points(point)
+
+
+def test_rate_request_tolerate_extra_fields(
+    client: Client, influx: InfluxWriterMock
+):
+    message = create_rate_message()
+
+    def _set_extra(body):
+        body["extra-field"] = "extra-field-value"
+
+    on_request_body(message, _set_extra)
+    client(message).raise_for_status()
+
+    point = create_rate_point()
+    influx.match_points(point)

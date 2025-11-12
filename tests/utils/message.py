@@ -66,7 +66,7 @@ def _default_trace() -> dict:
     }
 
 
-def create_message(
+def _create_message(
     *,
     chat_id: str = DEFAULT_CHAT_ID,
     project_id: str = DEFAULT_PROJECT_ID,
@@ -120,6 +120,91 @@ def create_message(
             "body": response_body,
         },
     }
+
+
+def create_chat_message(
+    *,
+    chat_id: str = DEFAULT_CHAT_ID,
+    project_id: str = DEFAULT_PROJECT_ID,
+    user_id: str = "test-user-id",
+    user_title: str = "test-user-title",
+    deployment: str = "gpt-4",
+    request_uri: str = "/openai/deployments/gpt-4/chat/completions?api-version=2023-03-15-preview",
+    token_usage: dict | None = _default_token_usage(),
+    parent_deployment: str | None = "assistant",
+    trace: dict | None = _default_trace(),
+    execution_path: list | None = ["app1", "app2"],
+    request_time: str = DEFAULT_RESPONSE_TIME,
+    request_body: str | dict | None = create_chat_completion_request(),
+    response_assembled: str | dict | None = create_chat_completion_response(),
+    # response.body is never inspected by the analytics for chat completion requests,
+    # therefore, no need to make it realistic.
+    response_body: str | dict | None = "whatever",
+    response_upstream_uri: str | None = "http://upstream.domain.com/endpoint",
+) -> dict:
+    return _create_message(**locals())
+
+
+def _default_embedding_request_body() -> dict:
+    return {"input": ["fish", "cat"]}
+
+
+def _default_embedding_response_body() -> dict:
+    return {
+        "object": "list",
+        "model": "text-embedding-3-small",
+        "data": [
+            {"index": 0, "object": "embedding", "embedding": [0.1, 0.2]},
+            {"index": 1, "object": "embedding", "embedding": [0.3, 0.4]},
+        ],
+        "usage": {"prompt_tokens": 43, "total_tokens": 43},
+    }
+
+
+def create_embedding_message(
+    *,
+    chat_id: str = DEFAULT_CHAT_ID,
+    project_id: str = DEFAULT_PROJECT_ID,
+    user_id: str = "test-user-id",
+    user_title: str = "test-user-title",
+    deployment: str = "text-embedding-3-small",
+    request_uri: str = "/openai/deployments/text-embedding-3-small/embeddings?api-version=2023-03-15-preview",
+    token_usage: dict | None = _default_token_usage(),
+    parent_deployment: str | None = "assistant",
+    trace: dict | None = _default_trace(),
+    execution_path: list | None = ["app1", "app2"],
+    request_time: str = DEFAULT_RESPONSE_TIME,
+    request_body: str | dict | None = _default_embedding_request_body(),
+    response_assembled: str | dict | None = create_chat_completion_response(),
+    response_body: str | dict | None = _default_embedding_response_body(),
+    response_upstream_uri: str | None = "http://upstream.domain.com/endpoint",
+) -> dict:
+    return _create_message(**locals())
+
+
+def _default_rate_request_body():
+    return {"responseId": "rate-response-id", "rate": True}
+
+
+def create_rate_message(
+    *,
+    chat_id: str = DEFAULT_CHAT_ID,
+    project_id: str = DEFAULT_PROJECT_ID,
+    user_id: str = "test-user-id",
+    user_title: str = "test-user-title",
+    deployment: str = "gpt-4",
+    request_uri: str = "/v1/gpt-4/rate",
+    token_usage: dict | None = None,
+    parent_deployment: str | None = "assistant",
+    trace: dict | None = _default_trace(),
+    execution_path: list | None = ["app1", "app2"],
+    request_time: str = DEFAULT_RESPONSE_TIME,
+    request_body: str | dict | None = _default_rate_request_body(),
+    response_assembled: str | dict | None = None,
+    response_body: str | dict | None = "",
+    response_upstream_uri: str | None = None,
+) -> dict:
+    return _create_message(**locals())
 
 
 def on_request_body(message: dict, f: Callable[[dict], None | dict]) -> dict:

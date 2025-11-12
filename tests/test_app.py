@@ -1,23 +1,4 @@
-import pytest
-from fastapi.testclient import TestClient
-
-import aidial_analytics_realtime.app as app
-from tests.mocks import InfluxWriterMock, TestTopicModel
 from tests.utils.client import Client
-
-
-@pytest.fixture
-def influx():
-    return InfluxWriterMock()
-
-
-@pytest.fixture
-def client(influx) -> Client:
-    app.app.dependency_overrides[app.InfluxWriterAsync] = lambda: influx  # type: ignore
-    app.app.dependency_overrides[app.TopicModel] = lambda: TestTopicModel()
-    return Client(
-        http_client=TestClient(app.app, raise_server_exceptions=False)
-    )
 
 
 def test_invalid_data_message(client: Client):

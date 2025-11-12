@@ -1,47 +1,15 @@
 import json
-from unittest.mock import patch
 
 import pytest
-from fastapi.testclient import TestClient
 
-import aidial_analytics_realtime.app as app
 from aidial_analytics_realtime.time import parse_time
-from tests.mocks import InfluxWriterMock, TestTopicModel
+from tests.mocks import InfluxWriterMock
 from tests.utils.client import Client
 from tests.utils.influx import create_point
 from tests.utils.message import create_chat_completion_response, create_message
 
 
-@pytest.fixture(autouse=True)
-def mock_uuid4():
-    counter = 0
-
-    def side_effect() -> str:
-        nonlocal counter
-        counter += 1
-        return f"pseudo-uuid-{counter}"
-
-    with patch(
-        "aidial_analytics_realtime.analytics.uuid4", side_effect=side_effect
-    ):
-        yield
-
-
-@pytest.fixture
-def influx():
-    return InfluxWriterMock()
-
-
-@pytest.fixture
-def client(influx) -> Client:
-    app.app.dependency_overrides[app.InfluxWriterAsync] = lambda: influx  # type: ignore
-    app.app.dependency_overrides[app.TopicModel] = lambda: TestTopicModel()
-    return Client(
-        http_client=TestClient(app.app, raise_server_exceptions=False)
-    )
-
-
-def test_chat_completion_basic(client: Client, influx: InfluxWriterMock):
+def test_chat_completion_baseline(client: Client, influx: InfluxWriterMock):
     message = create_message()
     client(message).raise_for_status()
     influx.match_points(create_point())
@@ -281,6 +249,7 @@ def test_chat_completion_deployment_price_with_price(
 
 @pytest.mark.parametrize("assembled_response", [None, "{}", "", "invalid JSON"])
 def test_chat_completion_invalid_assembled_response(
+    mock_uuid4,
     client: Client,
     influx: InfluxWriterMock,
     assembled_response: str | None,

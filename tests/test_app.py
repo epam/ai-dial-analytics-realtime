@@ -10,11 +10,7 @@ from aidial_analytics_realtime.time import parse_time
 from tests.mocks import InfluxWriterMock, TestTopicModel
 from tests.utils.client import Client
 from tests.utils.influx import create_point
-from tests.utils.message import (
-    create_chat_completion_request,
-    create_chat_completion_response,
-    create_message,
-)
+from tests.utils.message import create_chat_completion_response, create_message
 
 
 @pytest.fixture(autouse=True)
@@ -46,53 +42,83 @@ def client(influx) -> Client:
     )
 
 
-def test_chat_completion_plain_text_vanilla(
+def test_chat_completion_basic(client: Client, influx: InfluxWriterMock):
+    message = create_message()
+    client(message).raise_for_status()
+    influx.match_points(create_point())
+
+
+def test_chat_completion_chat_id(client: Client, influx: InfluxWriterMock):
+    message = create_message(chat_id="test-chat-id")
+    client(message).raise_for_status()
+    influx.match_points(create_point(chat_id="test-chat-id"))
+
+
+def test_chat_completion_project_id(client: Client, influx: InfluxWriterMock):
+    message = create_message(project_id="test-project-id")
+    client(message).raise_for_status()
+    influx.match_points(create_point(project_id="test-project-id"))
+
+
+def test_chat_completion_request_time(client: Client, influx: InfluxWriterMock):
+    message = create_message(request_time="2023-11-24T03:33:40.39")
+    client(message).raise_for_status()
+    timestamp = parse_time(message["request"]["time"])
+    influx.match_points(create_point(timestamp=timestamp))
+
+
+def test_chat_completion_response_id_from_assembled_response(
     client: Client, influx: InfluxWriterMock
 ):
-    message1 = create_message()
-    message2 = create_message(
-        chat_id="chat-2",
-        project_id="PROJECT-KEY-2",
-        request_time="2023-11-24T03:33:40.39",
-        request_body=create_chat_completion_request(),
-        response_assembled=create_chat_completion_response(
-            id="chatcmpl-2", created=1700828102
-        ),
-    )
-
-    client(message1, message2).raise_for_status()
-
-    point1 = create_point()
-    point2 = create_point(
-        project_id="PROJECT-KEY-2",
-        response_id="chatcmpl-2",
-        chat_id="chat-2",
-        timestamp=parse_time(message2["request"]["time"]),
-    )
-
-    influx.match_points(point1, point2)
+    response_assembled = create_chat_completion_response(id="test-response-id")
+    message = create_message(response_assembled=response_assembled)
+    client(message).raise_for_status()
+    influx.match_points(create_point(response_id="test-response-id"))
 
 
-def test_chat_completion_plain_text_no_body(
+def test_chat_completion_many_messages(
     client: Client, influx: InfluxWriterMock
 ):
-    # Checking that usage taken from message.token_usage when
-    # it's not possible to extract it from the assembled response.
+    n = 50
+    messages = [create_message(chat_id=f"chat-{idx}") for idx in range(0, n)]
+    client(*messages).raise_for_status()
 
-    message1 = create_message(
-        chat_id="chat-1",
-        token_usage={
-            "prompt_tokens": 111,
-            "completion_tokens": 222,
-            "total_tokens": 333,
-            "deployment_price": 0.001,
-            "price": 0.002,
-        },
-        response_assembled=None,
+    points = [create_point(chat_id=f"chat-{idx}") for idx in range(0, n)]
+    influx.match_points(*points)
+
+
+def test_chat_completion_usage_from_response(
+    client: Client, influx: InfluxWriterMock
+):
+    """
+    Checking that the usage is taken from the response
+    when the top-level usage isn't provided.
+    """
+
+    response = create_chat_completion_response()
+    message = create_message(token_usage=None, response_assembled=response)
+    client(message).raise_for_status()
+
+    usage = response["usage"]
+    point = create_point(
+        price=0.0,
+        deployment_price=0.0,
+        prompt_tokens=usage["prompt_tokens"],
+        completion_tokens=usage["completion_tokens"],
+        cached_prompt_tokens=usage["prompt_tokens_details"]["cached_tokens"],
     )
 
-    message2 = create_message(
-        chat_id="chat-2",
+    influx.match_points(point)
+
+
+def test_chat_completion_usage_from_top_level(
+    client: Client, influx: InfluxWriterMock
+):
+    """
+    Checking that the usage is taken from top level usage if it's provided.
+    """
+
+    message = create_message(
         token_usage={
             "prompt_tokens": 111,
             "completion_tokens": 222,
@@ -101,36 +127,24 @@ def test_chat_completion_plain_text_no_body(
             "deployment_price": 0.001,
             "price": 0.002,
         },
-        response_assembled=None,
     )
 
-    client(message1, message2).raise_for_status()
+    client(message).raise_for_status()
 
-    point1 = create_point(
-        chat_id="chat-1",
-        response_id="pseudo-uuid-1",
-        topic="ping?",
-        price=0.002,
-        deployment_price=0.001,
+    point = create_point(
         prompt_tokens=111,
         completion_tokens=222,
-    )
-
-    point2 = create_point(
-        chat_id="chat-2",
-        response_id="pseudo-uuid-2",
-        topic="ping?",
-        price=0.002,
-        deployment_price=0.001,
         cached_prompt_tokens=44,
-        prompt_tokens=111,
-        completion_tokens=222,
+        deployment_price=0.001,
+        price=0.002,
     )
 
-    influx.match_points(point1, point2)
+    influx.match_points(point)
 
 
-def test_chat_completion_list_content(client: Client, influx: InfluxWriterMock):
+def test_chat_completion_text_content_parts(
+    client: Client, influx: InfluxWriterMock
+):
     """Check that analytics collects text content from text content parts"""
 
     message = create_message()
@@ -155,7 +169,9 @@ def test_chat_completion_list_content(client: Client, influx: InfluxWriterMock):
     influx.match_points(point)
 
 
-def test_chat_completion_none_content(client: Client, influx: InfluxWriterMock):
+def test_chat_completion_messages_without_text_content(
+    client: Client, influx: InfluxWriterMock
+):
     """Check that analytics ignores content parts without textual content"""
 
     message = create_message()
@@ -364,144 +380,71 @@ def test_embeddings_tokens(client: Client, influx: InfluxWriterMock):
     )
 
 
-def test_data_request_with_new_format(client: Client, influx: InfluxWriterMock):
+def test_chat_completion_parent_deployment(
+    client: Client, influx: InfluxWriterMock
+):
+    message = create_message(parent_deployment="test-parent-deployment")
+    client(message).raise_for_status()
+    influx.match_points(
+        create_point(parent_deployment="test-parent-deployment")
+    )
 
-    client(
-        {
-            "apiType": "DialOpenAI",
-            "chat": {"id": "chat-1"},
-            "project": {"id": "PROJECT-KEY"},
-            "user": {"id": "", "title": ""},
-            "deployment": "gpt-4",
-            "token_usage": {
-                "completion_tokens": 40,
-                "prompt_tokens": 30,
-                "deployment_price": 0.001,
-                "price": 0.001,
-            },
-            "parent_deployment": "assistant",
-            "trace": {
-                "trace_id": "5dca3d6ed5d22b6ab574f27a6ab5ec14",
-                "core_span_id": "9ade2b6fef0a716d",
-                "core_parent_span_id": "20e7e64715abbe97",
-            },
-            "execution_path": [None, "b", "c"],
-            "request": {
-                "protocol": "HTTP/1.1",
-                "method": "POST",
-                "uri": "/openai/deployments/gpt-4/chat/completions?api-version=2023-03-15-preview",
-                "time": "2023-08-16T19:42:39.997",
-                "body": json.dumps(
-                    {
-                        "messages": [
-                            {"role": "system", "content": ""},
-                            {"role": "user", "content": "ping"},
-                        ],
-                        "model": "gpt-4",
-                        "max_tokens": 2000,
-                        "stream": True,
-                        "n": 1,
-                        "temperature": 0.0,
-                    }
-                ),
-            },
-            "assembled_response": json.dumps(
-                {
-                    "id": "chatcmpl-1",
-                    "object": "chat.completion",
-                    "created": 1692214960,
-                    "model": "gpt-4",
-                    "choices": [
-                        {
-                            "index": 0,
-                            "delta": {
-                                "role": "assistant",
-                                "content": "pong",
-                            },
-                            "finish_reason": "stop",
-                        }
-                    ],
-                    "usage": {
-                        "completion_tokens": 189,
-                        "prompt_tokens": 22,
-                        "total_tokens": 211,
-                    },
-                }
-            ),
-            "response": {
-                "status": "200",
-                "body": 'data: {"id":"chatcmpl-1","object":"chat.completion.chunk","created":1692214960,"model":"gpt-4","choices":[{"index":0,"delta":{"role":"assistant","content":"pong"},"finish_reason":null}]}\n\ndata: {"id":"chatcmpl-1","object":"chat.completion.chunk","created":1692214960,"model":"gpt-4","choices":[{"index":0,"delta":{},"finish_reason":"stop"}],"usage":{"completion_tokens":189,"prompt_tokens":22,"total_tokens":211}}\n\ndata: [DONE]\n',
-            },
-        },
-        {
-            "apiType": "DialOpenAI",
-            "chat": {"id": "chat-2"},
-            "project": {"id": "PROJECT-KEY-2"},
-            "user": {"id": "", "title": ""},
-            "deployment": "gpt-4",
-            "token_usage": {
-                "completion_tokens": 40,
-                "prompt_tokens": 30,
-                "price": 0.005,
-            },
-            "trace": {
-                "trace_id": "5dca3d6ed5d22b6ab574f27a6ab5ec14",
-                "core_span_id": "20e7e64715abbe97",
-            },
-            "execution_path": ["a", "b", "c"],
-            "request": {
-                "protocol": "HTTP/1.1",
-                "method": "POST",
-                "uri": "/openai/deployments/gpt-4/chat/completions",
-                "time": "2023-11-24T03:33:40.39",
-                "body": json.dumps(
-                    {
-                        "messages": [
-                            {"role": "system", "content": ""},
-                            {"role": "user", "content": "ping"},
-                        ],
-                        "model": "gpt-4",
-                        "max_tokens": 2000,
-                        "stream": True,
-                        "n": 1,
-                        "temperature": 0.0,
-                    }
-                ),
-            },
-            "assembled_response": json.dumps(
-                {
-                    "id": "chatcmpl-2",
-                    "object": "chat.completion",
-                    "created": 1700828102,
-                    "model": "gpt-4",
-                    "choices": [
-                        {
-                            "index": 0,
-                            "delta": {
-                                "role": "assistant",
-                                "content": "pong",
-                            },
-                            "finish_reason": "stop",
-                        }
-                    ],
-                    "usage": {
-                        "completion_tokens": 189,
-                        "prompt_tokens": 22,
-                        "total_tokens": 211,
-                    },
-                }
-            ),
-            "response": {
-                "status": "200",
-                "body": 'data: {"id":"chatcmpl-2","object":"chat.completion.chunk","created":1700828102,"model":"gpt-4","choices":[{"index":0,"delta":{"role":"assistant","content":"pong"},"finish_reason":null}]}\n\ndata: {"id":"chatcmpl-2","object":"chat.completion.chunk","created":1700828102,"model":"gpt-4","choices":[{"index":0,"delta":{},"finish_reason":"stop"}],"usage":{"completion_tokens":189,"prompt_tokens":22,"total_tokens":211}}\n\ndata: [DONE]\n',
-            },
-        },
-    ).raise_for_status()
 
-    assert influx.points == [
-        'analytics,core_parent_span_id=20e7e64715abbe97,core_span_id=9ade2b6fef0a716d,deployment=gpt-4,execution_path=undefined/b/c,language=undefined,model=gpt-4,parent_deployment=assistant,project_id=PROJECT-KEY,response_id=chatcmpl-1,title=undefined,topic=ping\\n\\npong,trace_id=5dca3d6ed5d22b6ab574f27a6ab5ec14,upstream=undefined cached_prompt_tokens=0i,chat_id="chat-1",completion_tokens=40i,deployment_price=0.001,number_request_messages=2i,price=0.001,prompt_tokens=30i,user_hash="undefined" 1692214959997000000',
-        'analytics,core_parent_span_id=undefined,core_span_id=20e7e64715abbe97,deployment=gpt-4,execution_path=a/b/c,language=undefined,model=gpt-4,parent_deployment=undefined,project_id=PROJECT-KEY-2,response_id=chatcmpl-2,title=undefined,topic=ping\\n\\npong,trace_id=5dca3d6ed5d22b6ab574f27a6ab5ec14,upstream=undefined cached_prompt_tokens=0i,chat_id="chat-2",completion_tokens=40i,deployment_price=0,number_request_messages=2i,price=0.005,prompt_tokens=30i,user_hash="undefined" 1700796820390000000',
-    ]
+def test_chat_completion_trace(client: Client, influx: InfluxWriterMock):
+    message = create_message(
+        trace={
+            "trace_id": "5dca3d6ed5d22b6ab574f27a6ab5ec14",
+            "core_span_id": "9ade2b6fef0a716d",
+            "core_parent_span_id": "20e7e64715abbe97",
+        }
+    )
+    client(message).raise_for_status()
+    influx.match_points(
+        create_point(
+            trace_id="5dca3d6ed5d22b6ab574f27a6ab5ec14",
+            core_span_id="9ade2b6fef0a716d",
+            core_parent_span_id="20e7e64715abbe97",
+        )
+    )
+
+
+@pytest.mark.parametrize(
+    "path,expected_path",
+    [
+        ([None, "b", "c"], "undefined/b/c"),
+        (["a", "b", "c"], "a/b/c"),
+    ],
+)
+def test_chat_completion_execution_path(
+    client: Client, influx: InfluxWriterMock, path: list, expected_path: str
+):
+    message = create_message(execution_path=path)
+    client(message).raise_for_status()
+    influx.match_points(create_point(execution_path=expected_path))
+
+
+def test_chat_completion_price(client: Client, influx: InfluxWriterMock):
+    message = create_message(token_usage={"price": 0.456})
+    client(message).raise_for_status()
+    influx.match_points(create_point(price=0.456))
+
+
+def test_chat_completion_deployment_price_no_price(
+    client: Client, influx: InfluxWriterMock
+):
+    message = create_message(token_usage={"deployment_price": 0.123})
+    client(message).raise_for_status()
+    influx.match_points(create_point(deployment_price=0.0))
+
+
+def test_chat_completion_deployment_price_with_price(
+    client: Client, influx: InfluxWriterMock
+):
+    message = create_message(
+        token_usage={"deployment_price": 0.123, "price": 0.456}
+    )
+    client(message).raise_for_status()
+    influx.match_points(create_point(deployment_price=0.123, price=0.456))
 
 
 def test_rate_request(client: Client, influx: InfluxWriterMock):

@@ -9,15 +9,11 @@ from tests.utils.constants import (
 
 def create_chat_completion_request():
     return {
-        "n": 1,
-        "stream": True,
+        "model": "gpt-4",
         "messages": [
             {"role": "system", "content": ""},
             {"role": "user", "content": "ping?"},
         ],
-        "model": "gpt-4",
-        "max_tokens": 2000,
-        "temperature": 0.0,
     }
 
 
@@ -45,7 +41,19 @@ def create_chat_completion_response(
             "completion_tokens": 189,
             "prompt_tokens": 22,
             "total_tokens": 211,
+            "prompt_tokens_details": {"cached_tokens": 10},
         },
+    }
+
+
+def _default_token_usage() -> dict:
+    return {
+        "prompt_tokens": 0,
+        "completion_tokens": 0,
+        "total_tokens": 0,
+        "prompt_tokens_details": {"cached_tokens": 0},
+        "deployment_price": 0.0,
+        "price": 0.0,
     }
 
 
@@ -54,7 +62,10 @@ def create_message(
     chat_id: str = DEFAULT_CHAT_ID,
     project_id: str = DEFAULT_PROJECT_ID,
     request_uri: str = "/openai/deployments/gpt-4/chat/completions?api-version=2023-03-15-preview",
-    token_usage: dict | None = None,
+    token_usage: dict | None = _default_token_usage(),
+    parent_deployment: str | None = None,
+    trace: dict | None = None,
+    execution_path: list | None = None,
     request_time: str = DEFAULT_RESPONSE_TIME,
     request_body: dict = create_chat_completion_request(),
     response_assembled: str | dict | None = create_chat_completion_response(),
@@ -70,6 +81,9 @@ def create_message(
         "user": {"id": "", "title": ""},
         "deployment": "gpt-4",
         "token_usage": token_usage,
+        "parent_deployment": parent_deployment,
+        "trace": trace,
+        "execution_path": execution_path,
         "request": {
             "protocol": "HTTP/1.1",
             "method": "POST",

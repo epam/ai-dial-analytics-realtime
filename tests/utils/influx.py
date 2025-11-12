@@ -14,6 +14,11 @@ from tests.utils.constants import (
 
 def create_point(
     *,
+    parent_deployment: str | None = None,
+    execution_path: str | None = None,
+    trace_id: str | None = None,
+    core_span_id: str | None = None,
+    core_parent_span_id: str | None = None,
     project_id: str = DEFAULT_PROJECT_ID,
     response_id: str = DEFAULT_RESPONSE_ID,
     chat_id: str = DEFAULT_CHAT_ID,
@@ -21,21 +26,21 @@ def create_point(
     topic: str | None = DEFAULT_TOPIC,
     title: str = DEFAULT_TITLE,
     timestamp: datetime = DEFAULT_TIMESTAMP,
-    price: float = 0.0,
-    deployment_price: float = 0.0,
-    completion_tokens: int = 189,
-    prompt_tokens: int = 22,
+    prompt_tokens: int = 0,
+    completion_tokens: int = 0,
     cached_prompt_tokens: int = 0,
+    deployment_price: float = 0.0,
+    price: float = 0.0,
 ) -> Point:
     return (
         Point("analytics")
         .tag("model", "gpt-4")
         .tag("deployment", "gpt-4")
-        .tag("parent_deployment", "undefined")
-        .tag("execution_path", "undefined")
-        .tag("trace_id", "undefined")
-        .tag("core_span_id", "undefined")
-        .tag("core_parent_span_id", "undefined")
+        .tag("parent_deployment", parent_deployment or "undefined")
+        .tag("execution_path", execution_path or "undefined")
+        .tag("trace_id", trace_id or "undefined")
+        .tag("core_span_id", core_span_id or "undefined")
+        .tag("core_parent_span_id", core_parent_span_id or "undefined")
         .tag("project_id", project_id)
         .tag("language", "undefined")
         .tag("upstream", "undefined")

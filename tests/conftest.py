@@ -8,7 +8,7 @@ from tests.mocks import InfluxWriterMock, TestTopicModel
 from tests.utils.client import Client
 
 
-@pytest.fixture
+@pytest.fixture(autouse=True)
 def mock_uuid4():
     counter = 0
 

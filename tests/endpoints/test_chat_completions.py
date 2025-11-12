@@ -249,7 +249,6 @@ def test_chat_completion_deployment_price_with_price(
 
 @pytest.mark.parametrize("assembled_response", [None, "{}", "", "invalid JSON"])
 def test_chat_completion_invalid_assembled_response(
-    mock_uuid4,
     client: Client,
     influx: InfluxWriterMock,
     assembled_response: str | None,

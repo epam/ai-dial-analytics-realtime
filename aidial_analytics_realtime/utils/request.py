@@ -12,21 +12,24 @@ class Message(BaseModel):
     message: str
 
 
+_TRACE_IDS_RE = re.compile(r"\"(trace_id|core_span_id)\"\s*:\s*\"(\w+)\"")
+
+
 def get_tracing_ids(request_message: Any) -> Tuple[str | None, str | None]:
-    try:
-        message = request_message["message"]
-        if not isinstance(message, str):
-            return None, None
-
-        trace_id = None
-        if m := re.search(r"\"trace_id\"\s*:\s*\"(\w+)\"", message):
-            trace_id = m.group(1)
-
-        span_id = None
-        if m := re.search(r"\"core_span_id\"\s*:\s*\"(\w+)\"", message):
-            span_id = m.group(1)
-
-        return trace_id, span_id
-
-    except Exception:
+    if not isinstance(request_message, dict):
         return None, None
+
+    message = request_message.get("message")
+    if not isinstance(message, str):
+        return None, None
+
+    # The message may be invalid JSON, therefore,
+    # using regexp instead of trying to parse JSON.
+    trace_id, span_id = None, None
+    for name, value in _TRACE_IDS_RE.findall(message):
+        if name == "trace_id":
+            trace_id = value
+        elif name == "core_span_id":
+            span_id = value
+
+    return trace_id, span_id

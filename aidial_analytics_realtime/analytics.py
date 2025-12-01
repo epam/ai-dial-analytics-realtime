@@ -12,7 +12,7 @@ from aidial_analytics_realtime.dial import (
     get_embeddings_request_contents,
 )
 from aidial_analytics_realtime.influx_writer import InfluxWriterAsync
-from aidial_analytics_realtime.langid import detect_lang_by_text
+from aidial_analytics_realtime.langid import LangID
 from aidial_analytics_realtime.rates import RatesCalculator
 from aidial_analytics_realtime.topic_model import TopicModel
 
@@ -23,7 +23,10 @@ class RequestType(Enum):
 
 
 async def detect_lang(
-    request: dict, response: dict, request_type: RequestType
+    lang_id: LangID,
+    request: dict,
+    response: dict,
+    request_type: RequestType,
 ) -> str:
     match request_type:
         case RequestType.CHAT_COMPLETION:
@@ -35,7 +38,7 @@ async def detect_lang(
         case _:
             assert_never(request_type)
 
-    return to_string(await detect_lang_by_text(text))
+    return to_string(await lang_id.detect_language(text))
 
 
 def to_string(obj: str | None) -> str:
@@ -61,6 +64,7 @@ async def make_point(
     usage: dict | None,
     topic_model: TopicModel,
     rates_calculator: RatesCalculator,
+    lang_id: LangID,
     parent_deployment: str | None,
     trace: dict | None,
     execution_path: list | None,
@@ -133,7 +137,7 @@ async def make_point(
             (
                 "undefined"
                 if not chat_id or request is None or response is None
-                else await detect_lang(request, response, request_type)
+                else await detect_lang(lang_id, request, response, request_type)
             ),
         )
         .tag("upstream", to_string(upstream_url))
@@ -242,6 +246,7 @@ async def on_message(
     type: RequestType,
     topic_model: TopicModel,
     rates_calculator: RatesCalculator,
+    lang_id: LangID,
     token_usage: dict | None,
     parent_deployment: str | None,
     trace: dict | None,
@@ -266,6 +271,7 @@ async def on_message(
             token_usage,
             topic_model,
             rates_calculator,
+            lang_id,
             parent_deployment,
             trace,
             execution_path,
@@ -287,6 +293,7 @@ async def on_message(
             response_usage,
             topic_model,
             rates_calculator,
+            lang_id,
             parent_deployment,
             trace,
             execution_path,
@@ -308,6 +315,7 @@ async def on_message(
             None,
             topic_model,
             rates_calculator,
+            lang_id,
             parent_deployment,
             trace,
             execution_path,
@@ -330,6 +338,7 @@ async def on_message(
                 usage,
                 topic_model,
                 rates_calculator,
+                lang_id,
                 parent_deployment,
                 trace,
                 execution_path,

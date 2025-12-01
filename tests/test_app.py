@@ -13,7 +13,11 @@ def test_invalid_data_message(client: Client):
     assert response.json() == [
         {
             "status": "error",
-            "error": "1 validation error for Message\n__root__\n  Message expected dict not str (type=type_error)",
+            "error": """
+1 validation error for Message
+__root__
+  Message expected dict not str (type=type_error)
+""".strip(),
             "reason": "invalid request message",
         },
         {

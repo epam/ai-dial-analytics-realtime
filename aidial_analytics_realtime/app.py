@@ -5,7 +5,7 @@ import logging
 import re
 import sys
 from datetime import datetime
-from typing import Any, List
+from typing import Any
 
 import aiohttp
 import starlette.requests
@@ -13,7 +13,6 @@ import uvicorn
 from aidial_sdk.telemetry.init import TelemetryConfig, init_telemetry
 from fastapi import Depends, FastAPI
 from fastapi.responses import JSONResponse
-from pydantic import BaseModel
 
 from aidial_analytics_realtime.analytics import (
     RequestType,
@@ -32,6 +31,11 @@ from aidial_analytics_realtime.utils.concurrency import cpu_task_executor
 from aidial_analytics_realtime.utils.logging import add_logger_prefix
 from aidial_analytics_realtime.utils.logging import app_logger as logger
 from aidial_analytics_realtime.utils.logging import configure_loggers
+from aidial_analytics_realtime.utils.request import (
+    DataRequest,
+    Message,
+    get_tracing_ids,
+)
 from aidial_analytics_realtime.utils.timer import Timer
 
 RATE_PATTERN = r"/v1/(.+?)/rate"
@@ -272,10 +276,6 @@ async def on_log_message(
         logger.warning(f"Unsupported message type: {uri!r}")
 
 
-class DataRequest(BaseModel):
-    __root__: List[Any]
-
-
 @app.post("/data")
 async def on_log_messages(
     data: DataRequest,
@@ -290,7 +290,11 @@ async def on_log_messages(
     async with Timer(logger.debug, format="request {elapsed}"):
 
         async def _task(i: int, message: Any) -> dict:
-            add_logger_prefix(f"[{i}/{n}]")
+            trace_id, span_id = get_tracing_ids(message)
+
+            add_logger_prefix(
+                f"[{i}/{n}] [trace_id={trace_id or 'na'} span_id={span_id or 'na'}]"
+            )
 
             async with Timer(logger.debug, format="message {elapsed}"):
                 return await process_message(
@@ -310,10 +314,6 @@ async def on_log_messages(
     # Returning 200 code even if processing of some messages has failed,
     # since the log broker that sends the messages may decide to retry the failed requests.
     return JSONResponse(content=statuses, status_code=200)
-
-
-class Message(BaseModel):
-    message: str
 
 
 async def process_message(

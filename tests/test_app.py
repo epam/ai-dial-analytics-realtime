@@ -1,4 +1,5 @@
 import json
+import logging
 import re
 
 import pytest
@@ -393,7 +394,9 @@ def test_chat_completion_none_content():
     ]
 
 
-def test_embeddings_plain_text():
+def test_embeddings_plain_text(caplog):
+    caplog.set_level(logging.INFO)
+
     write_api_mock: app.InfluxWriterAsync = InfluxWriterMock()
     app.app.dependency_overrides[app.InfluxWriterAsync] = lambda: write_api_mock
     app.app.dependency_overrides[app.TopicModel] = lambda: TestTopicModel()
@@ -466,6 +469,11 @@ def test_embeddings_plain_text():
     assert re.match(
         r'analytics,core_parent_span_id=20e7e64715abbe97,core_span_id=9ade2b6fef0a716d,deployment=text-embedding-3-small,execution_path=undefined/b/c,language=undefined,model=text-embedding-3-small,parent_deployment=assistant,project_id=PROJECT-KEY,response_id=(.+?),title=undefined,topic=fish\\n\\ncat,trace_id=5dca3d6ed5d22b6ab574f27a6ab5ec14,upstream=undefined cached_prompt_tokens=0i,chat_id="chat-1",completion_tokens=0i,deployment_price=0.001,number_request_messages=2i,price=0.001,prompt_tokens=2i,user_hash="undefined" 1692214959997000000',
         write_api_mock.points[0],
+    )
+
+    assert (
+        "[1/1] [trace_id=5dca3d6ed5d22b6ab574f27a6ab5ec14 span_id=9ade2b6fef0a716d] success"
+        in caplog.text
     )
 
 

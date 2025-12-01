@@ -11,7 +11,6 @@ from aidial_analytics_realtime.utils.timer import Timer
 
 @cache
 def _get_language_identifier() -> LanguageIdentifier:
-
     return LanguageIdentifier.from_modelstring(model, norm_probs=True)
 
 

@@ -471,10 +471,9 @@ def test_embeddings_plain_text(caplog):
         write_api_mock.points[0],
     )
 
-    log_lines = [rec.message for rec in caplog.records]
     assert (
         "[1/1] [trace_id=5dca3d6ed5d22b6ab574f27a6ab5ec14 span_id=9ade2b6fef0a716d] success"
-        in log_lines
+        in caplog.text
     )
 
 

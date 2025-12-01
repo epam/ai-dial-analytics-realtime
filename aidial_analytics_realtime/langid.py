@@ -1,3 +1,5 @@
+from functools import cache
+
 from langid.langid import LanguageIdentifier, model
 
 from aidial_analytics_realtime.utils.concurrency import (
@@ -6,7 +8,11 @@ from aidial_analytics_realtime.utils.concurrency import (
 from aidial_analytics_realtime.utils.logging import app_logger as logger
 from aidial_analytics_realtime.utils.timer import Timer
 
-_identifier = LanguageIdentifier.from_modelstring(model, norm_probs=True)
+
+@cache
+def _get_language_identifier() -> LanguageIdentifier:
+
+    return LanguageIdentifier.from_modelstring(model, norm_probs=True)
 
 
 async def detect_lang_by_text(text: str) -> str | None:
@@ -18,7 +24,7 @@ async def detect_lang_by_text(text: str) -> str | None:
     try:
         with Timer(logger.debug, format="langid {elapsed}"):
             lang, prob = await run_in_cpu_tasks_executor(
-                _identifier.classify, text
+                _get_language_identifier().classify, text
             )
 
         if prob > 0.998:

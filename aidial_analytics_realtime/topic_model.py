@@ -1,13 +1,18 @@
 import os
-from typing import Protocol
-
-from bertopic import BERTopic
+from typing import TYPE_CHECKING, Protocol
 
 from aidial_analytics_realtime.utils.concurrency import (
     run_in_cpu_tasks_executor,
 )
 from aidial_analytics_realtime.utils.logging import app_logger as logger
 from aidial_analytics_realtime.utils.timer import Timer
+
+if TYPE_CHECKING:
+    from bertopic import BERTopic
+else:
+    from typing import Any
+
+    BERTopic = Any
 
 
 class TopicModel(Protocol):
@@ -29,8 +34,11 @@ class TopicModelBERT:
     def create(
         cls, *, topic_model: str, topic_embeddings_model: str | None
     ) -> "TopicModelBERT":
+        # bertopic import involves a lot of compute in the numba package,
+        # therefore, doing it lazily.
+        import bertopic
 
-        model = BERTopic.load(topic_model, topic_embeddings_model)
+        model = bertopic.BERTopic.load(topic_model, topic_embeddings_model)
 
         # Disable tqdm progress bars on batch encoding
         model.verbose = False

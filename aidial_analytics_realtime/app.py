@@ -23,6 +23,7 @@ from aidial_analytics_realtime.influx_writer import (
     InfluxWriterAsync,
     create_influx_writer,
 )
+from aidial_analytics_realtime.langid import LangID
 from aidial_analytics_realtime.log_request.message import get_assembled_response
 from aidial_analytics_realtime.rates import RatesCalculator
 from aidial_analytics_realtime.time import parse_time
@@ -56,6 +57,9 @@ async def lifespan(app: FastAPI):
 
             rates_calculator = RatesCalculator()
             app.dependency_overrides[RatesCalculator] = lambda: rates_calculator
+
+            lang_id = LangID.create()
+            app.dependency_overrides[LangID] = lambda: lang_id
 
             yield
 
@@ -105,6 +109,7 @@ async def on_chat_completion_message(
     influx_writer: InfluxWriterAsync,
     topic_model: TopicModel,
     rates_calculator: RatesCalculator,
+    lang_id: LangID,
     token_usage: dict | None,
     parent_deployment: str | None,
     trace: dict | None,
@@ -135,6 +140,7 @@ async def on_chat_completion_message(
         RequestType.CHAT_COMPLETION,
         topic_model,
         rates_calculator,
+        lang_id,
         token_usage,
         parent_deployment,
         trace,
@@ -155,6 +161,7 @@ async def on_embedding_message(
     influx_writer: InfluxWriterAsync,
     topic_model: TopicModel,
     rates_calculator: RatesCalculator,
+    lang_id: LangID,
     token_usage: dict | None,
     parent_deployment: str | None,
     trace: dict | None,
@@ -188,6 +195,7 @@ async def on_embedding_message(
         RequestType.EMBEDDING,
         topic_model,
         rates_calculator,
+        lang_id,
         token_usage,
         parent_deployment,
         trace,
@@ -200,6 +208,7 @@ async def on_log_message(
     influx_writer: InfluxWriterAsync,
     topic_model: TopicModel,
     rates_calculator: RatesCalculator,
+    lang_id: LangID,
 ):
     request = message["request"]
     uri = message["request"]["uri"]
@@ -246,6 +255,7 @@ async def on_log_message(
             influx_writer,
             topic_model,
             rates_calculator,
+            lang_id,
             token_usage,
             parent_deployment,
             trace,
@@ -266,6 +276,7 @@ async def on_log_message(
             influx_writer,
             topic_model,
             rates_calculator,
+            lang_id,
             token_usage,
             parent_deployment,
             trace,
@@ -282,6 +293,7 @@ async def on_log_messages(
     influx_writer: InfluxWriterAsync = Depends(),
     topic_model: TopicModel = Depends(),
     rates_calculator: RatesCalculator = Depends(),
+    lang_id: LangID = Depends(),
 ):
     messages = data.__root__
     n = len(messages)
@@ -302,6 +314,7 @@ async def on_log_messages(
                     influx_writer,
                     topic_model,
                     rates_calculator,
+                    lang_id,
                 )
 
         statuses: list[dict] = await asyncio.gather(
@@ -321,6 +334,7 @@ async def process_message(
     influx_writer: InfluxWriterAsync,
     topic_model: TopicModel,
     rates_calculator: RatesCalculator,
+    lang_id: LangID,
 ) -> dict:
     def _error(reason: str | None = None) -> dict:
         error = str(sys.exc_info()[1])
@@ -346,7 +360,7 @@ async def process_message(
 
     try:
         await on_log_message(
-            message_dict, influx_writer, topic_model, rates_calculator
+            message_dict, influx_writer, topic_model, rates_calculator, lang_id
         )
         logger.info("success")
         return {"status": "success"}

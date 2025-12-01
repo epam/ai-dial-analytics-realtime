@@ -1,21 +1,19 @@
 import json
 
+import httpx
 import pytest
-from fastapi.testclient import TestClient
 
 import aidial_analytics_realtime.app as app
 from tests.mocks import InfluxWriterMock
 
 
+@pytest.fixture(scope="module")
+def topic_model():
+    return app.create_topic_model(topic_model="davanstrien/chat_topics")
+
+
 @pytest.mark.with_external
-def test_data_request():
-    write_api_mock = InfluxWriterMock()
-    app.app.dependency_overrides[app.InfluxWriterAsync] = lambda: write_api_mock
-
-    topic_model = app.create_topic_model(topic_model="davanstrien/chat_topics")
-    app.app.dependency_overrides[app.TopicModel] = lambda: topic_model
-
-    client = TestClient(app.app)
+def test_data_request(write_api_mock: InfluxWriterMock, client: httpx.Client):
     response = client.post(
         "/data",
         json=[
@@ -85,14 +83,9 @@ def test_data_request():
 
 
 @pytest.mark.with_external
-def test_data_request_with_new_format():
-    write_api_mock = InfluxWriterMock()
-    app.app.dependency_overrides[app.InfluxWriterAsync] = lambda: write_api_mock
-
-    topic_model = app.create_topic_model(topic_model="davanstrien/chat_topics")
-    app.app.dependency_overrides[app.TopicModel] = lambda: topic_model
-
-    client = TestClient(app.app)
+def test_data_request_with_new_format(
+    write_api_mock: InfluxWriterMock, client: httpx.Client
+):
     response = client.post(
         "/data",
         json=[

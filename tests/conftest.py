@@ -4,7 +4,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 import aidial_analytics_realtime.app as app
-from tests.mocks import InfluxWriterMock, LangIDNoop, TopicModelEcho
+from tests.mocks import InfluxWriterMock, LangIDNoop, TopicModelNoop
 from tests.utils.client import Client
 
 
@@ -35,7 +35,7 @@ def influx():
 
 @pytest.fixture
 def topic_model():
-    return TopicModelEcho()
+    return TopicModelNoop()
 
 
 @pytest.fixture

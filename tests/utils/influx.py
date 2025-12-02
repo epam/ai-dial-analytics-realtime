@@ -7,7 +7,6 @@ from tests.utils.constants import (
     DEFAULT_PROJECT_ID,
     DEFAULT_RESPONSE_ID,
     DEFAULT_TIMESTAMP,
-    DEFAULT_TOPIC,
     DEFAULT_USER_ID,
     DEFAULT_USER_TITLE,
 )
@@ -55,7 +54,7 @@ def create_point(
     chat_id: str = DEFAULT_CHAT_ID,
     number_request_messages: int = 2,
     upstream: str | None = "http://upstream.domain.com/endpoint",
-    topic: str | None = DEFAULT_TOPIC,
+    topic: str | None = None,
     title: str | None = DEFAULT_USER_TITLE,
     timestamp: datetime = DEFAULT_TIMESTAMP,
     prompt_tokens: int = 0,

@@ -14,7 +14,6 @@ def test_embeddings_baseline(client: Client, influx: InfluxWriterMock):
         response_id="pseudo-uuid-1",
         deployment="text-embedding-3-small",
         model="text-embedding-3-small",
-        topic="fish\n\ncat",
     )
 
     influx.match_points(point)
@@ -28,7 +27,6 @@ def test_embeddings_no_request_body(client: Client, influx: InfluxWriterMock):
         response_id="pseudo-uuid-1",
         deployment="text-embedding-3-small",
         model="text-embedding-3-small",
-        topic="undefined",
         number_request_messages=0,
     )
 
@@ -45,7 +43,6 @@ def test_embeddings_input_as_tokens(client: Client, influx: InfluxWriterMock):
         response_id="pseudo-uuid-1",
         deployment="text-embedding-3-small",
         model="text-embedding-3-small",
-        topic="undefined",
         number_request_messages=2,
     )
 
@@ -70,7 +67,6 @@ def test_embeddings_trade_ids_in_log_messages(
         response_id="pseudo-uuid-1",
         deployment="text-embedding-3-small",
         model="text-embedding-3-small",
-        topic="fish\n\ncat",
         trace_id=trace["trace_id"],
         core_parent_span_id=trace["core_parent_span_id"],
         core_span_id=trace["core_span_id"],

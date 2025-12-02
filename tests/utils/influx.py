@@ -45,10 +45,11 @@ def create_point(
     execution_path: str | None = "app1/app2",
     model: str = "gpt-4",
     deployment: str = "gpt-4",
-    trace_id: str | None = "default-trace-id",
-    core_span_id: str | None = "default-core-span-id",
-    core_parent_span_id: str | None = "default-core-parent-span-id",
+    trace_id: str | None = "default_trace_id",
+    core_span_id: str | None = "default_core_span_id",
+    core_parent_span_id: str | None = "default_core_parent_span_id",
     project_id: str = DEFAULT_PROJECT_ID,
+    language: str | None = None,
     response_id: str = DEFAULT_RESPONSE_ID,
     user_hash: str | None = DEFAULT_USER_ID,
     chat_id: str = DEFAULT_CHAT_ID,
@@ -73,9 +74,9 @@ def create_point(
         .tag("core_span_id", core_span_id or "undefined")
         .tag("core_parent_span_id", core_parent_span_id or "undefined")
         .tag("project_id", project_id)
-        .tag("language", "undefined")
+        .tag("language", language or "undefined")
         .tag("upstream", upstream or "undefined")
-        .tag("topic", topic)
+        .tag("topic", topic or "undefined")
         .tag("title", title or "undefined")
         .tag("response_id", response_id)
         .field("user_hash", user_hash or "undefined")

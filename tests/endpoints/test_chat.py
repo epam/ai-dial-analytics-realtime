@@ -161,25 +161,22 @@ def test_chat_completion_text_content_parts(
 ):
     """Check that analytics collects text content from text content parts"""
 
-    message = create_chat_message()
-    message["request"]["body"] = json.dumps(
-        {
-            "model": "gpt-4",
-            "messages": [
-                {
-                    "role": "system",
-                    "content": [
-                        {"type": "text", "text": "act as a helpful assistant"}
-                    ],
-                },
-                {"role": "user", "content": "ping?"},
-            ],
-        }
-    )
+    request_body = {
+        "model": "gpt-4",
+        "messages": [
+            {
+                "role": "system",
+                "content": [{"type": "text", "text": "be nice"}],
+            },
+            {"role": "user", "content": "ping?"},
+        ],
+    }
+
+    message = create_chat_message(request_body=request_body)
 
     client(message).raise_for_status()
 
-    point = create_point(topic="act as a helpful assistant\n\nping?\n\npong")
+    point = create_point(topic="be nice\n\nping?\n\npong")
     influx.match_points(point)
 
 

@@ -4,8 +4,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 import aidial_analytics_realtime.app as app
-from aidial_analytics_realtime.langid import LangID
-from tests.mocks import InfluxWriterMock, TestTopicModel
+from tests.mocks import InfluxWriterMock, LangIDNoop, TopicModelEcho
 from tests.utils.client import Client
 
 
@@ -24,9 +23,9 @@ def mock_uuid4():
         yield
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture
 def language_classifier():
-    return LangID.create()
+    return LangIDNoop()
 
 
 @pytest.fixture
@@ -36,7 +35,7 @@ def influx():
 
 @pytest.fixture
 def topic_model():
-    return TestTopicModel()
+    return TopicModelEcho()
 
 
 @pytest.fixture

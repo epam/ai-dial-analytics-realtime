@@ -15,9 +15,9 @@ def default_token_usage() -> dict:
 
 def default_trace() -> dict:
     return {
-        "trace_id": "default-trace-id",
-        "core_span_id": "default-core-span-id",
-        "core_parent_span_id": "default-core-parent-span-id",
+        "trace_id": "default_trace_id",
+        "core_span_id": "default_core_span_id",
+        "core_parent_span_id": "default_core_parent_span_id",
     }
 
 

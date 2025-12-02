@@ -3,7 +3,7 @@ import logging
 from tests.mocks import InfluxWriterMock
 from tests.utils.client import Client
 from tests.utils.influx import create_point
-from tests.utils.message import create_embedding_message
+from tests.utils.message.embeddings import create_embedding_message
 
 
 def test_embeddings_baseline(client: Client, influx: InfluxWriterMock):

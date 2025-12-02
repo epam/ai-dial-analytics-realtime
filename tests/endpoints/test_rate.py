@@ -1,7 +1,8 @@
 from tests.mocks import InfluxWriterMock
 from tests.utils.client import Client
 from tests.utils.influx import create_rate_point
-from tests.utils.message import create_rate_message, on_request_body
+from tests.utils.message.base import on_request_body
+from tests.utils.message.rate import create_rate_message
 
 
 def test_rate_request_baseline(client: Client, influx: InfluxWriterMock):

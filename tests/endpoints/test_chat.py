@@ -6,10 +6,10 @@ from aidial_analytics_realtime.time import parse_time
 from tests.mocks import InfluxWriterMock
 from tests.utils.client import Client
 from tests.utils.influx import create_point
-from tests.utils.message import (
+from tests.utils.message.base import on_request_body
+from tests.utils.message.chat import (
     create_chat_completion_response,
     create_chat_message,
-    on_request_body,
 )
 
 

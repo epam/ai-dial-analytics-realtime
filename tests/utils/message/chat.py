@@ -1,0 +1,71 @@
+from tests.utils.constants import (
+    DEFAULT_CHAT_ID,
+    DEFAULT_PROJECT_ID,
+    DEFAULT_RESPONSE_ID,
+    DEFAULT_RESPONSE_TIME,
+)
+from tests.utils.message.base import (
+    create_message,
+    default_token_usage,
+    default_trace,
+)
+
+
+def create_chat_completion_request():
+    return {
+        "model": "gpt-4",
+        "messages": [
+            {"role": "system", "content": ""},
+            {"role": "user", "content": "ping?"},
+        ],
+    }
+
+
+def create_chat_completion_response(
+    *, id: str = DEFAULT_RESPONSE_ID, created: int = 1692214960
+):
+    return {
+        "id": id,
+        "object": "chat.completion.chunk",
+        "created": created,
+        "model": "gpt-4",
+        "choices": [
+            {
+                "index": 0,
+                "delta": {
+                    "role": "assistant",
+                    "content": "pong",
+                },
+                "finish_reason": "stop",
+            }
+        ],
+        "usage": {
+            "completion_tokens": 189,
+            "prompt_tokens": 22,
+            "total_tokens": 211,
+            "prompt_tokens_details": {"cached_tokens": 10},
+        },
+    }
+
+
+def create_chat_message(
+    *,
+    chat_id: str = DEFAULT_CHAT_ID,
+    project_id: str = DEFAULT_PROJECT_ID,
+    user_id: str = "default-user-id",
+    user_title: str = "default-user-title",
+    deployment: str = "gpt-4",
+    request_uri: str = "/openai/deployments/gpt-4/chat/completions?api-version=2023-03-15-preview",
+    token_usage: dict | None = default_token_usage(),
+    parent_deployment: str | None = "assistant",
+    trace: dict | None = default_trace(),
+    execution_path: list | None = ["app1", "app2"],
+    request_time: str = DEFAULT_RESPONSE_TIME,
+    request_body: str | dict | None = create_chat_completion_request(),
+    response_assembled: str | dict | None = create_chat_completion_response(),
+    # response.body is never inspected by the analytics for chat completions requests,
+    # therefore, no need to make it realistic.
+    response_body: str | dict | None = "whatever",
+    response_upstream_uri: str | None = "http://upstream.domain.com/endpoint",
+) -> dict:
+    return create_message(**locals())

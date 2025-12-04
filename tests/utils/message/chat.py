@@ -3,6 +3,9 @@ from tests.utils.constants import (
     DEFAULT_PROJECT_ID,
     DEFAULT_RESPONSE_ID,
     DEFAULT_RESPONSE_TIME,
+    DEFAULT_UPSTREAM_URI,
+    DEFAULT_USER_ID,
+    DEFAULT_USER_TITLE,
 )
 from tests.utils.message.base import (
     create_message,
@@ -43,8 +46,8 @@ def create_chat_message(
     *,
     chat_id: str = DEFAULT_CHAT_ID,
     project_id: str = DEFAULT_PROJECT_ID,
-    user_id: str = "default-user-id",
-    user_title: str = "default-user-title",
+    user_id: str = DEFAULT_USER_ID,
+    user_title: str = DEFAULT_USER_TITLE,
     deployment: str = "gpt-4",
     request_uri: str = "/openai/deployments/gpt-4/chat/completions?api-version=2023-03-15-preview",
     token_usage: dict | None = default_token_usage(),
@@ -57,6 +60,6 @@ def create_chat_message(
     # response.body is never inspected by the analytics for chat completions requests,
     # therefore, no need to make it realistic.
     response_body: str | dict | None = "whatever",
-    response_upstream_uri: str | None = "http://upstream.domain.com/endpoint",
+    response_upstream_uri: str | None = DEFAULT_UPSTREAM_URI,
 ) -> dict:
     return create_message(**locals())

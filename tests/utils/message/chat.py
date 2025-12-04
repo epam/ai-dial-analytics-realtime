@@ -11,34 +11,25 @@ from tests.utils.message.base import (
 )
 
 
-def create_chat_completion_request():
+def create_request(content: str = "default-user-message"):
     return {
         "model": "gpt-4",
-        "messages": [
-            {"role": "system", "content": ""},
-            {"role": "user", "content": "ping?"},
-        ],
+        "messages": [{"role": "user", "content": content}],
     }
 
 
-def create_chat_completion_response(
-    *, id: str = DEFAULT_RESPONSE_ID, created: int = 1692214960
+def create_assembled_response(
+    *,
+    id: str = DEFAULT_RESPONSE_ID,
+    content: str = "default-assistant-message",
 ):
+    delta = {"role": "assistant", "content": content}
     return {
         "id": id,
         "object": "chat.completion.chunk",
-        "created": created,
+        "created": 1692214960,
         "model": "gpt-4",
-        "choices": [
-            {
-                "index": 0,
-                "delta": {
-                    "role": "assistant",
-                    "content": "pong",
-                },
-                "finish_reason": "stop",
-            }
-        ],
+        "choices": [{"index": 0, "delta": delta, "finish_reason": "stop"}],
         "usage": {
             "completion_tokens": 189,
             "prompt_tokens": 22,
@@ -61,8 +52,8 @@ def create_chat_message(
     trace: dict | None = default_trace(),
     execution_path: list | None = ["app1", "app2"],
     request_time: str = DEFAULT_RESPONSE_TIME,
-    request_body: str | dict | None = create_chat_completion_request(),
-    response_assembled: str | dict | None = create_chat_completion_response(),
+    request_body: str | dict | None = create_request(),
+    response_assembled: str | dict | None = create_assembled_response(),
     # response.body is never inspected by the analytics for chat completions requests,
     # therefore, no need to make it realistic.
     response_body: str | dict | None = "whatever",

@@ -6,7 +6,7 @@ from tests.utils.client import Client
 from tests.utils.influx import create_point
 from tests.utils.message.base import on_request_body
 from tests.utils.message.chat import (
-    create_chat_completion_response,
+    create_assembled_response,
     create_chat_message,
 )
 
@@ -80,7 +80,7 @@ def test_chat_completion_request_time(client: Client, influx: InfluxWriterMock):
 def test_chat_completion_response_id_from_assembled_response(
     client: Client, influx: InfluxWriterMock
 ):
-    response_assembled = create_chat_completion_response(id="test-response-id")
+    response_assembled = create_assembled_response(id="test-response-id")
     message = create_chat_message(response_assembled=response_assembled)
     client(message).raise_for_status()
     influx.match_points(create_point(response_id="test-response-id"))
@@ -107,7 +107,7 @@ def test_chat_completion_usage_from_response(
     when the top-level usage isn't provided.
     """
 
-    response = create_chat_completion_response()
+    response = create_assembled_response()
     message = create_chat_message(token_usage=None, response_assembled=response)
     client(message).raise_for_status()
 

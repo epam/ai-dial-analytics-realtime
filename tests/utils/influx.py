@@ -52,7 +52,7 @@ def create_point(
     response_id: str = DEFAULT_RESPONSE_ID,
     user_hash: str | None = DEFAULT_USER_ID,
     chat_id: str = DEFAULT_CHAT_ID,
-    number_request_messages: int = 2,
+    number_request_messages: int = 1,
     upstream: str | None = "http://upstream.domain.com/endpoint",
     topic: str | None = None,
     title: str | None = DEFAULT_USER_TITLE,

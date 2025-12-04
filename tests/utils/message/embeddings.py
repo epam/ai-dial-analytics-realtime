@@ -8,21 +8,17 @@ from tests.utils.message.base import (
     default_token_usage,
     default_trace,
 )
-from tests.utils.message.chat import create_chat_completion_response
 
 
 def _default_embedding_request_body() -> dict:
-    return {"input": ["fish", "cat"]}
+    return {"input": ["default-embedding-input"]}
 
 
 def _default_embedding_response_body() -> dict:
     return {
         "object": "list",
         "model": "text-embedding-3-small",
-        "data": [
-            {"index": 0, "object": "embedding", "embedding": [0.1, 0.2]},
-            {"index": 1, "object": "embedding", "embedding": [0.3, 0.4]},
-        ],
+        "data": [{"index": 0, "object": "embedding", "embedding": [0.1, 0.2]}],
         "usage": {"prompt_tokens": 43, "total_tokens": 43},
     }
 
@@ -41,7 +37,7 @@ def create_embedding_message(
     execution_path: list | None = ["app1", "app2"],
     request_time: str = DEFAULT_RESPONSE_TIME,
     request_body: str | dict | None = _default_embedding_request_body(),
-    response_assembled: str | dict | None = create_chat_completion_response(),
+    response_assembled: str | dict | None = None,
     response_body: str | dict | None = _default_embedding_response_body(),
     response_upstream_uri: str | None = "http://upstream.domain.com/endpoint",
 ) -> dict:

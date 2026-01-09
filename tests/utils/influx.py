@@ -22,7 +22,7 @@ from tests.utils.constants import (
 
 def create_rate_point(
     *,
-    deployment: str = "gpt-4",
+    deployment: str = DEFAULT_DEPLOYMENT,
     project_id: str = DEFAULT_PROJECT_ID,
     response_id: str = DEFAULT_RESPONSE_ID,
     chat_id: str | None = DEFAULT_CHAT_ID,

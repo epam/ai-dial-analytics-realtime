@@ -14,6 +14,13 @@ def test_rate_baseline(client: Client, influx: InfluxWriterMock):
     influx.match_points(point)
 
 
+def test_rate_deployment(client: Client, influx: InfluxWriterMock):
+    message = create_rate_message(deployment="test-deployment-id")
+    client(message).raise_for_status()
+    point = create_rate_point(deployment="test-deployment-id")
+    influx.match_points(point)
+
+
 def test_rate_like(client: Client, influx: InfluxWriterMock):
     message = create_rate_message()
 

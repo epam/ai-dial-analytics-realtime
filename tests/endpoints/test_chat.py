@@ -6,24 +6,24 @@ from tests.utils.client import Client
 from tests.utils.influx import create_point
 from tests.utils.message.base import on_request_body
 from tests.utils.message.chat import (
-    create_assembled_response,
+    create_chat_assembled_response,
     create_chat_message,
 )
 
 
-def test_chat_completion_baseline(client: Client, influx: InfluxWriterMock):
+def test_chat_baseline(client: Client, influx: InfluxWriterMock):
     message = create_chat_message()
     client(message).raise_for_status()
     influx.match_points(create_point())
 
 
-def test_chat_completion_deployment(client: Client, influx: InfluxWriterMock):
+def test_chat_deployment(client: Client, influx: InfluxWriterMock):
     message = create_chat_message(deployment="test-dial-deployment-id")
     client(message).raise_for_status()
     influx.match_points(create_point(deployment="test-dial-deployment-id"))
 
 
-def test_chat_completion_model(client: Client, influx: InfluxWriterMock):
+def test_chat_model(client: Client, influx: InfluxWriterMock):
     message = create_chat_message()
 
     def _set_model(body):
@@ -35,9 +35,7 @@ def test_chat_completion_model(client: Client, influx: InfluxWriterMock):
     influx.match_points(create_point(model="test-model-id"))
 
 
-def test_chat_completion_missing_model(
-    client: Client, influx: InfluxWriterMock
-):
+def test_chat_missing_model(client: Client, influx: InfluxWriterMock):
     """
     Testing fallback to deployment when model field is missing.
     """
@@ -58,37 +56,35 @@ def test_chat_completion_missing_model(
     )
 
 
-def test_chat_completion_chat_id(client: Client, influx: InfluxWriterMock):
+def test_chat_chat_id(client: Client, influx: InfluxWriterMock):
     message = create_chat_message(chat_id="test-chat-id")
     client(message).raise_for_status()
     influx.match_points(create_point(chat_id="test-chat-id"))
 
 
-def test_chat_completion_project_id(client: Client, influx: InfluxWriterMock):
+def test_chat_project_id(client: Client, influx: InfluxWriterMock):
     message = create_chat_message(project_id="test-project-id")
     client(message).raise_for_status()
     influx.match_points(create_point(project_id="test-project-id"))
 
 
-def test_chat_completion_request_time(client: Client, influx: InfluxWriterMock):
+def test_chat_request_time(client: Client, influx: InfluxWriterMock):
     message = create_chat_message(request_time="2023-11-24T03:33:40.39")
     client(message).raise_for_status()
     timestamp = parse_time(message["request"]["time"])
     influx.match_points(create_point(timestamp=timestamp))
 
 
-def test_chat_completion_response_id_from_assembled_response(
+def test_chat_response_id_from_assembled_response(
     client: Client, influx: InfluxWriterMock
 ):
-    response_assembled = create_assembled_response(id="test-response-id")
+    response_assembled = create_chat_assembled_response(id="test-response-id")
     message = create_chat_message(response_assembled=response_assembled)
     client(message).raise_for_status()
     influx.match_points(create_point(response_id="test-response-id"))
 
 
-def test_chat_completion_many_messages(
-    client: Client, influx: InfluxWriterMock
-):
+def test_chat_many_messages(client: Client, influx: InfluxWriterMock):
     n = 50
     messages = [
         create_chat_message(chat_id=f"chat-{idx}") for idx in range(0, n)
@@ -99,15 +95,13 @@ def test_chat_completion_many_messages(
     influx.match_points(*points)
 
 
-def test_chat_completion_usage_from_response(
-    client: Client, influx: InfluxWriterMock
-):
+def test_chat_usage_from_response(client: Client, influx: InfluxWriterMock):
     """
     Checking that the usage is taken from the response
     when the top-level usage isn't provided.
     """
 
-    response = create_assembled_response()
+    response = create_chat_assembled_response()
     message = create_chat_message(token_usage=None, response_assembled=response)
     client(message).raise_for_status()
 
@@ -123,9 +117,7 @@ def test_chat_completion_usage_from_response(
     influx.match_points(point)
 
 
-def test_chat_completion_usage_from_top_level(
-    client: Client, influx: InfluxWriterMock
-):
+def test_chat_usage_from_top_level(client: Client, influx: InfluxWriterMock):
     """
     Checking that the usage is taken from top level usage if it's provided.
     """
@@ -154,9 +146,7 @@ def test_chat_completion_usage_from_top_level(
     influx.match_points(point)
 
 
-def test_chat_completion_parent_deployment(
-    client: Client, influx: InfluxWriterMock
-):
+def test_chat_parent_deployment(client: Client, influx: InfluxWriterMock):
     message = create_chat_message(parent_deployment="test-parent-deployment")
     client(message).raise_for_status()
     influx.match_points(
@@ -164,7 +154,7 @@ def test_chat_completion_parent_deployment(
     )
 
 
-def test_chat_completion_trace(client: Client, influx: InfluxWriterMock):
+def test_chat_trace(client: Client, influx: InfluxWriterMock):
     message = create_chat_message(
         trace={
             "trace_id": "5dca3d6ed5d22b6ab574f27a6ab5ec14",
@@ -189,7 +179,7 @@ def test_chat_completion_trace(client: Client, influx: InfluxWriterMock):
         (["a", "b", "c"], "a/b/c"),
     ],
 )
-def test_chat_completion_execution_path(
+def test_chat_execution_path(
     client: Client, influx: InfluxWriterMock, path: list, expected_path: str
 ):
     message = create_chat_message(execution_path=path)
@@ -197,13 +187,13 @@ def test_chat_completion_execution_path(
     influx.match_points(create_point(execution_path=expected_path))
 
 
-def test_chat_completion_price(client: Client, influx: InfluxWriterMock):
+def test_chat_price(client: Client, influx: InfluxWriterMock):
     message = create_chat_message(token_usage={"price": 0.456})
     client(message).raise_for_status()
     influx.match_points(create_point(price=0.456))
 
 
-def test_chat_completion_deployment_price_no_price(
+def test_chat_deployment_price_no_price(
     client: Client, influx: InfluxWriterMock
 ):
     message = create_chat_message(token_usage={"deployment_price": 0.123})
@@ -211,7 +201,7 @@ def test_chat_completion_deployment_price_no_price(
     influx.match_points(create_point(deployment_price=0.0))
 
 
-def test_chat_completion_deployment_price_with_price(
+def test_chat_deployment_price_with_price(
     client: Client, influx: InfluxWriterMock
 ):
     message = create_chat_message(
@@ -222,7 +212,7 @@ def test_chat_completion_deployment_price_with_price(
 
 
 @pytest.mark.parametrize("assembled_response", [None, "{}", "", "invalid JSON"])
-def test_chat_completion_without_assembled_response(
+def test_chat_without_assembled_response(
     client: Client,
     influx: InfluxWriterMock,
     assembled_response: str | None,
@@ -241,7 +231,7 @@ def test_chat_completion_without_assembled_response(
     influx.match_points(point)
 
 
-def test_unescaped_control_char_in_message(
+def test_chat_unescaped_control_char_in_message(
     client: Client, influx: InfluxWriterMock
 ):
     project_id = "PROJECT-\nKEY"
@@ -252,3 +242,31 @@ def test_unescaped_control_char_in_message(
 
     point = create_point(project_id=project_id)
     influx.match_points(point)
+
+
+@pytest.mark.parametrize(
+    "request_uri, is_valid",
+    [
+        ("/openai/deployments/ID/chat/completions", True),
+        ("/openai/deployments/ID1/ID2/chat/completions", True),
+        ("/openai/deployments/ID/chat/completions/abc/efg", True),
+        ("/openai/deployments/ID/completions", False),
+        ("/openai/ID/chat/completions", False),
+    ],
+)
+def test_chat_request_uri(
+    caplog,
+    client: Client,
+    influx: InfluxWriterMock,
+    request_uri: str,
+    is_valid: bool,
+):
+    message = create_chat_message(request_uri=request_uri)
+    response = client(message).raise_for_status()
+    assert response.json() == [{"status": "success"}]
+
+    if is_valid:
+        influx.match_points(create_point())
+    else:
+        influx.match_points()
+        assert f"Unsupported message type: {request_uri!r}" in caplog.text

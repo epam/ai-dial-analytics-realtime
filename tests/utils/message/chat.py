@@ -1,5 +1,6 @@
 from tests.utils.constants import (
     DEFAULT_CHAT_ID,
+    DEFAULT_EXECUTION_PATH_LIST,
     DEFAULT_PROJECT_ID,
     DEFAULT_RESPONSE_ID,
     DEFAULT_RESPONSE_TIME,
@@ -14,14 +15,14 @@ from tests.utils.message.base import (
 )
 
 
-def create_request(content: str = "default-user-message"):
+def create_chat_request(content: str = "default-user-message"):
     return {
         "model": "gpt-4",
         "messages": [{"role": "user", "content": content}],
     }
 
 
-def create_assembled_response(
+def create_chat_assembled_response(
     *,
     id: str = DEFAULT_RESPONSE_ID,
     content: str = "default-assistant-message",
@@ -49,14 +50,14 @@ def create_chat_message(
     user_id: str = DEFAULT_USER_ID,
     user_title: str = DEFAULT_USER_TITLE,
     deployment: str = "gpt-4",
-    request_uri: str = "/openai/deployments/gpt-4/chat/completions?api-version=2023-03-15-preview",
+    request_uri: str = "/openai/deployments/test-deployment-id/chat/completions",
     token_usage: dict | None = default_token_usage(),
     parent_deployment: str | None = "assistant",
     trace: dict | None = default_trace(),
-    execution_path: list | None = ["app1", "app2"],
+    execution_path: list | None = DEFAULT_EXECUTION_PATH_LIST,
     request_time: str = DEFAULT_RESPONSE_TIME,
-    request_body: str | dict | None = create_request(),
-    response_assembled: str | dict | None = create_assembled_response(),
+    request_body: str | dict | None = create_chat_request(),
+    response_assembled: str | dict | None = create_chat_assembled_response(),
     # response.body is never inspected by the analytics for chat completions requests,
     # therefore, no need to make it realistic.
     response_body: str | dict | None = "whatever",

@@ -4,9 +4,9 @@ from tests.mocks import InfluxWriterMock, TopicModelEcho
 from tests.utils.client import Client
 from tests.utils.influx import create_point
 from tests.utils.message.chat import (
-    create_assembled_response,
+    create_chat_assembled_response,
     create_chat_message,
-    create_request,
+    create_chat_request,
 )
 
 
@@ -21,7 +21,7 @@ def test_chat_completion_without_assembled_response(
     influx: InfluxWriterMock,
     assembled_response: str | None,
 ):
-    request = create_request("user-message")
+    request = create_chat_request("user-message")
     message = create_chat_message(
         request_body=request, response_assembled=assembled_response
     )
@@ -45,7 +45,7 @@ def test_chat_completion_text_content_parts(
     """Check that analytics collects text content from text content parts"""
 
     request_body = {
-        "model": "gpt-4",
+        "model": "gpt-4",  # FIXME: model isn't arbitrary!
         "messages": [
             {
                 "role": "system",
@@ -55,7 +55,7 @@ def test_chat_completion_text_content_parts(
         ],
     }
 
-    response = create_assembled_response(content="assistant-message")
+    response = create_chat_assembled_response(content="assistant-message")
     message = create_chat_message(
         request_body=request_body, response_assembled=response
     )
@@ -75,7 +75,7 @@ def test_chat_completion_messages_without_text_content(
     """Check that analytics ignores content parts without textual content"""
 
     request_body = {
-        "model": "gpt-4",
+        "model": "gpt-4",  # FIXME: model isn't arbitrary!
         "messages": [
             {"role": "user", "content": "what's the weather like?"},
             {
@@ -100,7 +100,7 @@ def test_chat_completion_messages_without_text_content(
         ],
     }
 
-    response = create_assembled_response(content="assistant-message")
+    response = create_chat_assembled_response(content="assistant-message")
     message = create_chat_message(
         request_body=request_body, response_assembled=response
     )

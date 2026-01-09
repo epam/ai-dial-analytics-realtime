@@ -1,5 +1,7 @@
 import logging
 
+import pytest
+
 from tests.mocks import InfluxWriterMock
 from tests.utils.client import Client
 from tests.utils.influx import create_point
@@ -77,3 +79,37 @@ def test_embeddings_trade_ids_in_log_messages(
         f"[1/1] [trace_id={trace['trace_id']} span_id={trace["core_span_id"]}] success"
         in caplog.text
     )
+
+
+@pytest.mark.parametrize(
+    "request_uri, is_valid",
+    [
+        ("/openai/deployments/ID/embeddings", True),
+        ("/openai/deployments/ID1/ID2/embeddings", True),
+        ("/openai/deployments/ID/chat/embeddings/abc/efg", True),
+        ("/openai/deployments/ID/embs", False),
+        ("/openai/ID/embeddings", False),
+    ],
+)
+def test_embeddings_request_uri(
+    caplog,
+    client: Client,
+    influx: InfluxWriterMock,
+    request_uri: str,
+    is_valid: bool,
+):
+    message = create_embedding_message(request_uri=request_uri)
+    response = client(message).raise_for_status()
+    assert response.json() == [{"status": "success"}]
+
+    if is_valid:
+        influx.match_points(
+            create_point(
+                response_id="pseudo-uuid-1",
+                deployment="text-embedding-3-small",
+                model="text-embedding-3-small",
+            )
+        )
+    else:
+        influx.match_points()
+        assert f"Unsupported message type: {request_uri!r}" in caplog.text

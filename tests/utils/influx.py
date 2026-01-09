@@ -6,6 +6,7 @@ from tests.utils.constants import (
     DEFAULT_CHAT_ID,
     DEFAULT_CORE_PARENT_SPAN_ID,
     DEFAULT_CORE_SPAN_ID,
+    DEFAULT_EXECUTION_PATH_STR,
     DEFAULT_PROJECT_ID,
     DEFAULT_RESPONSE_ID,
     DEFAULT_TIMESTAMP,
@@ -45,7 +46,7 @@ def create_rate_point(
 def create_point(
     *,
     parent_deployment: str | None = "assistant",
-    execution_path: str | None = "app1/app2",
+    execution_path: str | None = DEFAULT_EXECUTION_PATH_STR,
     model: str = "gpt-4",
     deployment: str = "gpt-4",
     trace_id: str | None = DEFAULT_TRACE_ID,

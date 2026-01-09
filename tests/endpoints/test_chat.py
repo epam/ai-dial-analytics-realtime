@@ -107,8 +107,6 @@ def test_chat_usage_from_response(client: Client, influx: InfluxWriterMock):
 
     usage = response["usage"]
     point = create_chat_point(
-        price=0.0,
-        deployment_price=0.0,
         prompt_tokens=usage["prompt_tokens"],
         completion_tokens=usage["completion_tokens"],
         cached_prompt_tokens=usage["prompt_tokens_details"]["cached_tokens"],
@@ -222,11 +220,7 @@ def test_chat_without_assembled_response(
 
     point = create_chat_point(
         # Since there is no assembled_response.id, it's auto-generated as UUID.
-        response_id="pseudo-uuid-1",
-        prompt_tokens=0,
-        completion_tokens=0,
-        deployment_price=0.0,
-        price=0.0,
+        response_id="pseudo-uuid-1"
     )
     influx.match_points(point)
 

@@ -9,6 +9,7 @@ from tests.utils.constants import (
     DEFAULT_DEPLOYMENT,
     DEFAULT_EXECUTION_PATH_STR,
     DEFAULT_MODEL,
+    DEFAULT_PARENT_DEPLOYMENT,
     DEFAULT_PROJECT_ID,
     DEFAULT_RESPONSE_ID,
     DEFAULT_TIMESTAMP,
@@ -45,30 +46,30 @@ def create_rate_point(
     )
 
 
-def create_point(
+def _create_point(
     *,
-    parent_deployment: str | None = "assistant",
-    execution_path: str | None = DEFAULT_EXECUTION_PATH_STR,
-    model: str = DEFAULT_MODEL,
-    deployment: str = DEFAULT_DEPLOYMENT,
-    trace_id: str | None = DEFAULT_TRACE_ID,
-    core_span_id: str | None = DEFAULT_CORE_SPAN_ID,
-    core_parent_span_id: str | None = DEFAULT_CORE_PARENT_SPAN_ID,
-    project_id: str = DEFAULT_PROJECT_ID,
-    language: str | None = None,
-    response_id: str = DEFAULT_RESPONSE_ID,
-    user_hash: str | None = DEFAULT_USER_ID,
-    chat_id: str = DEFAULT_CHAT_ID,
-    number_request_messages: int = 1,
-    upstream: str | None = DEFAULT_UPSTREAM_URI,
-    topic: str | None = None,
-    title: str | None = DEFAULT_USER_TITLE,
-    timestamp: datetime = DEFAULT_TIMESTAMP,
-    prompt_tokens: int = 0,
-    completion_tokens: int = 0,
-    cached_prompt_tokens: int = 0,
-    deployment_price: float = 0.0,
-    price: float = 0.0,
+    parent_deployment: str | None,
+    execution_path: str | None,
+    model: str,
+    deployment: str,
+    trace_id: str | None,
+    core_span_id: str | None,
+    core_parent_span_id: str | None,
+    project_id: str,
+    language: str | None,
+    response_id: str,
+    user_hash: str | None,
+    chat_id: str,
+    number_request_messages: int,
+    upstream: str | None,
+    topic: str | None,
+    title: str | None,
+    timestamp: datetime,
+    prompt_tokens: int,
+    completion_tokens: int,
+    cached_prompt_tokens: int,
+    deployment_price: float,
+    price: float,
 ) -> Point:
     return (
         Point("analytics")
@@ -95,3 +96,59 @@ def create_point(
         .field("cached_prompt_tokens", cached_prompt_tokens)
         .time(timestamp)
     )
+
+
+def create_chat_point(
+    *,
+    parent_deployment: str | None = DEFAULT_PARENT_DEPLOYMENT,
+    execution_path: str | None = DEFAULT_EXECUTION_PATH_STR,
+    model: str = DEFAULT_MODEL,
+    deployment: str = DEFAULT_DEPLOYMENT,
+    trace_id: str | None = DEFAULT_TRACE_ID,
+    core_span_id: str | None = DEFAULT_CORE_SPAN_ID,
+    core_parent_span_id: str | None = DEFAULT_CORE_PARENT_SPAN_ID,
+    project_id: str = DEFAULT_PROJECT_ID,
+    language: str | None = None,
+    response_id: str = DEFAULT_RESPONSE_ID,
+    user_hash: str | None = DEFAULT_USER_ID,
+    chat_id: str = DEFAULT_CHAT_ID,
+    number_request_messages: int = 1,
+    upstream: str | None = DEFAULT_UPSTREAM_URI,
+    topic: str | None = None,
+    title: str | None = DEFAULT_USER_TITLE,
+    timestamp: datetime = DEFAULT_TIMESTAMP,
+    prompt_tokens: int = 0,
+    completion_tokens: int = 0,
+    cached_prompt_tokens: int = 0,
+    deployment_price: float = 0.0,
+    price: float = 0.0,
+) -> Point:
+    return _create_point(**locals())
+
+
+def create_embeddings_point(
+    *,
+    parent_deployment: str | None = DEFAULT_PARENT_DEPLOYMENT,
+    execution_path: str | None = DEFAULT_EXECUTION_PATH_STR,
+    deployment: str = DEFAULT_DEPLOYMENT,
+    trace_id: str | None = DEFAULT_TRACE_ID,
+    core_span_id: str | None = DEFAULT_CORE_SPAN_ID,
+    core_parent_span_id: str | None = DEFAULT_CORE_PARENT_SPAN_ID,
+    project_id: str = DEFAULT_PROJECT_ID,
+    language: str | None = None,
+    response_id: str = DEFAULT_RESPONSE_ID,
+    user_hash: str | None = DEFAULT_USER_ID,
+    chat_id: str = DEFAULT_CHAT_ID,
+    number_request_messages: int = 1,
+    upstream: str | None = DEFAULT_UPSTREAM_URI,
+    topic: str | None = None,
+    title: str | None = DEFAULT_USER_TITLE,
+    timestamp: datetime = DEFAULT_TIMESTAMP,
+    prompt_tokens: int = 0,
+    completion_tokens: int = 0,
+    cached_prompt_tokens: int = 0,
+    deployment_price: float = 0.0,
+    price: float = 0.0,
+) -> Point:
+    model = deployment  # type: ignore
+    return _create_point(**locals())

@@ -5,7 +5,7 @@ import pytest
 import aidial_analytics_realtime.app as app
 from tests.mocks import InfluxWriterMock
 from tests.utils.client import Client
-from tests.utils.influx import create_point
+from tests.utils.influx import create_chat_point
 from tests.utils.message.chat import create_chat_message
 
 
@@ -30,4 +30,6 @@ def test_topic_classification_by_hf_model(
         request_body={"messages": [{"role": "user", "content": content}]}
     )
     client(message).raise_for_status()
-    influx.match_points(create_point(topic=topic, number_request_messages=1))
+    influx.match_points(
+        create_chat_point(topic=topic, number_request_messages=1)
+    )

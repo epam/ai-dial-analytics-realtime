@@ -4,18 +4,24 @@ import pytest
 
 from tests.mocks import InfluxWriterMock
 from tests.utils.client import Client
-from tests.utils.influx import create_point
+from tests.utils.influx import create_embeddings_point
 from tests.utils.message.embeddings import create_embedding_message
 
 
 def test_embeddings_baseline(client: Client, influx: InfluxWriterMock):
     message = create_embedding_message()
     client(message).raise_for_status()
+    point = create_embeddings_point(response_id="pseudo-uuid-1")
+    influx.match_points(point)
 
-    point = create_point(
+
+def test_embeddings_deployment(client: Client, influx: InfluxWriterMock):
+    message = create_embedding_message(deployment="test-deployment-id")
+    client(message).raise_for_status()
+
+    point = create_embeddings_point(
         response_id="pseudo-uuid-1",
-        deployment="text-embedding-3-small",
-        model="text-embedding-3-small",
+        deployment="test-deployment-id",
     )
 
     influx.match_points(point)
@@ -25,10 +31,8 @@ def test_embeddings_no_request_body(client: Client, influx: InfluxWriterMock):
     message = create_embedding_message(request_body=None)
     client(message).raise_for_status()
 
-    point = create_point(
+    point = create_embeddings_point(
         response_id="pseudo-uuid-1",
-        deployment="text-embedding-3-small",
-        model="text-embedding-3-small",
         number_request_messages=0,
     )
 
@@ -41,10 +45,8 @@ def test_embeddings_input_as_tokens(client: Client, influx: InfluxWriterMock):
     )
     client(message).raise_for_status()
 
-    point = create_point(
+    point = create_embeddings_point(
         response_id="pseudo-uuid-1",
-        deployment="text-embedding-3-small",
-        model="text-embedding-3-small",
         number_request_messages=2,
     )
 
@@ -65,10 +67,8 @@ def test_embeddings_trade_ids_in_log_messages(
     message = create_embedding_message(trace=trace)
     client(message).raise_for_status()
 
-    point = create_point(
+    point = create_embeddings_point(
         response_id="pseudo-uuid-1",
-        deployment="text-embedding-3-small",
-        model="text-embedding-3-small",
         trace_id=trace["trace_id"],
         core_parent_span_id=trace["core_parent_span_id"],
         core_span_id=trace["core_span_id"],
@@ -104,11 +104,7 @@ def test_embeddings_request_uri(
 
     if is_valid:
         influx.match_points(
-            create_point(
-                response_id="pseudo-uuid-1",
-                deployment="text-embedding-3-small",
-                model="text-embedding-3-small",
-            )
+            create_embeddings_point(response_id="pseudo-uuid-1")
         )
     else:
         influx.match_points()

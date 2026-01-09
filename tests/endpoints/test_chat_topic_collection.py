@@ -2,7 +2,7 @@ import pytest
 
 from tests.mocks import InfluxWriterMock, TopicModelEcho
 from tests.utils.client import Client
-from tests.utils.influx import create_point
+from tests.utils.influx import create_chat_point
 from tests.utils.message.chat import (
     create_chat_assembled_response,
     create_chat_message,
@@ -27,7 +27,7 @@ def test_chat_completion_without_assembled_response(
     )
     client(message).raise_for_status()
 
-    point = create_point(
+    point = create_chat_point(
         # Since there is no assembled_response.id, it's auto-generated as UUID.
         response_id="pseudo-uuid-1",
         topic="user-message",
@@ -57,7 +57,7 @@ def test_chat_completion_text_content_parts(
 
     client(message).raise_for_status()
 
-    point = create_point(
+    point = create_chat_point(
         number_request_messages=2,
         topic="system-message\n\nuser-message\n\nassistant-message",
     )
@@ -100,7 +100,7 @@ def test_chat_completion_messages_without_text_content(
     )
     client(message).raise_for_status()
 
-    point = create_point(
+    point = create_chat_point(
         number_request_messages=4,
         topic="what's the weather like?\n\nIt's sunny today.\n\nuser-message\n\nassistant-message",
     )

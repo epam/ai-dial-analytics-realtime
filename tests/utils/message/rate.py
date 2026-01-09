@@ -21,7 +21,7 @@ def create_rate_message(
     user_id: str = DEFAULT_USER_ID,
     user_title: str = DEFAULT_USER_TITLE,
     deployment: str = "gpt-4",
-    request_uri: str = "/v1/test-deployment-id/rate",
+    request_uri: str = "/v1/whatever-deployment-id/rate",
     token_usage: dict | None = None,
     parent_deployment: str | None = "assistant",
     trace: dict | None = default_trace(),

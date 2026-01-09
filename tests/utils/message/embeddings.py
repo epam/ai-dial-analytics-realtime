@@ -34,7 +34,7 @@ def create_embedding_message(
     user_id: str = DEFAULT_USER_ID,
     user_title: str = DEFAULT_USER_TITLE,
     deployment: str = "text-embedding-3-small",
-    request_uri: str = "/openai/deployments/test-deployment-id/embeddings",
+    request_uri: str = "/openai/deployments/whatever-deployment-id/embeddings",
     token_usage: dict | None = default_token_usage(),
     parent_deployment: str | None = "assistant",
     trace: dict | None = default_trace(),

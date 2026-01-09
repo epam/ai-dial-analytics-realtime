@@ -16,3 +16,6 @@ DEFAULT_CORE_PARENT_SPAN_ID = "default_core_parent_span_id"
 
 DEFAULT_EXECUTION_PATH_LIST = ["app1", "app2"]
 DEFAULT_EXECUTION_PATH_STR = "app1/app2"
+
+DEFAULT_MODEL = "default-model"
+DEFAULT_DEPLOYMENT = "default-deployment"

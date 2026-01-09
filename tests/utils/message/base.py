@@ -1,6 +1,12 @@
 import json
 from typing import Callable
 
+from tests.utils.constants import (
+    DEFAULT_CORE_PARENT_SPAN_ID,
+    DEFAULT_CORE_SPAN_ID,
+    DEFAULT_TRACE_ID,
+)
+
 
 def default_token_usage() -> dict:
     return {
@@ -15,9 +21,9 @@ def default_token_usage() -> dict:
 
 def default_trace() -> dict:
     return {
-        "trace_id": "default_trace_id",
-        "core_span_id": "default_core_span_id",
-        "core_parent_span_id": "default_core_parent_span_id",
+        "trace_id": DEFAULT_TRACE_ID,
+        "core_span_id": DEFAULT_CORE_SPAN_ID,
+        "core_parent_span_id": DEFAULT_CORE_PARENT_SPAN_ID,
     }
 
 

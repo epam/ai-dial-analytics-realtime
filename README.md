@@ -32,7 +32,7 @@ The logs for `/chat/completions` and `/embeddings` endpoints are saved to the `a
 |---|---|
 |user_hash| The unique hash identifying the user. |
 |deployment_price| The cost of this specific request, excluding the cost of any requests it directly or indirectly initiated. |
-|price| The total cost of the request, including the cost of this request and all related requests it directly or indirectly triggered. |
+|price| The total cost of the request, including the cost of this request and all related requests it directly or indirectly triggered. It always holds that `price>=deployment_price`.|
 |number_request_messages| The total number of messages in the request. For chat completion requests it's number of messages in the chat history. For embedding requests it's number of inputs. |
 |chat_id| The unique identifier for the conversation that this request is part of. |
 |prompt_tokens| The number of tokens in the request. |

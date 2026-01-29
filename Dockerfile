@@ -20,9 +20,6 @@ RUN python3 -m venv .venv
 
 ENV PATH="/app/.venv/bin:$PATH"
 
-# fix CVE-2024-6345
-RUN pip install setuptools==70.0.0 --quiet
-
 # Install split into two steps (the dependencies and the sources)
 # in order to leverage the Docker caching
 COPY pyproject.toml poetry.lock poetry.toml README.md ./

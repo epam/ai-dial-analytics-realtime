@@ -20,6 +20,9 @@ RUN python3 -m venv .venv
 
 ENV PATH="/app/.venv/bin:$PATH"
 
+# fix CVE-2026-24049, CVE-2026-23949
+RUN pip install setuptools==80.10.2 --quiet
+
 # Install split into two steps (the dependencies and the sources)
 # in order to leverage the Docker caching
 COPY pyproject.toml poetry.lock poetry.toml README.md ./
@@ -45,11 +48,6 @@ ENV TOPIC_EMBEDDINGS_MODEL="all-mpnet-base-v2"
 # Install ca-certificates is required for https connection to InfluxDB
 RUN apt-get update && \
     apt-get install -y python3 ca-certificates
-
-# fix CVE-2026-23949
-RUN pip install setuptools==80.10.2
-# fix CVE-2026-24049
-RUN pip install wheel==0.46.2
 
 WORKDIR /app
 

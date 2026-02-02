@@ -154,8 +154,8 @@ async def make_point(
             ),
         )
         .field("user_hash", to_string(user_hash))
-        .field("price", price)
-        .field("deployment_price", deployment_price)
+        .field("price", float(price))
+        .field("deployment_price", float(deployment_price))
         .field(
             "number_request_messages",
             (

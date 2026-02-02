@@ -264,3 +264,29 @@ def test_chat_request_uri(
     else:
         influx.match_points()
         assert f"Unsupported message type: {request_uri!r}" in caplog.text
+
+
+def test_chat_when_price_is_missing_deployment_price_is_zero(
+    client: Client, influx: InfluxWriterMock
+):
+    message = create_chat_message(token_usage={"deployment_price": 0.001})
+    client(message).raise_for_status()
+    influx.match_points(create_chat_point(deployment_price=0.0))
+
+
+def test_chat_integer_deployment_price(
+    client: Client, influx: InfluxWriterMock
+):
+    message = create_chat_message(
+        token_usage={"deployment_price": 42, "price": 0.001}
+    )
+    client(message).raise_for_status()
+    influx.match_points(create_chat_point(deployment_price=42.0, price=0.001))
+
+
+def test_chat_integer_price(client: Client, influx: InfluxWriterMock):
+    message = create_chat_message(
+        token_usage={"deployment_price": 0.001, "price": 42}
+    )
+    client(message).raise_for_status()
+    influx.match_points(create_chat_point(deployment_price=0.001, price=42.0))

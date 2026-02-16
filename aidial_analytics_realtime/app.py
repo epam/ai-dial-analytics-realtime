@@ -361,7 +361,7 @@ async def process_message(
         await on_log_message(
             message_dict, influx_writer, topic_model, rates_calculator, lang_id
         )
-        logger.info("success")
+        logger.debug("success")
         return {"status": "success"}
     except starlette.requests.ClientDisconnect:
         return _error("client disconnect")

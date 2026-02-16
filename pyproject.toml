@@ -55,6 +55,7 @@ priority = "explicit"
 [tool.poetry.group.test.dependencies]
 pytest = "^7.4.1"
 httpx = "^0.25.2"
+pytest-env = "1.1.1"
 
 [tool.poetry.group.dev.dependencies]
 black = "^24.3.0"
@@ -106,6 +107,7 @@ exclude = [
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+env = ["LOG_LEVEL=DEBUG"]
 markers = [
     "with_external: marks tests may require external resources, like the download models (deselect with '-m \"not with_external\"')",
 ]

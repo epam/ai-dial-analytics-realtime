@@ -56,7 +56,7 @@ def test_embeddings_input_as_tokens(client: Client, influx: InfluxWriterMock):
 def test_embeddings_trade_ids_in_log_messages(
     caplog, client: Client, influx: InfluxWriterMock
 ):
-    caplog.set_level(logging.INFO)
+    caplog.set_level(logging.DEBUG)
 
     trace = {
         "trace_id": "5dca3d6ed5d22b6ab574f27a6ab5ec14",
@@ -75,10 +75,13 @@ def test_embeddings_trade_ids_in_log_messages(
     )
 
     influx.match_points(point)
-    assert (
-        f"[1/1] [trace_id={trace['trace_id']} span_id={trace["core_span_id"]}] success"
-        in caplog.text
-    )
+
+    found = False
+    for record in caplog.records:
+        if record.levelname == "DEBUG" and record.message == f"[1/1] [trace_id={trace['trace_id']} span_id={trace["core_span_id"]}] success":
+            found = True
+            break
+    assert found, f"Cannot find the expected log line among the following:\n{caplog.text}"
 
 
 @pytest.mark.parametrize(

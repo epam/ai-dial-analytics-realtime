@@ -11,6 +11,9 @@ DEFAULT_USER_TITLE = "default-user-title"
 DEFAULT_UPSTREAM_URI = "http://default-upstream.domain.com/endpoint"
 DEFAULT_RESPONSE_STATUS = "200"
 
+DEFAULT_MCP_METHOD = "tools/call"
+DEFAULT_MCP_TOOL_CALL_NAME = "get_current_time"
+
 DEFAULT_TRACE_ID = "default_trace_id"
 DEFAULT_CORE_SPAN_ID = "default_core_span_id"
 DEFAULT_CORE_PARENT_SPAN_ID = "default_core_parent_span_id"

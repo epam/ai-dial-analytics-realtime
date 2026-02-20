@@ -28,6 +28,11 @@ class InfluxWriterMock:
             assert str(expected) == str(actual)
 
 
+class LangIDNotImplemented:
+    async def detect_language(self, text: str) -> str | None:
+        raise NotImplementedError("LangID isn't implemented")
+
+
 class LangIDNoop:
     async def detect_language(self, text: str) -> str | None:
         return None
@@ -41,3 +46,8 @@ class TopicModelEcho:
 class TopicModelNoop:
     async def get_topic_by_text(self, text: str) -> str | None:
         return None
+
+
+class TopicModelNotImplemented:
+    async def get_topic_by_text(self, text: str) -> str | None:
+        raise NotImplementedError("TopicModel isn't implemented")

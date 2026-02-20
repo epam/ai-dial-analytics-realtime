@@ -189,6 +189,7 @@ async def make_point(
 async def make_mcp_point(
     *,
     deployment: str,
+    parent_deployment: str | None,
     project_id: str,
     chat_id: str | None,
     upstream_url: str | None,
@@ -196,7 +197,6 @@ async def make_mcp_point(
     user_title: str,
     timestamp: datetime,
     request: dict | None,
-    parent_deployment: str | None,
     trace: dict | None,
     execution_path: list | None,
 ):

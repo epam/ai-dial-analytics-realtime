@@ -64,7 +64,7 @@ The logs for `/chat/completions` and `/embeddings` endpoints are saved to the `a
 |upstream|The upstream endpoint used by the DIAL model.|
 |topic|The topic detected for the content of the request.|
 |title|The title of the person making the request.|
-|response_id|Unique ID of the response.|
+|response_id|Unique ID of the response. For chat completion response it equals to `id` response field; for embedding request - it's generate from scratch as UUID.|
 
 |Field|Type|Description|
 |---|---|---|

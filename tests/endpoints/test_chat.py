@@ -159,21 +159,14 @@ def test_chat_parent_deployment(client: Client, influx: InfluxWriterMock):
 
 
 def test_chat_trace(client: Client, influx: InfluxWriterMock):
-    message = create_chat_message(
-        trace={
-            "trace_id": "5dca3d6ed5d22b6ab574f27a6ab5ec14",
-            "core_span_id": "9ade2b6fef0a716d",
-            "core_parent_span_id": "20e7e64715abbe97",
-        }
-    )
+    trace = {
+        "trace_id": "5dca3d6ed5d22b6ab574f27a6ab5ec14",
+        "core_span_id": "9ade2b6fef0a716d",
+        "core_parent_span_id": "20e7e64715abbe97",
+    }
+    message = create_chat_message(trace=trace)
     client(message).raise_for_status()
-    influx.match_points(
-        create_chat_point(
-            trace_id="5dca3d6ed5d22b6ab574f27a6ab5ec14",
-            core_span_id="9ade2b6fef0a716d",
-            core_parent_span_id="20e7e64715abbe97",
-        )
-    )
+    influx.match_points(create_chat_point(**trace))  # type: ignore
 
 
 @pytest.mark.parametrize(

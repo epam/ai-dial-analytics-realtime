@@ -8,6 +8,8 @@ from tests.utils.constants import (
     DEFAULT_CORE_SPAN_ID,
     DEFAULT_DEPLOYMENT,
     DEFAULT_EXECUTION_PATH_STR,
+    DEFAULT_MCP_METHOD,
+    DEFAULT_MCP_TOOL_CALL_NAME,
     DEFAULT_MODEL,
     DEFAULT_PARENT_DEPLOYMENT,
     DEFAULT_PROJECT_ID,
@@ -42,6 +44,42 @@ def create_rate_point(
         .tag("chat_id", chat_id or "undefined")
         .field("dislike_count", dislike_count)
         .field("like_count", like_count)
+        .time(timestamp)
+    )
+
+
+def create_mcp_point(
+    *,
+    parent_deployment: str = DEFAULT_PARENT_DEPLOYMENT,
+    deployment: str = DEFAULT_DEPLOYMENT,
+    project_id: str = DEFAULT_PROJECT_ID,
+    chat_id: str | None = DEFAULT_CHAT_ID,
+    upstream: str | None = DEFAULT_UPSTREAM_URI,
+    user_hash: str | None = DEFAULT_USER_ID,
+    title: str | None = DEFAULT_USER_TITLE,
+    timestamp: datetime = DEFAULT_TIMESTAMP,
+    mcp_method: str = DEFAULT_MCP_METHOD,
+    mcp_tool_call_name: str = DEFAULT_MCP_TOOL_CALL_NAME,
+    execution_path: str | None = DEFAULT_EXECUTION_PATH_STR,
+    trace_id: str | None = DEFAULT_TRACE_ID,
+    core_span_id: str | None = DEFAULT_CORE_SPAN_ID,
+    core_parent_span_id: str | None = DEFAULT_CORE_PARENT_SPAN_ID,
+):
+    return (
+        Point("mcp_analytics")
+        .tag("project_id", project_id)
+        .tag("title", title or "undefined")
+        .tag("deployment", deployment)
+        .tag("parent_deployment", parent_deployment or "undefined")
+        .tag("mcp_method", mcp_method or "undefined")
+        .field("execution_path", execution_path or "undefined")
+        .field("trace_id", trace_id or "undefined")
+        .field("core_span_id", core_span_id or "undefined")
+        .field("core_parent_span_id", core_parent_span_id or "undefined")
+        .field("upstream", upstream or "undefined")
+        .field("user_hash", user_hash or "undefined")
+        .field("chat_id", chat_id or "undefined")
+        .field("mcp_tool_call_name", mcp_tool_call_name or "undefined")
         .time(timestamp)
     )
 

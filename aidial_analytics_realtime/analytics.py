@@ -186,6 +186,52 @@ async def make_point(
     return point
 
 
+async def make_mcp_point(
+    *,
+    deployment: str,
+    project_id: str,
+    chat_id: str | None,
+    upstream_url: str | None,
+    user_hash: str,
+    user_title: str,
+    timestamp: datetime,
+    request: dict | None,
+    parent_deployment: str | None,
+    trace: dict | None,
+    execution_path: list | None,
+):
+    trace = trace or {}
+    request = request or {}
+
+    mcp_method = request.get("method")
+
+    mcp_tool_call_name = None
+    if mcp_method == "tools/call" and (params := request.get("params")):
+        mcp_tool_call_name = params.get("name")
+
+    point = (
+        Point("mcp_analytics")
+        .tag("project_id", project_id)
+        .tag("title", to_string(user_title))
+        .tag("deployment", deployment)
+        .tag("parent_deployment", to_string(parent_deployment))
+        .tag("mcp_method", to_string(mcp_method))
+        .field("execution_path", build_execution_path(execution_path))
+        .field("trace_id", to_string(trace.get("trace_id")))
+        .field("core_span_id", to_string(trace.get("core_span_id")))
+        .field(
+            "core_parent_span_id", to_string(trace.get("core_parent_span_id"))
+        )
+        .field("upstream", to_string(upstream_url))
+        .field("user_hash", to_string(user_hash))
+        .field("chat_id", to_string(chat_id))
+        .field("mcp_tool_call_name", to_string(mcp_tool_call_name))
+        .time(timestamp)
+    )
+
+    return point
+
+
 def make_rate_point(
     deployment: str,
     project_id: str,

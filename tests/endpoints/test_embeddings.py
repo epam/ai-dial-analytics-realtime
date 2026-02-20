@@ -15,6 +15,14 @@ def test_embeddings_baseline(client: Client, influx: InfluxWriterMock):
     influx.match_points(point)
 
 
+def test_embeddings_baseline_reject_non_200(
+    client: Client, influx: InfluxWriterMock
+):
+    message = create_embedding_message(response_status="400")
+    client(message).raise_for_status()
+    influx.match_points()
+
+
 def test_embeddings_deployment(client: Client, influx: InfluxWriterMock):
     message = create_embedding_message(deployment="test-deployment-id")
     client(message).raise_for_status()

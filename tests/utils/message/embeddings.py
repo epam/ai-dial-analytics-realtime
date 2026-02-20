@@ -4,6 +4,7 @@ from tests.utils.constants import (
     DEFAULT_EXECUTION_PATH_LIST,
     DEFAULT_PARENT_DEPLOYMENT,
     DEFAULT_PROJECT_ID,
+    DEFAULT_RESPONSE_STATUS,
     DEFAULT_RESPONSE_TIME,
     DEFAULT_UPSTREAM_URI,
     DEFAULT_USER_ID,
@@ -46,5 +47,6 @@ def create_embedding_message(
     response_assembled: str | dict | None = None,
     response_body: str | dict | None = _default_embedding_response_body(),
     response_upstream_uri: str | None = DEFAULT_UPSTREAM_URI,
+    response_status: str = DEFAULT_RESPONSE_STATUS,
 ) -> dict:
     return create_message(**locals())

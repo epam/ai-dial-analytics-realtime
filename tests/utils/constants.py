@@ -9,6 +9,7 @@ DEFAULT_CHAT_ID = "default-chat-id"
 DEFAULT_USER_ID = "default-user-id"
 DEFAULT_USER_TITLE = "default-user-title"
 DEFAULT_UPSTREAM_URI = "http://default-upstream.domain.com/endpoint"
+DEFAULT_RESPONSE_STATUS = "200"
 
 DEFAULT_TRACE_ID = "default_trace_id"
 DEFAULT_CORE_SPAN_ID = "default_core_span_id"

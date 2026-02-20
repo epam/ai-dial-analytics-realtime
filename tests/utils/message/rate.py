@@ -5,6 +5,7 @@ from tests.utils.constants import (
     DEFAULT_PARENT_DEPLOYMENT,
     DEFAULT_PROJECT_ID,
     DEFAULT_RESPONSE_ID,
+    DEFAULT_RESPONSE_STATUS,
     DEFAULT_RESPONSE_TIME,
     DEFAULT_USER_ID,
     DEFAULT_USER_TITLE,
@@ -33,5 +34,6 @@ def create_rate_message(
     response_assembled: str | dict | None = None,
     response_body: str | dict | None = "whatever",
     response_upstream_uri: str | None = None,
+    response_status: str = DEFAULT_RESPONSE_STATUS,
 ) -> dict:
     return create_message(**locals())

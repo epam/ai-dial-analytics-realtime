@@ -17,6 +17,12 @@ def test_chat_baseline(client: Client, influx: InfluxWriterMock):
     influx.match_points(create_chat_point())
 
 
+def test_chat_baseline_reject_non_200(client: Client, influx: InfluxWriterMock):
+    message = create_chat_message(response_status="400")
+    client(message).raise_for_status()
+    influx.match_points()
+
+
 def test_chat_deployment(client: Client, influx: InfluxWriterMock):
     message = create_chat_message(deployment="test-dial-deployment-id")
     client(message).raise_for_status()

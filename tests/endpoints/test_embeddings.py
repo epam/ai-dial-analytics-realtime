@@ -15,6 +15,14 @@ def test_embeddings_baseline(client: Client, influx: InfluxWriterMock):
     influx.match_points(point)
 
 
+def test_embeddings_baseline_reject_non_200(
+    client: Client, influx: InfluxWriterMock
+):
+    message = create_embedding_message(response_status="400")
+    client(message).raise_for_status()
+    influx.match_points()
+
+
 def test_embeddings_deployment(client: Client, influx: InfluxWriterMock):
     message = create_embedding_message(deployment="test-deployment-id")
     client(message).raise_for_status()
@@ -67,12 +75,7 @@ def test_embeddings_trade_ids_in_log_messages(
     message = create_embedding_message(trace=trace)
     client(message).raise_for_status()
 
-    point = create_embeddings_point(
-        response_id="pseudo-uuid-1",
-        trace_id=trace["trace_id"],
-        core_parent_span_id=trace["core_parent_span_id"],
-        core_span_id=trace["core_span_id"],
-    )
+    point = create_embeddings_point(response_id="pseudo-uuid-1", **trace)  # type: ignore
 
     influx.match_points(point)
 

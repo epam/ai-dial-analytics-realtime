@@ -41,6 +41,7 @@ def create_message(
     execution_path: list | None,
     request_time: str,
     request_body: str | dict | None,
+    response_status: str | None,
     response_assembled: str | dict | None,
     response_body: str | dict | None,
     response_upstream_uri: str | None,
@@ -74,7 +75,7 @@ def create_message(
         },
         "assembled_response": assembled_response,
         "response": {
-            "status": "200",
+            "status": response_status,
             "upstream_uri": response_upstream_uri,
             "body": response_body,
         },

@@ -6,6 +6,7 @@ from tests.utils.constants import (
     DEFAULT_PARENT_DEPLOYMENT,
     DEFAULT_PROJECT_ID,
     DEFAULT_RESPONSE_ID,
+    DEFAULT_RESPONSE_STATUS,
     DEFAULT_RESPONSE_TIME,
     DEFAULT_UPSTREAM_URI,
     DEFAULT_USER_ID,
@@ -68,5 +69,6 @@ def create_chat_message(
     # therefore, no need to make it realistic.
     response_body: str | dict | None = "whatever",
     response_upstream_uri: str | None = DEFAULT_UPSTREAM_URI,
+    response_status: str = DEFAULT_RESPONSE_STATUS,
 ) -> dict:
     return create_message(**locals())

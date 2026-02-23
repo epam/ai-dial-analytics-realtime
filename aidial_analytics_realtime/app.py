@@ -16,6 +16,7 @@ from fastapi.responses import JSONResponse
 
 from aidial_analytics_realtime.analytics import (
     RequestType,
+    make_mcp_point,
     make_rate_point,
     on_message,
 )
@@ -42,6 +43,7 @@ from aidial_analytics_realtime.utils.timer import Timer
 RATE_PATTERN = r"/v1/(.+?)/rate"
 CHAT_COMPLETION_PATTERN = r"/openai/deployments/(.+?)/chat/completions"
 EMBEDDING_PATTERN = r"/openai/deployments/(.+?)/embeddings"
+MCP_PATTERN = r"/v1/toolset/(.+?)/mcp"
 
 
 @contextlib.asynccontextmanager
@@ -202,6 +204,46 @@ async def on_embedding_message(
     )
 
 
+async def on_mcp_message(
+    *,
+    deployment: str,
+    project_id: str,
+    chat_id: str,
+    upstream_url: str,
+    user_hash: str,
+    user_title: str,
+    timestamp: datetime,
+    request: dict,
+    response: dict,
+    influx_writer: InfluxWriterAsync,
+    parent_deployment: str | None,
+    trace: dict | None,
+    execution_path: list | None,
+):
+    if response["status"] != "200":
+        return
+
+    request_body_str = request.get("body")
+    request_body = (
+        None if request_body_str is None else json.loads(request_body_str)
+    )
+
+    point = make_mcp_point(
+        deployment=deployment,
+        project_id=project_id,
+        chat_id=chat_id,
+        upstream_url=upstream_url,
+        user_hash=user_hash,
+        user_title=user_title,
+        timestamp=timestamp,
+        request=request_body,
+        parent_deployment=parent_deployment,
+        trace=trace,
+        execution_path=execution_path,
+    )
+    await influx_writer(point)
+
+
 async def on_log_message(
     message: dict,
     influx_writer: InfluxWriterAsync,
@@ -280,6 +322,23 @@ async def on_log_message(
             parent_deployment,
             trace,
             execution_path,
+        )
+
+    elif re.search(MCP_PATTERN, uri):
+        await on_mcp_message(
+            deployment=deployment,
+            project_id=project_id,
+            chat_id=chat_id,
+            upstream_url=upstream_url,
+            user_hash=user_hash,
+            user_title=user_title,
+            timestamp=timestamp,
+            request=request,
+            response=response,
+            influx_writer=influx_writer,
+            parent_deployment=parent_deployment,
+            trace=trace,
+            execution_path=execution_path,
         )
 
     else:

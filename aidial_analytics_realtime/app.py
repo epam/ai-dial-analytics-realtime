@@ -228,7 +228,7 @@ async def on_mcp_message(
         None if request_body_str is None else json.loads(request_body_str)
     )
 
-    point = await make_mcp_point(
+    point = make_mcp_point(
         deployment=deployment,
         project_id=project_id,
         chat_id=chat_id,

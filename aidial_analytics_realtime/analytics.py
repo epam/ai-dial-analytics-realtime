@@ -186,7 +186,7 @@ async def make_point(
     return point
 
 
-async def make_mcp_point(
+def make_mcp_point(
     *,
     deployment: str,
     parent_deployment: str | None,
@@ -209,7 +209,7 @@ async def make_mcp_point(
     if mcp_method == "tools/call" and (params := request.get("params")):
         mcp_tool_call_name = params.get("name")
 
-    point = (
+    return (
         Point("mcp_analytics")
         .tag("project_id", project_id)
         .tag("title", to_string(user_title))
@@ -228,8 +228,6 @@ async def make_mcp_point(
         .field("mcp_tool_call_name", to_string(mcp_tool_call_name))
         .time(timestamp)
     )
-
-    return point
 
 
 def make_rate_point(

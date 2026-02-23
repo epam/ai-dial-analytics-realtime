@@ -10,7 +10,7 @@ from tests.utils.client import Client
 from tests.utils.influx import create_mcp_point
 
 # from tests.utils.message.base import on_request_body
-from tests.utils.message.mcp import create_mcp_message
+from tests.utils.message.mcp import create_mcp_message, create_mcp_request
 
 
 @pytest.fixture
@@ -33,6 +33,38 @@ def test_mcp_baseline_reject_non_200(client: Client, influx: InfluxWriterMock):
     message = create_mcp_message(response_status="400")
     client(message).raise_for_status()
     influx.match_points()
+
+
+def test_mcp_method_name(client: Client, influx: InfluxWriterMock):
+    message = create_mcp_message(
+        request_body=create_mcp_request(method="test-mcp-method", params={})
+    )
+    client(message).raise_for_status()
+    influx.match_points(
+        create_mcp_point(
+            mcp_method="test-mcp-method",
+            mcp_tool_call_name="undefined",
+        )
+    )
+
+
+def test_mcp_tool_call_name(client: Client, influx: InfluxWriterMock):
+    message = create_mcp_message(
+        request_body=create_mcp_request(
+            method="tools/call",
+            params={
+                "name": "test-tool-call-name",
+                "arguments": "test-arguments",
+            },
+        )
+    )
+    client(message).raise_for_status()
+    influx.match_points(
+        create_mcp_point(
+            mcp_method="tools/call",
+            mcp_tool_call_name="test-tool-call-name",
+        )
+    )
 
 
 def test_mcp_deployment(client: Client, influx: InfluxWriterMock):

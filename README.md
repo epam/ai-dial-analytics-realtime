@@ -109,7 +109,7 @@ The logs for the `/mcp` endpoint are saved to the `mcp_analytics` measurement:
 
 |Field|Type|Description|
 |---|---|---|
-|execution_path|A list of deployment calls representing the call stack of the request. E.g. `['app1', 'app2', 'model1']` means `app1` called `app2` and `app2` called `model1`. The last element of the list equals to the `deployment` tag. The penultimate element of the list *(when present)* equals to the `parent_deployment` tag.|
+|execution_path|string|A list of deployment calls representing the call stack of the request. E.g. `['app1', 'app2', 'model1']` means `app1` called `app2` and `app2` called `model1`. The last element of the list equals to the `deployment` tag. The penultimate element of the list *(when present)* equals to the `parent_deployment` tag.|
 |chat_id|string|The unique identifier for the conversation that this request is part of.|
 |user_hash|string|The unique hash identifying the user.|
 |upstream|string|The upstream endpoint of the DIAL toolset.|

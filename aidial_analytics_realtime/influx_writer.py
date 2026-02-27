@@ -15,13 +15,25 @@ def create_influx_writer() -> Tuple[InfluxDBClientAsync, InfluxWriterAsync]:
     influx_url = get_env("INFLUX_URL")
     influx_api_token = get_env("INFLUX_API_TOKEN")
 
-    if bucket_or_database := os.getenv("INFLUX_BUCKET"):
+    if (bucket := os.getenv("INFLUX_BUCKET")) and (
+        database := os.getenv("INFLUX_DATABASE")
+    ):
+        raise ValueError(
+            "Both INFLUX_BUCKET and INFLUX_DATABASE env variables are set. Only one of them should be set."
+        )
+
+    if bucket:
         # InfluxDB 2 case
         influx_org = get_env("INFLUX_ORG")
-    else:
+        bucket_or_database = bucket
+    elif database:
         # InfluxDB 3 case
         influx_org = "ignored"
-        bucket_or_database = get_env("INFLUX_DATABASE")
+        bucket_or_database = database
+    else:
+        raise ValueError(
+            "Neither INFLUX_BUCKET nor INFLUX_DATABASE env variable is set. Only one of them should be set."
+        )
 
     client = InfluxDBClientAsync(
         url=influx_url, token=influx_api_token, org=influx_org

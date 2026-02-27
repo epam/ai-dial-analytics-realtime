@@ -171,31 +171,12 @@
         "multi": false,
         "name": "datasource",
         "options": [],
-        "query": "influxdb",
+        "query": "influxdb3",
         "queryValue": "",
         "refresh": 1,
         "regex": "",
         "skipUrlSync": false,
         "type": "datasource"
-      },
-      {
-        "datasource": {
-          "type": "influxdb",
-          "uid": "${datasource}"
-        },
-        "definition": "buckets()",
-        "description": "A InfluxDB bucket name",
-        "hide": 0,
-        "includeAll": false,
-        "multi": false,
-        "name": "INFLUX_BUCKET",
-        "options": [],
-        "query": "buckets()",
-        "refresh": 1,
-        "regex": "",
-        "skipUrlSync": false,
-        "sort": 0,
-        "type": "query"
       }
     ]
   },

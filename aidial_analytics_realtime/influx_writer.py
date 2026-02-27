@@ -15,7 +15,7 @@ def create_influx_writer() -> Tuple[InfluxDBClientAsync, InfluxWriterAsync]:
     influx_url = get_env("INFLUX_URL")
     influx_api_token = get_env("INFLUX_API_TOKEN")
 
-    if bucket_or_database := os.environ.get("INFLUX_BUCKET"):
+    if bucket_or_database := os.getenv("INFLUX_BUCKET"):
         # InfluxDB 2 case
         influx_org = get_env("INFLUX_ORG")
     else:

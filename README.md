@@ -22,8 +22,8 @@
   - [Configuration](#configuration)
     - [Connection to the InfluxDB](#connection-to-the-influxdb)
       - [InfluxDB 2](#influxdb-2)
-    - [Aggregated Dashboards (Optional)](#aggregated-dashboards-optional)
       - [InfluxDB 3](#influxdb-3)
+    - [Aggregated Dashboards (Optional)](#aggregated-dashboards-optional)
     - [Other configuration](#other-configuration)
   - [Development](#development)
     - [Development environment](#development-environment)
@@ -142,14 +142,6 @@ You need to specify the connection options to the InfluxDB instance using the en
 
 You can follow the [InfluxDB 2 documentation](https://docs.influxdata.com/influxdb/v2/get-started/) to setup InfluxDB locally and acquire the required configuration parameters.
 
-### Aggregated Dashboards (Optional)
-
-This project includes optional **aggregated Grafana dashboards** that visualize 6-hours and monthly trends.
-
-To enable these dashboards, you must **manually create the required InfluxDB buckets and tasks**. These steps are **not automated** via Helm and must be applied manually.
-
-See [influxdb/README.md](dashboards/customized/influxdb/README.md) for full instructions.
-
 #### InfluxDB 3
 
 You need to specify the connection options to the InfluxDB instance using the environment variables:
@@ -164,6 +156,17 @@ You can follow the [InfluxDB 3 documentation](https://docs.influxdata.com/influx
 
 > [!IMPORTANT]
 > The `INFLUX_DATABASE` variable is introduced in version 0.22.0. For earlier versions set `INFLUX_BUCKET` variable to the target database name and `INFLUX_ORG` variable to any non-empty value (e.g. "ignored") to enable the InfluxDB 3 support.
+
+### Aggregated Dashboards (Optional)
+
+This project includes optional **aggregated Grafana dashboards** that visualize 6-hours and monthly trends.
+
+To enable these dashboards, you must **manually create the required InfluxDB buckets and tasks**. These steps are **not automated** via Helm and must be applied manually.
+
+See [influxdb/README.md](dashboards/customized/influxdb/README.md) for full instructions.
+
+> [!IMPORTANT]
+> Aggregated Dashboards are only supported for InfluxDB 2.
 
 ### Other configuration
 

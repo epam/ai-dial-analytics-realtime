@@ -155,7 +155,7 @@ You need to specify the connection options to the InfluxDB instance using the en
 You can follow the [InfluxDB 3 documentation](https://docs.influxdata.com/influxdb3/core/get-started/) to setup InfluxDB locally and acquire the required configuration parameters.
 
 > [!IMPORTANT]
-> The `INFLUX_DATABASE` variable is introduced in version 0.22.0. For earlier versions set `INFLUX_BUCKET` variable to the target database name and `INFLUX_ORG` variable to any non-empty value (e.g. "ignored") to enable the InfluxDB 3 support.
+> The `INFLUX_DATABASE` variable was introduced in version 0.22.0. For earlier versions set `INFLUX_BUCKET` variable to the target database name and `INFLUX_ORG` variable to any non-empty value (e.g. "ignored") to enable the InfluxDB 3 support.
 
 ### Aggregated Dashboards (Optional)
 

@@ -1,24 +1,4 @@
 {
-  "__requires": [
-    {
-      "type": "grafana",
-      "id": "grafana",
-      "name": "Grafana",
-      "version": "10.0.3"
-    },
-    {
-      "type": "datasource",
-      "id": "influxdb",
-      "name": "InfluxDB",
-      "version": "1.0.0"
-    },
-    {
-      "type": "panel",
-      "id": "table",
-      "name": "Table",
-      "version": ""
-    }
-  ],
   "annotations": {
     "list": [
       {
@@ -35,12 +15,11 @@
       }
     ]
   },
-  "editable": false,
+  "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 0,
-  "id": null,
+  "id": 13,
   "links": [],
-  "liveNow": false,
   "panels": [
     {
       "datasource": {
@@ -64,8 +43,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
-                "value": null
+                "color": "green"
               },
               {
                 "color": "red",
@@ -108,15 +86,36 @@
         },
         "showHeader": true
       },
-      "pluginVersion": "10.0.3",
+      "pluginVersion": "12.0.0",
       "targets": [
         {
+          "dataset": "iox",
           "datasource": {
             "type": "influxdb",
             "uid": "${datasource}"
           },
-          "query": "SELECT\n  time AS \"_time\",\n  project_id,\n  topic,\n  title,\n  deployment,\n  model,\n  price\nFROM analytics\nWHERE time >= $__timeFrom AND time < $__timeTo\nORDER BY time DESC",
-          "refId": "A"
+          "editorMode": "code",
+          "format": "table",
+          "query": "SELECT\r\n  time AS \"_time\",\r\n  project_id,\r\n  topic,\r\n  title,\r\n  deployment,\r\n  model,\r\n  price\r\nFROM analytics\r\nWHERE time >= $__timeFrom AND time < $__timeTo\r\nORDER BY time DESC",
+          "rawQuery": true,
+          "rawSql": "SELECT\n  time AS \"_time\",\n  project_id,\n  topic,\n  title,\n  deployment,\n  model,\n  price\nFROM analytics\nWHERE time >= $__timeFrom AND time < $__timeTo\nORDER BY time DESC",
+          "refId": "A",
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ]
+          }
         }
       ],
       "title": "Panel Title",
@@ -149,9 +148,9 @@
       "type": "table"
     }
   ],
+  "preload": false,
   "refresh": "1m",
-  "schemaVersion": 38,
-  "style": "dark",
+  "schemaVersion": 41,
   "tags": [
     "DIAL",
     "ai-dial-analytics-realtime"
@@ -160,22 +159,17 @@
     "list": [
       {
         "current": {
-          "selected": true,
-          "text": "default",
-          "value": "default"
+          "text": "InfluxDB-3",
+          "value": "influxdb3"
         },
         "description": "InfluxDB datasource",
-        "hide": 0,
         "includeAll": false,
         "label": "Data source",
-        "multi": false,
         "name": "datasource",
         "options": [],
-        "query": "influxdb3",
-        "queryValue": "",
+        "query": "influxdb",
         "refresh": 1,
         "regex": "",
-        "skipUrlSync": false,
         "type": "datasource"
       }
     ]
@@ -188,6 +182,5 @@
   "timezone": "",
   "title": "DIAL Analytics Raw Data",
   "uid": "98a34b22-dd32-4e2a-8c4c-81147d2ff3da",
-  "version": 1,
-  "weekStart": ""
+  "version": 3
 }

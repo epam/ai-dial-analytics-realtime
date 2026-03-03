@@ -122,12 +122,33 @@
       "pluginVersion": "12.0.0",
       "targets": [
         {
+          "dataset": "iox",
           "datasource": {
             "type": "influxdb",
             "uid": "${DS_INFLUXDB}"
           },
+          "editorMode": "code",
+          "format": "table",
           "query": "bucket = \"${INFLUX_BUCKET}\"\nfrom(bucket: bucket)\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"mcp_analytics\")\n  |> filter(fn: (r) => r._field == \"upstream\")\n  |> count()\n  |> group()\n  |> sum()",
-          "refId": "A"
+          "rawQuery": true,
+          "rawSql": "SELECT COUNT(*)\nFROM mcp_analytics\nWHERE time >= $__timeFrom AND time < $__timeTo",
+          "refId": "A",
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ]
+          }
         }
       ],
       "title": "Total MCP Calls",
@@ -191,12 +212,33 @@
       "pluginVersion": "12.0.0",
       "targets": [
         {
+          "dataset": "iox",
           "datasource": {
             "type": "influxdb",
             "uid": "${DS_INFLUXDB}"
           },
+          "editorMode": "code",
+          "format": "table",
           "query": "bucket = \"${INFLUX_BUCKET}\"\nfrom(bucket: bucket)\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"mcp_analytics\")\n  |> filter(fn: (r) => r._field == \"user_hash\")\n  |> keep(columns: [\"_value\"])\n  |> distinct(column: \"_value\")\n  |> count()",
-          "refId": "A"
+          "rawQuery": true,
+          "rawSql": "SELECT COUNT(DISTINCT user_hash)\nFROM mcp_analytics\nWHERE time >= $__timeFrom AND time < $__timeTo",
+          "refId": "A",
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ]
+          }
         }
       ],
       "title": "Unique Users",
@@ -260,12 +302,33 @@
       "pluginVersion": "12.0.0",
       "targets": [
         {
+          "dataset": "iox",
           "datasource": {
             "type": "influxdb",
             "uid": "${DS_INFLUXDB}"
           },
+          "editorMode": "code",
+          "format": "table",
           "query": "bucket = \"${INFLUX_BUCKET}\"\nfrom(bucket: bucket)\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"mcp_analytics\")\n  |> filter(fn: (r) => r.mcp_method == \"tools/call\")\n  |> filter(fn: (r) => r._field == \"upstream\")\n  |> count()\n  |> group()\n  |> sum()",
-          "refId": "A"
+          "rawQuery": true,
+          "rawSql": "SELECT COUNT(*)\nFROM mcp_analytics\nWHERE time >= $__timeFrom AND time < $__timeTo\n  AND mcp_method = 'tools/call'",
+          "refId": "A",
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ]
+          }
         }
       ],
       "title": "Tool Calls",
@@ -350,12 +413,33 @@
       "pluginVersion": "12.0.0",
       "targets": [
         {
+          "dataset": "iox",
           "datasource": {
             "type": "influxdb",
             "uid": "${DS_INFLUXDB}"
           },
+          "editorMode": "code",
+          "format": "time_series",
           "query": "bucket = \"${INFLUX_BUCKET}\"\nfrom(bucket: bucket)\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"mcp_analytics\" and r._field == \"upstream\")\n  |> map(fn: (r) => ({\n      r with\n      project_id: if exists r.project_id then r.project_id else \"undefined\"\n  }))\n  |> group(columns: [\"project_id\"])\n  |> aggregateWindow(every: v.windowPeriod, fn: count)",
-          "refId": "A"
+          "rawQuery": true,
+          "rawSql": "SELECT\n  COALESCE(project_id, 'undefined') AS project_id,\n  date_bin_gapfill($__interval, time) AS time,\n  COUNT(*) AS requests\nFROM mcp_analytics\nWHERE time >= $__timeFrom AND time < $__timeTo\nGROUP BY 1, 2\nORDER BY 2 ASC",
+          "refId": "A",
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ]
+          }
         }
       ],
       "title": "Requests per DIAL Project",
@@ -440,12 +524,33 @@
       "pluginVersion": "12.0.0",
       "targets": [
         {
+          "dataset": "iox",
           "datasource": {
             "type": "influxdb",
             "uid": "${DS_INFLUXDB}"
           },
+          "editorMode": "code",
+          "format": "time_series",
           "query": "bucket = \"${INFLUX_BUCKET}\"\nfrom(bucket: bucket)\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"mcp_analytics\" and r._field == \"upstream\")\n  |> group(columns: [\"mcp_method\"])\n  |> aggregateWindow(every: v.windowPeriod, fn: count)",
-          "refId": "A"
+          "rawQuery": true,
+          "rawSql": "SELECT\n  mcp_method,\n  date_bin_gapfill($__interval, time) AS time,\n  COUNT(*) AS method\nFROM mcp_analytics\nWHERE time >= $__timeFrom AND time < $__timeTo\nGROUP BY 1, 2\nORDER BY 2 ASC",
+          "refId": "A",
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ]
+          }
         }
       ],
       "title": "Requests per MCP Method",
@@ -505,12 +610,33 @@
       "pluginVersion": "12.0.0",
       "targets": [
         {
+          "dataset": "iox",
           "datasource": {
             "type": "influxdb",
             "uid": "${DS_INFLUXDB}"
           },
+          "editorMode": "code",
+          "format": "table",
           "query": "bucket = \"${INFLUX_BUCKET}\"\nfrom(bucket: bucket)\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"mcp_analytics\")\n  |> filter(fn: (r) => r._field == \"upstream\")\n  |> group(columns: [\"deployment\"])\n  |> count()\n  |> group()\n  |> sort(columns: [\"_value\"], desc: true)\n  |> keep(columns: [\"deployment\", \"_value\"])",
-          "refId": "A"
+          "rawQuery": true,
+          "rawSql": "SELECT deployment, COUNT(*) AS count\nFROM mcp_analytics\nWHERE time >= $__timeFrom AND time < $__timeTo\nGROUP BY deployment",
+          "refId": "A",
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ]
+          }
         }
       ],
       "title": "Calls by Deployment",
@@ -586,12 +712,33 @@
       "pluginVersion": "12.0.0",
       "targets": [
         {
+          "dataset": "iox",
           "datasource": {
             "type": "influxdb",
             "uid": "${DS_INFLUXDB}"
           },
+          "editorMode": "code",
+          "format": "table",
           "query": "bucket = \"${INFLUX_BUCKET}\"\nfrom(bucket: bucket)\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"mcp_analytics\")\n  |> filter(fn: (r) => r._field == \"mcp_tool_call_name\")\n  |> filter(fn: (r) => r._value != \"undefined\" and r._value != \"\")\n  |> map(fn: (r) => ({ r with tool_name: r._value }))\n  |> group(columns: [\"tool_name\"])\n  |> count()\n  |> group()\n  |> sort(columns: [\"_value\"], desc: true)",
-          "refId": "A"
+          "rawQuery": true,
+          "rawSql": "SELECT mcp_tool_call_name, COUNT(*) AS count\nFROM mcp_analytics\nWHERE time >= $__timeFrom AND time < $__timeTo\n  AND mcp_method == 'tools/call'\nGROUP BY mcp_tool_call_name\nORDER BY 2 DESC, 1 DESC",
+          "refId": "A",
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ]
+          }
         }
       ],
       "title": "Most Called Tools",
@@ -704,12 +851,33 @@
       "pluginVersion": "12.0.0",
       "targets": [
         {
+          "dataset": "iox",
           "datasource": {
             "type": "influxdb",
             "uid": "${DS_INFLUXDB}"
           },
+          "editorMode": "code",
+          "format": "table",
           "query": "bucket = \"${INFLUX_BUCKET}\"\nfrom(bucket: bucket)\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"mcp_analytics\")\n  |> pivot(rowKey:[\"_time\"], columnKey: [\"_field\"], valueColumn: \"_value\")\n  |> map(fn: (r) => ({\n      _time: r._time,\n      project_id: if exists r.project_id then r.project_id else \"undefined\",\n      deployment: r.deployment,\n      mcp_method: r.mcp_method,\n      mcp_tool_call_name: if exists r.mcp_tool_call_name then r.mcp_tool_call_name else \"undefined\",\n      trace_id: if exists r.trace_id then r.trace_id else \"\"\n  }))\n  |> group()\n  |> sort(columns: [\"_time\"], desc: true)\n  |> limit(n: 100)",
-          "refId": "A"
+          "rawQuery": true,
+          "rawSql": "SELECT\n  time,\n  COALESCE(project_id, 'undefined') AS project_id,\n  deployment,\n  mcp_method,\n  mcp_tool_call_name,\n  trace_id\nFROM mcp_analytics\nORDER BY time DESC\nLIMIT 100",
+          "refId": "A",
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ]
+          }
         }
       ],
       "title": "Recent Activity Log",
@@ -787,6 +955,6 @@
   "timezone": "",
   "title": "DIAL Analytics MCP",
   "uid": "c935f785-18d2-4754-b95f-354d0cdd149f",
-  "version": 2,
+  "version": 11,
   "weekStart": ""
 }

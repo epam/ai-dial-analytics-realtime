@@ -968,8 +968,7 @@
   "templating": {
     "list": [
       {
-        "current": {
-        },
+        "current": {},
         "description": "InfluxDB datasource",
         "includeAll": false,
         "label": "Data source",

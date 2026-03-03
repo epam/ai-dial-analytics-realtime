@@ -209,7 +209,7 @@
           "type": "influxdb",
           "uid": "${datasource}"
         },
-        "definition": "import \"strings\"\n\nbuckets()\n  |> filter(fn: (r) => not strings.hasPrefix(v: r.name, prefix: \"_\"))\n  |> keep(columns: [\"name\", \"id\", \"retentionPeriod\"])\n  |> sort(columns: [\"name\"])",
+        "definition": "import \"strings\"\n\nbuckets()\n  |> filter(fn: (r) => not strings.hasPrefix(v: r.name, prefix: \"_\"))",
         "description": "A InfluxDB bucket name",
         "includeAll": false,
         "name": "INFLUX_BUCKET",

@@ -766,7 +766,7 @@
           "type": "influxdb",
           "uid": "${datasource}"
         },
-        "definition": "buckets()",
+        "definition": "import \"strings\"\n\nbuckets()\n  |> filter(fn: (r) => not strings.hasPrefix(v: r.name, prefix: \"_\"))",
         "description": "InfluxDB bucket name",
         "includeAll": false,
         "label": "Bucket",
@@ -787,6 +787,6 @@
   "timezone": "",
   "title": "DIAL Analytics MCP",
   "uid": "c935f785-18d2-4754-b95f-354d0cdd149f",
-  "version": 1,
+  "version": 2,
   "weekStart": ""
 }

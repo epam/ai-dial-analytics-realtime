@@ -1,16 +1,27 @@
 {
+  "__inputs": [
+    {
+      "name": "DS_INFLUXDB",
+      "label": "InfluxDB",
+      "description": "",
+      "type": "datasource",
+      "pluginId": "influxdb",
+      "pluginName": "InfluxDB"
+    }
+  ],
+  "__elements": {},
   "__requires": [
     {
       "type": "panel",
       "id": "ae3e-plotly-panel",
       "name": "Plotly panel",
-      "version": "0.3.3"
+      "version": "0.5.0"
     },
     {
       "type": "grafana",
       "id": "grafana",
       "name": "Grafana",
-      "version": "10.0.3"
+      "version": "12.0.0"
     },
     {
       "type": "datasource",
@@ -22,7 +33,7 @@
       "type": "panel",
       "id": "magnesium-wordcloud-panel",
       "name": "Word cloud",
-      "version": "1.2.4"
+      "version": "1.2.11"
     },
     {
       "type": "panel",
@@ -59,12 +70,11 @@
       }
     ]
   },
-  "editable": false,
+  "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 0,
   "id": null,
   "links": [],
-  "liveNow": false,
   "panels": [
     {
       "datasource": {
@@ -82,8 +92,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
-                "value": null
+                "color": "green"
               },
               {
                 "color": "red",
@@ -106,6 +115,7 @@
         "graphMode": "area",
         "justifyMode": "auto",
         "orientation": "auto",
+        "percentChangeColorMode": "standard",
         "reduceOptions": {
           "calcs": [
             "last"
@@ -113,17 +123,40 @@
           "fields": "/.*/",
           "values": false
         },
-        "textMode": "auto"
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
       },
-      "pluginVersion": "10.0.3",
+      "pluginVersion": "12.0.0",
       "targets": [
         {
+          "dataset": "iox",
           "datasource": {
             "type": "influxdb",
-            "uid": "${datasource}"
+            "uid": "${DS_INFLUXDB}"
           },
+          "editorMode": "code",
+          "format": "table",
           "query": "bucket = \"${INFLUX_BUCKET}\"\r\n\r\nfrom(bucket: bucket)\r\n  |> range(start: v.timeRangeStart, stop:v.timeRangeStop)\r\n  |> filter(fn: (r) => r._measurement == \"analytics\" and r._field == \"user_hash\")\r\n  |> group()\r\n  |> distinct()\r\n  |> count()",
-          "refId": "A"
+          "rawQuery": true,
+          "rawSql": "SELECT COUNT(DISTINCT user_hash)\nFROM analytics\nWHERE time >= $__timeFrom AND time < $__timeTo",
+          "refId": "A",
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ]
+          }
         }
       ],
       "title": "Unique Users",
@@ -164,14 +197,36 @@
           "transitionDuration": 800
         }
       },
+      "pluginVersion": "1.2.11",
       "targets": [
         {
+          "dataset": "iox",
           "datasource": {
             "type": "influxdb",
-            "uid": "${datasource}"
+            "uid": "${DS_INFLUXDB}"
           },
+          "editorMode": "code",
+          "format": "table",
           "query": "bucket = \"${INFLUX_BUCKET}\"\r\n\r\nfrom(bucket: bucket)\r\n  |> range(start: v.timeRangeStart, stop:v.timeRangeStop)\r\n  |> filter(fn: (r) => r._measurement == \"analytics\")\r\n  |> filter(fn: (r) => r._field == \"number_request_messages\")\r\n  |> group(columns: [\"topic\"])\r\n  |> count()\r\n  |> group()",
-          "refId": "A"
+          "rawQuery": true,
+          "rawSql": "SELECT topic, COUNT(*) AS _value\nFROM analytics\nWHERE time >= $__timeFrom \n  AND time < $__timeTo \n  AND topic IS NOT NULL\n  AND TRIM(topic) <> ''\nGROUP BY topic",
+          "refId": "A",
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ]
+          }
         }
       ],
       "title": "Popular Topics",
@@ -230,15 +285,36 @@
         "onclick": "//console.log(data)\n//window.updateVariables({query:{'var-project':'test'}, partial: true})",
         "script": "var title = data.series[0].fields.find(x => x.name === \"title\")?.values\nvar topic = data.series[0].fields.find(x => x.name === \"topic\")?.values\nvar count = data.series[0].fields.find(x => x.name === \"_value\")?.values\n\nvar trace = {\n  x: title?.buffer || title || [\"No data\"],\n  y: topic?.buffer || topic || [\"No data\"],\n  z: count?.buffer || count || [NaN],\n  type: 'heatmap',\n  colorscale: \"YlOrRd\",\n};\n\nreturn {data:[trace]};"
       },
-      "pluginVersion": "9.2.4",
+      "pluginVersion": "0.5.0",
       "targets": [
         {
+          "dataset": "iox",
           "datasource": {
             "type": "influxdb",
-            "uid": "${datasource}"
+            "uid": "${DS_INFLUXDB}"
           },
+          "editorMode": "code",
+          "format": "table",
           "query": "import \"influxdata/influxdb/schema\"\r\n\r\nbucket = \"${INFLUX_BUCKET}\"\r\n\r\nfrom(bucket: bucket)\r\n  |> range(start: v.timeRangeStart, stop:v.timeRangeStop)\r\n  |> filter(fn: (r) => r._measurement == \"analytics\")\r\n  |> filter(fn: (r) => r._field == \"number_request_messages\")\r\n  |> group(columns: [\"topic\", \"title\"])\r\n  |> count()\r\n  |> group()\r\n",
-          "refId": "A"
+          "rawQuery": true,
+          "rawSql": "SELECT COUNT(*) AS _value, topic, title\nFROM analytics\nWHERE time >= $__timeFrom \n  AND time < $__timeTo\nGROUP BY topic, title",
+          "refId": "A",
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ]
+          }
         }
       ],
       "title": "Title-Topic Heatmap",
@@ -267,11 +343,13 @@
             "mode": "palette-classic"
           },
           "custom": {
+            "axisBorderShow": false,
             "axisCenteredZero": false,
             "axisColorMode": "text",
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
+            "barWidthFactor": 0.6,
             "drawStyle": "line",
             "fillOpacity": 30,
             "gradientMode": "hue",
@@ -280,6 +358,7 @@
               "tooltip": false,
               "viz": false
             },
+            "insertNulls": false,
             "lineInterpolation": "smooth",
             "lineWidth": 1,
             "pointSize": 5,
@@ -302,8 +381,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
-                "value": null
+                "color": "green"
               },
               {
                 "color": "red",
@@ -345,18 +423,41 @@
           "showLegend": true
         },
         "tooltip": {
+          "hideZeros": false,
           "mode": "single",
           "sort": "none"
         }
       },
+      "pluginVersion": "12.0.0",
       "targets": [
         {
+          "dataset": "iox",
           "datasource": {
             "type": "influxdb",
-            "uid": "${datasource}"
+            "uid": "${DS_INFLUXDB}"
           },
+          "editorMode": "code",
+          "format": "table",
           "query": "bucket = \"${INFLUX_BUCKET}\"\r\n\r\nfrom(bucket: bucket)\r\n  |> range(start: v.timeRangeStart, stop:v.timeRangeStop)\r\n  |> filter(fn: (r) => r._measurement == \"analytics\")\r\n  |> filter(fn: (r) => r._field == \"number_request_messages\")\r\n  |> group()\r\n  |> aggregateWindow(every: v.windowPeriod, fn: count)\r\n  |> keep(columns: [\"_time\", \"_value\"])",
-          "refId": "A"
+          "rawQuery": true,
+          "rawSql": "SELECT\n  $__dateBin(time) AS time,\n  COUNT(*) AS count\nFROM analytics\nWHERE time >= $__timeFrom\n  AND time < $__timeTo\nGROUP BY 1",
+          "refId": "A",
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ]
+          }
         }
       ],
       "title": "System Usage",
@@ -385,8 +486,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
-                "value": null
+                "color": "green"
               },
               {
                 "color": "red",
@@ -455,16 +555,37 @@
           }
         ]
       },
-      "pluginVersion": "10.0.3",
+      "pluginVersion": "12.0.0",
       "targets": [
         {
+          "dataset": "iox",
           "datasource": {
             "type": "influxdb",
-            "uid": "${datasource}"
+            "uid": "${DS_INFLUXDB}"
           },
+          "editorMode": "code",
+          "format": "table",
           "hide": false,
           "query": "import \"influxdata/influxdb/schema\"\r\n\r\ngetOrDefault = (f, d) => if exists f then f else d\r\n\r\nbucket = \"${INFLUX_BUCKET}\"\r\n\r\nfrom(bucket: bucket)\r\n  |> range(start: v.timeRangeStart, stop:v.timeRangeStop)\r\n  |> filter(fn: (r) => r._measurement == \"analytics\")\r\n  |> filter(fn: (r) => r._field == \"prompt_tokens\" or r._field == \"completion_tokens\" or r._field == \"number_request_messages\" or r._field == \"user_hash\" or r._field == \"price\")\r\n  |> schema.fieldsAsCols()\r\n  |> group(columns: [\"project_id\", \"deployment\", \"model\", \"user_hash\"])\r\n  |> reduce(\r\n        fn: (r, accumulator) => ({\r\n          request_count: accumulator.request_count + 1,\r\n          prompt_tokens: getOrDefault(f: r.prompt_tokens, d: 0) + accumulator.prompt_tokens,\r\n          completion_tokens: getOrDefault(f: r.completion_tokens, d: 0) + accumulator.completion_tokens,\r\n          money: getOrDefault(f: r.price, d: 0.0) + accumulator.money\r\n        }),\r\n        identity: {request_count: 0, prompt_tokens: 0, completion_tokens: 0, money: 0.0}\r\n    )\r\n  |> group(columns: [\"project_id\", \"deployment\", \"model\"])\r\n  |> reduce(\r\n        fn: (r, accumulator) => ({\r\n          user_count: accumulator.user_count + 1,\r\n          request_count: r.request_count + accumulator.request_count,\r\n          prompt_tokens: r.prompt_tokens + accumulator.prompt_tokens,\r\n          completion_tokens: r.completion_tokens + accumulator.completion_tokens,\r\n          money: r.money + accumulator.money\r\n        }),\r\n        identity: {user_count: 0, request_count: 0, prompt_tokens: 0, completion_tokens: 0, money: 0.0}\r\n    )\r\n  |> group()",
-          "refId": "A"
+          "rawQuery": true,
+          "rawSql": "SELECT\n  project_id,\n  deployment,\n  model,\n  COUNT(DISTINCT user_hash) AS user_count,\n  COUNT(*) AS request_count,\n  SUM(COALESCE(prompt_tokens, 0)) AS prompt_tokens,\n  SUM(COALESCE(completion_tokens, 0)) AS completion_tokens,\n  SUM(COALESCE(price, 0.0)) AS money\nFROM analytics\nWHERE time >= $__timeFrom AND time < $__timeTo\nGROUP BY project_id, deployment, model",
+          "refId": "A",
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ]
+          }
         }
       ],
       "title": "Stats Table",
@@ -536,8 +657,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
-                "value": null
+                "color": "green"
               },
               {
                 "color": "red",
@@ -601,16 +721,37 @@
           }
         ]
       },
-      "pluginVersion": "10.0.3",
+      "pluginVersion": "12.0.0",
       "targets": [
         {
+          "dataset": "iox",
           "datasource": {
             "type": "influxdb",
-            "uid": "${datasource}"
+            "uid": "${DS_INFLUXDB}"
           },
+          "editorMode": "code",
+          "format": "table",
           "hide": false,
           "query": "import \"influxdata/influxdb/schema\"\r\n\r\ngetOrDefault = (f, d) => if exists f then f else d\r\n\r\nbucket = \"${INFLUX_BUCKET}\"\r\n\r\nfrom(bucket: bucket)\r\n  |> range(start: v.timeRangeStart, stop:v.timeRangeStop)\r\n  |> filter(fn: (r) => r._measurement == \"analytics\")\r\n  |> filter(fn: (r) => r._field == \"prompt_tokens\" or r._field == \"completion_tokens\" or r._field == \"number_request_messages\" or r._field == \"price\")\r\n  |> schema.fieldsAsCols()\r\n  |> group(columns: [\"project_id\"])\r\n  |> reduce(\r\n        fn: (r, accumulator) => ({\r\n          request_count: accumulator.request_count + 1,\r\n          prompt_tokens: getOrDefault(f: r.prompt_tokens, d: 0) + accumulator.prompt_tokens,\r\n          completion_tokens: getOrDefault(f: r.completion_tokens, d: 0) + accumulator.completion_tokens,\r\n          money: getOrDefault(f: r.price, d: 0.0) + accumulator.money\r\n        }),\r\n        identity: {request_count: 0, prompt_tokens: 0, completion_tokens: 0, money: 0.0}\r\n    )\r\n  |> group()",
-          "refId": "A"
+          "rawQuery": true,
+          "rawSql": "SELECT\n  project_id,\n  COUNT(*) AS request_count,\n  SUM(COALESCE(prompt_tokens, 0)) AS prompt_tokens,\n  SUM(COALESCE(completion_tokens, 0)) AS completion_tokens,\n  SUM(COALESCE(price, 0.0)) AS money\nFROM analytics\nWHERE time >= $__timeFrom AND time < $__timeTo\nGROUP BY project_id",
+          "refId": "A",
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ]
+          }
         }
       ],
       "title": "Project Stats Table",
@@ -677,8 +818,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
-                "value": null
+                "color": "green"
               },
               {
                 "color": "red",
@@ -742,16 +882,37 @@
           }
         ]
       },
-      "pluginVersion": "10.0.3",
+      "pluginVersion": "12.0.0",
       "targets": [
         {
+          "dataset": "iox",
           "datasource": {
             "type": "influxdb",
-            "uid": "${datasource}"
+            "uid": "${DS_INFLUXDB}"
           },
+          "editorMode": "code",
+          "format": "table",
           "hide": false,
           "query": "import \"influxdata/influxdb/schema\"\r\n\r\ngetOrDefault = (f, d) => if exists f then f else d\r\n\r\nbucket = \"${INFLUX_BUCKET}\"\r\n\r\nfrom(bucket: bucket)\r\n  |> range(start: v.timeRangeStart, stop:v.timeRangeStop)\r\n  |> filter(fn: (r) => r._measurement == \"analytics\")\r\n  |> filter(fn: (r) => r._field == \"prompt_tokens\" or r._field == \"completion_tokens\" or r._field == \"number_request_messages\" or r._field == \"price\")\r\n  |> schema.fieldsAsCols()\r\n  |> group(columns: [\"model\", \"deployment\"])\r\n  |> reduce(\r\n        fn: (r, accumulator) => ({\r\n          request_count: accumulator.request_count + 1,\r\n          prompt_tokens: getOrDefault(f: r.prompt_tokens, d: 0) + accumulator.prompt_tokens,\r\n          completion_tokens: getOrDefault(f: r.completion_tokens, d: 0) + accumulator.completion_tokens,\r\n          money: getOrDefault(f: r.price, d: 0.0) + accumulator.money\r\n        }),\r\n        identity: {request_count: 0, prompt_tokens: 0, completion_tokens: 0, money: 0.0}\r\n    )\r\n  |> group()",
-          "refId": "A"
+          "rawQuery": true,
+          "rawSql": "SELECT\n  model,\n  deployment,\n  COUNT(*) AS request_count,\n  SUM(COALESCE(prompt_tokens, 0)) AS prompt_tokens,\n  SUM(COALESCE(completion_tokens, 0)) AS completion_tokens,\n  SUM(COALESCE(price, 0.0)) AS money\nFROM analytics\nWHERE time >= $__timeFrom AND time < $__timeTo\nGROUP BY model, deployment",
+          "refId": "A",
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ]
+          }
         }
       ],
       "title": "Deployment/Model Stats Table",
@@ -799,8 +960,7 @@
     }
   ],
   "refresh": "",
-  "schemaVersion": 38,
-  "style": "dark",
+  "schemaVersion": 41,
   "tags": [
     "DIAL",
     "ai-dial-analytics-realtime"
@@ -809,41 +969,35 @@
     "list": [
       {
         "current": {
+        },
+        "description": "InfluxDB datasource",
+        "includeAll": false,
+        "label": "Data source",
+        "name": "datasource",
+        "options": [],
+        "query": "influxdb",
+        "refresh": 1,
+        "regex": "",
+        "type": "datasource"
+      },
+      {
+        "current": {
           "selected": true,
           "text": "default",
           "value": "default"
         },
-        "description": "InfluxDB datasource",
-        "hide": 0,
-        "includeAll": false,
-        "label": "Data source",
-        "multi": false,
-        "name": "datasource",
-        "options": [],
-        "query": "influxdb",
-        "queryValue": "",
-        "refresh": 1,
-        "regex": "",
-        "skipUrlSync": false,
-        "type": "datasource"
-      },
-      {
         "datasource": {
           "type": "influxdb",
           "uid": "${datasource}"
         },
-        "definition": "buckets()",
+        "definition": "import \"strings\"\n\nbuckets()\n  |> filter(fn: (r) => not strings.hasPrefix(v: r.name, prefix: \"_\"))\n  |> keep(columns: [\"name\", \"id\", \"retentionPeriod\"])\n  |> sort(columns: [\"name\"])",
         "description": "A InfluxDB bucket name",
-        "hide": 0,
         "includeAll": false,
-        "multi": false,
         "name": "INFLUX_BUCKET",
         "options": [],
         "query": "buckets()",
         "refresh": 1,
         "regex": "",
-        "skipUrlSync": false,
-        "sort": 0,
         "type": "query"
       }
     ]
@@ -856,6 +1010,6 @@
   "timezone": "",
   "title": "DIAL Analytics",
   "uid": "435858b2-4106-4d11-b6e8-9b0ff107b460",
-  "version": 1,
+  "version": 19,
   "weekStart": ""
 }

@@ -50,34 +50,34 @@
 }
 """
 
-from __future__ import annotations
-
 import uuid
+from datetime import datetime, timezone
 
 from .rollup_6h import run_6h
 from .rollup_monthly import run_monthly
-from .utils import parse_call_time
 
 
-def process_scheduled_call(influxdb3_local, call_time, args=None):
+def process_scheduled_call(influxdb3_local, call_time: datetime, args=None):
     """
     InfluxDB 3 scheduled plugin entrypoint.
     """
     task_id = str(uuid.uuid4())
     args = args or {}
 
-    ct = parse_call_time(call_time)
+    call_time = call_time.replace(tzinfo=timezone.utc)
     mode = str(args.get("mode", "6h")).strip().lower()
 
     influxdb3_local.info(
-        f"[{task_id}] scheduled call mode={mode} call_time={ct.isoformat()} args={args}"
+        f"[{task_id}] scheduled call mode={mode} call_time={call_time.isoformat()} args={args}"
     )
 
     try:
-        if mode in ("month", "monthly"):
-            run_monthly(influxdb3_local, ct, args, task_id=task_id)
+        if mode == "monthly":
+            run_monthly(influxdb3_local, call_time, args, task_id=task_id)
+        elif mode == "6h":
+            run_6h(influxdb3_local, call_time, args, task_id=task_id)
         else:
-            run_6h(influxdb3_local, ct, args, task_id=task_id)
+            raise ValueError(f"unsupported mode: {mode}")
 
         influxdb3_local.info(f"[{task_id}] completed OK")
     except Exception as e:

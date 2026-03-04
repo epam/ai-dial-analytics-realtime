@@ -27,13 +27,11 @@ class Config:
     def parse(cls, d: Dict[str, str] | None) -> "Config":
         d = d or {}
 
-        mode_s = str(d.get("mode", "hourly")).strip().lower()
-        if mode_s == "hourly":
-            mode = Mode.HOURLY
-        elif mode_s == "monthly":
-            mode = Mode.MONTHLY
-        else:
-            raise ValueError(f"unsupported mode: {mode_s}")
+        mode_s = d.get("mode") or "hourly"
+        try:
+            mode = Mode(mode_s.strip().lower())
+        except Exception as e:
+            raise ValueError(f"Unsupported mode: {mode_s!r}") from e
 
         agg_database = d.get("agg_database")
         raw_table = d.get("raw_table")

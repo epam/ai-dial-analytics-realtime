@@ -35,20 +35,12 @@ Aggregated data is written into the following **tables** (tables are created aut
 
 ## Aggregation Logic Overview
 
-All aggregation logic lives in a **single Python scheduled plugin**, structured as a small package:
-
-```txt
-influx_v3/plugin/
-  __init__.py          # Scheduled plugin entrypoint
-  rollup_6h.py         # 6-hour aggregations
-  rollup_monthly.py    # Monthly aggregations
-  utils.py             # Shared helpers (time windows, SQL, writing)
-```
+All aggregation logic lives in a **single Python scheduled plugin**, structured as a small [package](./plugin/).
 
 This plugin:
 
-* queries raw data from `default`
-* writes roll-ups into `analytics_agg`
+* queries raw data from the `default.analytics` table
+* writes hourly and monthly roll-ups into `analytics_agg.*` tables
 * supports **scheduled execution** and **manual backfills** using the same code paths
 
 ---
@@ -93,7 +85,7 @@ influxdb3 create trigger \
   --database default \
   --path analytics_rollups \
   --trigger-spec "cron:0 0 */6 * * *" \
-  --trigger-arguments mode=6h,raw_table=analytics,agg_database=analytics_agg,window_hours=6,offset_minutes=2 \
+  --trigger-arguments mode=hourly,raw_table=analytics,agg_database=analytics_agg,window_hours=6,offset_minutes=2 \
   analytics_6h_rollups
 ```
 
@@ -123,7 +115,7 @@ Example trigger creation:
 
 ```sh
 influxdb3 create trigger \
-  --database default \
+  --database analytics_agg \
   --path analytics_rollups \
   --trigger-spec "cron:0 0 0 1 * *" \
   --trigger-arguments mode=monthly,agg_database=analytics_agg \
@@ -141,8 +133,8 @@ If you already have existing raw data, you **must backfill aggregates explicitly
 
 The plugin supports two optional arguments:
 
-* `start_time` — RFC3339 timestamp (inclusive)
-* `end_time` — RFC3339 timestamp (exclusive)
+* `start_time` — ISO 8601 timestamp (inclusive)
+* `end_time` — ISO 8601 timestamp (exclusive)
 
 When provided, these **override the scheduled window**.
 

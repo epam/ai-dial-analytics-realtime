@@ -18,7 +18,7 @@ if TYPE_CHECKING:
 
 def parse_iso_datetime(name: str, value: str) -> datetime:
     try:
-        # In Python ≤3.10, "Z" was not supported by fromisoformat()
+        # In Python<=3.10, "Z" was not supported by fromisoformat()
         dt: datetime = datetime.fromisoformat(value.replace("Z", "+00:00"))
     except ValueError:
         raise ValueError(

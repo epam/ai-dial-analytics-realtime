@@ -15,6 +15,10 @@ from .utils import (
 def run_hourly(
     influxdb3_local, call_time: datetime, config: Config, *, task_id: str
 ) -> None:
+    """
+    Reads: raw_table
+    Writes: default_agg_stats, default_agg_topic, default_agg_topic_2, default_agg_kpi, default_agg_chatid
+    """
 
     start, end = window_from_args_or_call_time(
         call_time,
@@ -26,7 +30,9 @@ def run_hourly(
 
     start_s, end_s = to_iso(start), to_iso(end)
 
-    influxdb3_local.info(f"[{task_id}] 6h rollup window: {start_s} .. {end_s}")
+    influxdb3_local.info(
+        f"[{task_id}] {config.window_hours}-hours rollup window: {start_s} .. {end_s}"
+    )
 
     # 1) default_agg_stats
     stats_sql = f"""
@@ -48,6 +54,7 @@ FROM {config.raw_table}
 WHERE time >= '{start_s}' AND time < '{end_s}'
 GROUP BY deployment, model, project_id, parent_deployment, language
 """
+
     stats_rows = query_rows(influxdb3_local, stats_sql)
     write_points(
         influxdb3_local,
@@ -74,7 +81,7 @@ GROUP BY deployment, model, project_id, parent_deployment, language
         task_id=task_id,
     )
 
-    # 2) default_agg_topic + default_agg_topic_2 (same content, but different retention/purpose - FIXME????)
+    # 2) default_agg_topic_2
     topic_sql = f"""
 SELECT
     '{start_s}' AS time,
@@ -90,27 +97,26 @@ FROM {config.raw_table}
 WHERE time >= '{start_s}' AND time < '{end_s}'
 GROUP BY title, topic, model
 """
+
     topic_rows = query_rows(influxdb3_local, topic_sql)
+    write_points(
+        influxdb3_local,
+        db_name=config.agg_database,
+        table_name="default_agg_topic_2",
+        rows=topic_rows,
+        time_col="time",
+        tag_cols=("title", "topic", "model"),
+        field_cols=(
+            "topic_count",
+            "number_request_messages",
+            "price",
+            "prompt_tokens",
+            "completion_tokens",
+        ),
+        task_id=task_id,
+    )
 
-    for table in ("default_agg_topic", "default_agg_topic_2"):
-        write_points(
-            influxdb3_local,
-            db_name=config.agg_database,
-            table_name=table,
-            rows=topic_rows,
-            time_col="time",
-            tag_cols=("title", "topic", "model"),
-            field_cols=(
-                "topic_count",
-                "number_request_messages",
-                "price",
-                "prompt_tokens",
-                "completion_tokens",
-            ),
-            task_id=task_id,
-        )
-
-    # 3) token class histogram
+    # 3) default_agg_topic - token class histogram
     token_sql = f"""
 SELECT
     '{start_s}' AS time,
@@ -119,12 +125,17 @@ SELECT
         THEN 'project'
         ELSE 'user'
     END AS user_type,
-    {token_class_case_sql()} AS prompt_token_class,
-    COUNT(*) AS request_count
+    SUM(CAST(50000 <= prompt_tokens                           AS INT)) AS class_1,
+    SUM(CAST(10000 <  prompt_tokens AND prompt_tokens < 50000 AS INT)) AS class_2,
+    SUM(CAST( 5000 <  prompt_tokens AND prompt_tokens < 10000 AS INT)) AS class_3,
+    SUM(CAST( 1000 <  prompt_tokens AND prompt_tokens <  5000 AS INT)) AS class_4,
+    SUM(CAST(  100 <  prompt_tokens AND prompt_tokens <  1000 AS INT)) AS class_5,
+    SUM(CAST(                           prompt_tokens <=  100 AS INT)) AS class_6
 FROM {config.raw_table}
 WHERE time >= '{start_s}' AND time < '{end_s}'
-GROUP BY user_type, prompt_token_class
+GROUP BY user_type
 """
+
     token_rows = query_rows(influxdb3_local, token_sql)
     write_points(
         influxdb3_local,
@@ -132,8 +143,15 @@ GROUP BY user_type, prompt_token_class
         table_name="default_agg_topic",
         rows=token_rows,
         time_col="time",
-        tag_cols=("user_type", "prompt_token_class"),
-        field_cols=("request_count",),
+        tag_cols=("user_type"),
+        field_cols=(
+            "class_1",
+            "class_2",
+            "class_3",
+            "class_4",
+            "class_5",
+            "class_6",
+        ),
         task_id=task_id,
     )
 
@@ -153,6 +171,7 @@ FROM {config.raw_table}
 WHERE time >= '{start_s}' AND time < '{end_s}'
 GROUP BY user_hash, project_id, parent_deployment, title
 """
+
     kpi_rows = query_rows(influxdb3_local, kpi_sql)
     write_points(
         influxdb3_local,
@@ -180,6 +199,7 @@ FROM {config.raw_table}
 WHERE time >= '{start_s}' AND time < '{end_s}'
 GROUP BY chat_id
 """
+
     chat_rows = query_rows(influxdb3_local, chat_sql)
     write_points(
         influxdb3_local,

@@ -10,6 +10,11 @@ from .utils import query_rows, to_iso, write_points
 def run_monthly(
     influxdb3_local, call_time: datetime, config: Config, *, task_id: str
 ) -> None:
+    """
+    Reads: default_agg_stats, default_agg_kpi
+    Writes: default_agg_month
+    """
+
     this_month = _month_start(call_time)
     prev_month = _month_start(this_month - timedelta(days=2))
 

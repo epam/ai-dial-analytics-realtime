@@ -3,6 +3,7 @@ from __future__ import annotations
 from datetime import datetime, timedelta, timezone
 from typing import Any, Dict
 
+from .config import Config
 from .utils import query_rows, to_iso, write_points
 
 
@@ -12,10 +13,8 @@ def _month_start(dt: datetime) -> datetime:
 
 
 def run_monthly(
-    influxdb3_local, call_time: datetime, args: Dict[str, Any], *, task_id: str
+    influxdb3_local, call_time: datetime, config: Config, *, task_id: str
 ) -> None:
-    agg_db = str(args.get("agg_database", "analytics_agg"))
-
     # Previous month window: [prev_month_start, this_month_start)
     this_month = _month_start(call_time)
     prev_month = _month_start(this_month - timedelta(days=32))
@@ -39,7 +38,8 @@ SELECT
     AVG(request_count)         AS avg_rc_per_api
 FROM default_agg_stats
 WHERE time >= '{start_s}' AND time < '{end_s}'
-    AND project_id IS NOT NULL AND project_id <> ''
+    AND project_id IS NOT NULL
+    AND project_id <> ''
 """
     api_rows = query_rows(influxdb3_local, api_sql)
 
@@ -54,7 +54,7 @@ WHERE time >= '{start_s}' AND time < '{end_s}'
 """
     model_rows = query_rows(influxdb3_local, model_sql)
 
-    # User-level rollups from default_agg_kpi (exclude undefined like your Flux)
+    # User-level rollups from default_agg_kpi
     user_sql = f"""
 SELECT
     '{stamp_s}' AS time,
@@ -63,7 +63,8 @@ SELECT
     COUNT(DISTINCT user_hash) AS unique_users
 FROM default_agg_kpi
 WHERE time >= '{start_s}' AND time < '{end_s}'
-    AND user_hash IS NOT NULL AND user_hash <> 'undefined'
+    AND user_hash IS NOT NULL
+    AND user_hash <> 'undefined'
 """
     user_rows = query_rows(influxdb3_local, user_sql)
 
@@ -77,7 +78,7 @@ WHERE time >= '{start_s}' AND time < '{end_s}'
 
     write_points(
         influxdb3_local,
-        db_name=agg_db,
+        db_name=config.agg_database,
         table_name="default_agg_month",
         rows=[merged],
         time_col="time",

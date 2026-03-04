@@ -6,8 +6,8 @@
   "scheduled_args_config": [
     {
       "name": "mode",
-      "example": "6h",
-      "description": "Which rollup to run: '6h' (default) or 'monthly'.",
+      "example": "hourly",
+      "description": "Which rollup to run: 'hourly' (default) or 'monthly'.",
       "required": false
     },
     {
@@ -25,25 +25,25 @@
     {
       "name": "window_hours",
       "example": "6",
-      "description": "For mode=6h: window size in hours.",
+      "description": "For mode=hourly: window size in hours.",
       "required": false
     },
     {
       "name": "offset_minutes",
       "example": "2",
-      "description": "For mode=6h: shift end of window backward to avoid late data.",
+      "description": "For mode=hourly: shift end of window backward to avoid late data.",
       "required": false
     },
     {
       "name": "start_time",
       "example": "2026-01-01T00:00:00Z",
-      "description": "Optional backfill start (RFC3339). If set with end_time, overrides call_time-derived window.",
+      "description": "Optional backfill start (ISO 8601). If set with end_time, overrides call_time-derived window.",
       "required": false
     },
     {
       "name": "end_time",
       "example": "2026-01-01T06:00:00Z",
-      "description": "Optional backfill end (RFC3339). If set with start_time, overrides call_time-derived window.",
+      "description": "Optional backfill end (ISO 8601)). If set with start_time, overrides call_time-derived window.",
       "required": false
     }
   ]
@@ -52,8 +52,10 @@
 
 import uuid
 from datetime import datetime, timezone
+from typing import assert_never
 
-from .rollup_6h import run_6h
+from .config import Config, Mode
+from .rollup_hourly import run_hourly
 from .rollup_monthly import run_monthly
 
 
@@ -62,22 +64,21 @@ def process_scheduled_call(influxdb3_local, call_time: datetime, args=None):
     InfluxDB 3 scheduled plugin entrypoint.
     """
     task_id = str(uuid.uuid4())
-    args = args or {}
 
+    config = Config.parse(args)
     call_time = call_time.replace(tzinfo=timezone.utc)
-    mode = str(args.get("mode", "6h")).strip().lower()
 
     influxdb3_local.info(
-        f"[{task_id}] scheduled call mode={mode} call_time={call_time.isoformat()} args={args}"
+        f"[{task_id}] scheduled call mode={config.mode} call_time={call_time.isoformat()} args={args}"
     )
 
     try:
-        if mode == "monthly":
-            run_monthly(influxdb3_local, call_time, args, task_id=task_id)
-        elif mode == "6h":
-            run_6h(influxdb3_local, call_time, args, task_id=task_id)
+        if config.mode == Mode.MONTHLY:
+            run_monthly(influxdb3_local, call_time, config, task_id=task_id)
+        elif config.mode == Mode.HOURLY:
+            run_hourly(influxdb3_local, call_time, config, task_id=task_id)
         else:
-            raise ValueError(f"unsupported mode: {mode}")
+            assert_never(config.mode)
 
         influxdb3_local.info(f"[{task_id}] completed OK")
     except Exception as e:

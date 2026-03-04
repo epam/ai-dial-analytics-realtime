@@ -18,7 +18,8 @@ if TYPE_CHECKING:
 
 def parse_iso_datetime(name: str, value: str) -> datetime:
     try:
-        dt: datetime = datetime.fromisoformat(value)
+        # In Python ≤3.10, "Z" was not supported by fromisoformat()
+        dt: datetime = datetime.fromisoformat(value.replace("Z", "+00:00"))
     except ValueError:
         raise ValueError(
             f"Invalid ISO 8601 datetime from the {name!r} column: {value!r}."

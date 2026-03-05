@@ -3,8 +3,9 @@ from datetime import datetime, timezone
 from typing import Any, Dict, Iterable
 
 from ..dates import parse_iso_date
-from .mocks import create_line_builder
-from .types import InfluxDBClient
+from .line_builder import LineBuilder as LineBuilderImpl
+from .mocks import ReadOnlyInfluxDBClient
+from .types import InfluxDBClient, LineBuilderProtocol
 
 
 def write_points(
@@ -25,7 +26,7 @@ def write_points(
     written = 0
 
     for r in rows:
-        b = create_line_builder(client, table_name)
+        b = _create_line_builder(client, table_name)
 
         t = r.get(time_col)
         if isinstance(t, int):
@@ -65,3 +66,16 @@ def write_points(
 
 def _ns(dt: datetime) -> int:
     return int(dt.astimezone(timezone.utc).timestamp() * 1_000_000_000)
+
+
+def _create_line_builder(
+    client: InfluxDBClient, table_name: str
+) -> LineBuilderProtocol:
+    if isinstance(client, ReadOnlyInfluxDBClient):
+        return LineBuilderImpl(table_name)
+    else:
+        # LineBuilder is available in the runtime:
+        # https://docs.influxdata.com/influxdb3/enterprise/plugins/extend-plugin/#write-data
+        # The actual LineBuilder code:
+        # https://github.com/influxdata/influxdb/blob/37ff7e6cd4598c312df3688026764a322969c1de/influxdb3_py_api/src/system_py.rs#L508-L613
+        return LineBuilder(table_name)  # type: ignore  # noqa: F821

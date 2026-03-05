@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import datetime
 
 from .config import Config
-from .influx import query_rows, write_points
+from .influx import write_points
 from .window import Window
 
 
@@ -52,7 +52,7 @@ WHERE {in_window}
 GROUP BY deployment, model, project_id, parent_deployment, language
 """
 
-    stats_rows = query_rows(influxdb3_local, stats_sql)
+    stats_rows = influxdb3_local.query(stats_sql)
     write_points(
         influxdb3_local,
         db_name=config.agg_database,
@@ -95,7 +95,7 @@ WHERE {in_window}
 GROUP BY title, topic, model
 """
 
-    topic_rows = query_rows(influxdb3_local, topic_sql)
+    topic_rows = influxdb3_local.query(topic_sql)
     write_points(
         influxdb3_local,
         db_name=config.agg_database,
@@ -133,7 +133,7 @@ WHERE {in_window}
 GROUP BY user_type
 """
 
-    token_rows = query_rows(influxdb3_local, token_sql)
+    token_rows = influxdb3_local.query(token_sql)
     write_points(
         influxdb3_local,
         db_name=config.agg_database,
@@ -169,7 +169,7 @@ WHERE {in_window}
 GROUP BY user_hash, project_id, parent_deployment, title
 """
 
-    kpi_rows = query_rows(influxdb3_local, kpi_sql)
+    kpi_rows = influxdb3_local.query(kpi_sql)
     write_points(
         influxdb3_local,
         db_name=config.agg_database,
@@ -197,7 +197,7 @@ WHERE {in_window}
 GROUP BY chat_id
 """
 
-    chat_rows = query_rows(influxdb3_local, chat_sql)
+    chat_rows = influxdb3_local.query(chat_sql)
     write_points(
         influxdb3_local,
         db_name=config.agg_database,

@@ -1,6 +1,6 @@
 from collections.abc import Sequence
 from datetime import datetime, timezone
-from typing import TYPE_CHECKING, Any, Dict, Iterable, List
+from typing import TYPE_CHECKING, Any, Dict, Iterable
 
 from .utils import parse_iso_date
 
@@ -15,14 +15,6 @@ if TYPE_CHECKING:
         def int64_field(self, key: str, value: int) -> None: ...
         def float64_field(self, key: str, value: float) -> None: ...
         def bool_field(self, key: str, value: bool) -> None: ...
-
-
-def query_rows(influxdb3_local, sql: str) -> List[Dict[str, Any]]:
-    """
-    Execute SQL and return list of row dicts.
-    """
-    res = influxdb3_local.query(sql)
-    return list(res) if res else []
 
 
 def write_points(

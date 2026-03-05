@@ -4,7 +4,7 @@ from datetime import datetime
 from typing import Any, Dict
 
 from .config import Config
-from .influx import query_rows, write_points
+from .influx import write_points
 from .window import Window
 
 
@@ -62,9 +62,9 @@ SELECT
 FROM ({_get_kpi_sub_table(in_window)})
 """
 
-    api_rows = query_rows(influxdb3_local, api_sql)
-    model_rows = query_rows(influxdb3_local, model_sql)
-    user_rows = query_rows(influxdb3_local, user_sql)
+    api_rows = influxdb3_local.query(api_sql)
+    model_rows = influxdb3_local.query(model_sql)
+    user_rows = influxdb3_local.query(user_sql)
 
     merged: Dict[str, Any] = {"time": start_s}
     if api_rows:

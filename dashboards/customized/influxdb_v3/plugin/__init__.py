@@ -25,7 +25,7 @@
     {
       "name": "window_hours",
       "example": "6",
-      "description": "For mode=hourly: window size in hours.",
+      "description": "For mode=hourly: window size in hours. Must be a divisor of 24. (default: 6 => windows are [00,06), [06,12), [12,18), [18,24)).",
       "required": false
     },
     {

@@ -3,12 +3,7 @@ from __future__ import annotations
 from datetime import datetime
 
 from .config import Config
-from .utils import (
-    query_rows,
-    to_iso,
-    window_from_args_or_call_time,
-    write_points,
-)
+from .utils import query_rows, to_iso, write_points
 
 
 def run_hourly(
@@ -19,14 +14,7 @@ def run_hourly(
     Writes: default_agg_stats, default_agg_topic, default_agg_topic_2, default_agg_kpi, default_agg_chatid
     """
 
-    start, end = window_from_args_or_call_time(
-        call_time,
-        config.start_time,
-        config.end_time,
-        window_hours=config.window_hours,
-        offset_minutes=config.offset_minutes,
-    )
-
+    start, end = config.get_window(call_time)
     start_s, end_s = to_iso(start), to_iso(end)
 
     influxdb3_local.info(

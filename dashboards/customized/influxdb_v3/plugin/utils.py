@@ -3,6 +3,8 @@ from __future__ import annotations
 from datetime import datetime, timedelta, timezone
 from typing import TYPE_CHECKING, Any, Dict, Iterable, List, Sequence, Tuple
 
+from .config import Config
+
 if TYPE_CHECKING:
     # LineBuilder is available in the processing runtime (as used by official plugins).
     # https://docs.influxdata.com/influxdb3/enterprise/plugins/extend-plugin/#write-data
@@ -37,31 +39,6 @@ def to_iso(dt: datetime) -> str:
 
 def _ns(dt: datetime) -> int:
     return int(dt.astimezone(timezone.utc).timestamp() * 1_000_000_000)
-
-
-def window_from_args_or_call_time(
-    call_time: datetime,
-    end_time: datetime | None,
-    start_time: datetime | None,
-    *,
-    window_hours: int,
-    offset_minutes: int,
-) -> Tuple[datetime, datetime]:
-    """
-    If args contains start_time/end_time => backfill window.
-    Else uses call_time to compute [end - window, end) with optional offset.
-    """
-
-    if start_time and end_time:
-        if end_time <= start_time:
-            raise ValueError(
-                f"end_time must be > start_time (got {start_time} .. {end_time})"
-            )
-        return start_time, end_time
-
-    end_time = call_time - timedelta(minutes=offset_minutes)
-    start_time = end_time - timedelta(hours=window_hours)
-    return start_time, end_time
 
 
 def query_rows(influxdb3_local, sql: str) -> List[Dict[str, Any]]:

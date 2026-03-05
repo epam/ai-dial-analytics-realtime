@@ -6,7 +6,6 @@ from .config import Config
 from .utils import (
     query_rows,
     to_iso,
-    token_class_case_sql,
     window_from_args_or_call_time,
     write_points,
 )

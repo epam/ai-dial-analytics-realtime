@@ -128,16 +128,3 @@ def write_points(
         f"[{task_id}] wrote {written} points -> {db_name}.{table_name}"
     )
     return written
-
-
-def token_class_case_sql() -> str:
-    return """
-CASE
-    WHEN prompt_tokens >= 50000 THEN 'class_1'
-    WHEN prompt_tokens >  10000 THEN 'class_2'
-    WHEN prompt_tokens >   5000 THEN 'class_3'
-    WHEN prompt_tokens >   1000 THEN 'class_4'
-    WHEN prompt_tokens >    100 THEN 'class_5'
-    ELSE 'class_6'
-END
-""".strip()

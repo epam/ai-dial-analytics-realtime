@@ -50,11 +50,16 @@ from datetime import datetime, timezone
 from typing_extensions import assert_never
 
 from .config import Config, Mode
+from .influx import InfluxDBClient
 from .rollup_hourly import run_hourly
 from .rollup_monthly import run_monthly
 
 
-def process_scheduled_call(influxdb3_local, call_time: datetime, args=None):
+def process_scheduled_call(
+    influxdb3_local: InfluxDBClient,
+    call_time: datetime,
+    args: dict | None = None,
+):
     """
     InfluxDB 3 scheduled plugin entrypoint.
     """

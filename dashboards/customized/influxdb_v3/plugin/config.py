@@ -65,7 +65,6 @@ class Config:
 
     def get_windows(self, call_time: datetime) -> List[Window]:
         match self.mode:
-
             case Mode.HOURLY:
                 if self.start_time and self.end_time:
                     if self.end_time <= self.start_time:
@@ -80,7 +79,7 @@ class Config:
 
             case Mode.MONTHLY:
                 this_month = _month_start(call_time)
-                prev_month = _month_start(this_month - timedelta(days=2))
+                prev_month = _month_start(this_month - timedelta(minutes=1))
                 window = Window(start=prev_month, end=this_month)
 
             case _:

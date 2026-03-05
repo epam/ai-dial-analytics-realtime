@@ -16,9 +16,15 @@ if TYPE_CHECKING:
         def float64_field(self, key: str, value: float) -> None: ...
         def bool_field(self, key: str, value: bool) -> None: ...
 
+    class InfluxDBClient:
+        def query(self, query: str) -> list[Dict[str, Any]]: ...
+        def write_to_db(self, db_name: str, line: LineBuilder) -> None: ...
+        def info(self, msg: str) -> None: ...
+        def error(self, msg: str) -> None: ...
+
 
 def write_points(
-    influxdb3_local,
+    client: InfluxDBClient,
     *,
     db_name: str,
     table_name: str,
@@ -66,12 +72,10 @@ def write_points(
                         f"Unexpected field value in the column '{k!r}': {v} of type {type(v)}"
                     )
 
-        influxdb3_local.write_to_db(db_name, b)
+        client.write_to_db(db_name, b)
         written += 1
 
-    influxdb3_local.info(
-        f"[{task_id}] wrote {written} points -> {db_name}.{table_name}"
-    )
+    client.info(f"[{task_id}] wrote {written} points -> {db_name}.{table_name}")
     return written
 
 

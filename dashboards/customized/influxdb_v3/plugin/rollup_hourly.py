@@ -3,12 +3,12 @@ from __future__ import annotations
 from datetime import datetime
 
 from .config import Config
-from .influx import write_points
+from .influx import InfluxDBClient, write_points
 from .window import Window
 
 
 def run_hourly(
-    influxdb3_local, call_time: datetime, config: Config, *, task_id: str
+    client: InfluxDBClient, call_time: datetime, config: Config, *, task_id: str
 ) -> None:
     """
     Reads: raw_table
@@ -18,16 +18,16 @@ def run_hourly(
     windows = config.get_windows(call_time)
 
     for window in windows:
-        run_hourly_window(influxdb3_local, config, window, task_id)
+        run_hourly_window(client, config, window, task_id)
 
 
 def run_hourly_window(
-    influxdb3_local, config: Config, window: Window, task_id: str
+    client: InfluxDBClient, config: Config, window: Window, task_id: str
 ) -> None:
     start_s = window.start_s
     in_window = window.in_window_sql()
 
-    influxdb3_local.info(
+    client.info(
         f"[{task_id}] {config.window_hours}-hours rollup window: {window.display()}"
     )
 
@@ -52,9 +52,9 @@ WHERE {in_window}
 GROUP BY deployment, model, project_id, parent_deployment, language
 """
 
-    stats_rows = influxdb3_local.query(stats_sql)
+    stats_rows = client.query(stats_sql)
     write_points(
-        influxdb3_local,
+        client,
         db_name=config.agg_database,
         table_name="default_agg_stats",
         rows=stats_rows,
@@ -95,9 +95,9 @@ WHERE {in_window}
 GROUP BY title, topic, model
 """
 
-    topic_rows = influxdb3_local.query(topic_sql)
+    topic_rows = client.query(topic_sql)
     write_points(
-        influxdb3_local,
+        client,
         db_name=config.agg_database,
         table_name="default_agg_topic_2",
         rows=topic_rows,
@@ -133,9 +133,9 @@ WHERE {in_window}
 GROUP BY user_type
 """
 
-    token_rows = influxdb3_local.query(token_sql)
+    token_rows = client.query(token_sql)
     write_points(
-        influxdb3_local,
+        client,
         db_name=config.agg_database,
         table_name="default_agg_topic",
         rows=token_rows,
@@ -169,9 +169,9 @@ WHERE {in_window}
 GROUP BY user_hash, project_id, parent_deployment, title
 """
 
-    kpi_rows = influxdb3_local.query(kpi_sql)
+    kpi_rows = client.query(kpi_sql)
     write_points(
-        influxdb3_local,
+        client,
         db_name=config.agg_database,
         table_name="default_agg_kpi",
         rows=kpi_rows,
@@ -197,9 +197,9 @@ WHERE {in_window}
 GROUP BY chat_id
 """
 
-    chat_rows = influxdb3_local.query(chat_sql)
+    chat_rows = client.query(chat_sql)
     write_points(
-        influxdb3_local,
+        client,
         db_name=config.agg_database,
         table_name="default_agg_chatid",
         rows=chat_rows,

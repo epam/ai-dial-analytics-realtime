@@ -4,12 +4,12 @@ from datetime import datetime
 from typing import Any, Dict
 
 from .config import Config
-from .influx import write_points
+from .influx import InfluxDBClient, write_points
 from .window import Window
 
 
 def run_monthly(
-    influxdb3_local, call_time: datetime, config: Config, *, task_id: str
+    client: InfluxDBClient, call_time: datetime, config: Config, *, task_id: str
 ) -> None:
     """
     Reads: default_agg_stats, default_agg_kpi
@@ -18,18 +18,16 @@ def run_monthly(
     windows = config.get_windows(call_time)
 
     for window in windows:
-        run_monthly_window(influxdb3_local, config, window, task_id)
+        run_monthly_window(client, config, window, task_id)
 
 
 def run_monthly_window(
-    influxdb3_local, config: Config, window: Window, task_id: str
+    client: InfluxDBClient, config: Config, window: Window, task_id: str
 ) -> None:
     start_s = window.start_s
     in_window = window.in_window_sql()
 
-    influxdb3_local.info(
-        f"[{task_id}] monthly rollup window: {window.display()}"
-    )
+    client.info(f"[{task_id}] monthly rollup window: {window.display()}")
 
     # API-level (project_id) rollups from default_agg_stats
     api_sql = f"""
@@ -62,9 +60,9 @@ SELECT
 FROM ({_get_kpi_sub_table(in_window)})
 """
 
-    api_rows = influxdb3_local.query(api_sql)
-    model_rows = influxdb3_local.query(model_sql)
-    user_rows = influxdb3_local.query(user_sql)
+    api_rows = client.query(api_sql)
+    model_rows = client.query(model_sql)
+    user_rows = client.query(user_sql)
 
     merged: Dict[str, Any] = {"time": start_s}
     if api_rows:
@@ -75,7 +73,7 @@ FROM ({_get_kpi_sub_table(in_window)})
         merged.update(user_rows[0])
 
     write_points(
-        influxdb3_local,
+        client,
         db_name=config.agg_database,
         table_name="default_agg_month",
         rows=[merged],

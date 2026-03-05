@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 from enum import Enum
 from typing import Dict, List
 
@@ -7,6 +7,7 @@ from typing_extensions import assert_never
 
 from .utils import parse_iso_date
 from .window import Window
+from .window_roller import HourlyRoller, MonthlyRoller, roll_windows
 
 
 class Mode(Enum):
@@ -64,30 +65,18 @@ class Config:
         )
 
     def get_windows(self, call_time: datetime) -> List[Window]:
+        call_time = call_time.astimezone(timezone.utc)
+        if self.end_time:
+            call_time = min(call_time, self.end_time)
+
         match self.mode:
             case Mode.HOURLY:
-                if self.start_time and self.end_time:
-                    if self.end_time <= self.start_time:
-                        raise ValueError(
-                            f"end_time must be > start_time (got {self.start_time} .. {self.end_time})"
-                        )
-                    window = Window(start=self.start_time, end=self.end_time)
-                else:
-                    end_time = call_time
-                    start_time = end_time - timedelta(hours=self.window_hours)
-                    window = Window(start=start_time, end=end_time)
-
+                roller = HourlyRoller(window_hours=self.window_hours)
             case Mode.MONTHLY:
-                this_month = _month_start(call_time)
-                prev_month = _month_start(this_month - timedelta(minutes=1))
-                window = Window(start=prev_month, end=this_month)
-
+                roller = MonthlyRoller()
             case _:
                 assert_never(self.mode)
 
-        return [window]
-
-
-def _month_start(dt: datetime) -> datetime:
-    dt = dt.astimezone(timezone.utc)
-    return dt.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        return roll_windows(
+            roller, start_time=self.start_time, call_time=call_time
+        )

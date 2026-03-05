@@ -2,7 +2,7 @@ from collections.abc import Sequence
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Any, Dict, Iterable
 
-from .utils import parse_iso_date
+from .dates import parse_iso_date
 
 if TYPE_CHECKING:
     # LineBuilder is available in the processing runtime (as used by official plugins).

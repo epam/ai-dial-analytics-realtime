@@ -5,7 +5,7 @@ from typing import Dict, List
 
 from typing_extensions import assert_never
 
-from .utils import parse_iso_date
+from .dates import parse_iso_date
 from .window import Window
 from .window_roller import HourlyRoller, MonthlyRoller, roll_windows
 

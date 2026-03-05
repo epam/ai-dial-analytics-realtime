@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from datetime import datetime
 
-from .utils import to_iso_date
+from .dates import to_iso_date
 
 
 @dataclass

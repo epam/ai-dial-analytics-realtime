@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import datetime
 
 from .config import Config
-from .influx import InfluxDBClient, write_points
+from .influx.client import InfluxDBClient, write_points
 from .window import Window
 
 
@@ -17,7 +17,11 @@ def run_hourly(
 
     windows = config.get_windows(call_time)
 
-    for window in windows:
+    n = len(windows)
+    for idx, window in enumerate(windows, start=1):
+        client.info(
+            f"[{task_id}] [{idx}/{n}] {config.window_hours}-hours rollup window: {window.display()}"
+        )
         run_hourly_window(client, config, window, task_id)
 
 
@@ -26,10 +30,6 @@ def run_hourly_window(
 ) -> None:
     start_s = window.start_s
     in_window = window.in_window_sql()
-
-    client.info(
-        f"[{task_id}] {config.window_hours}-hours rollup window: {window.display()}"
-    )
 
     # 1) default_agg_stats
     stats_sql = f"""

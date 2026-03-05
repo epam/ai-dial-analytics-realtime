@@ -4,7 +4,7 @@ from datetime import datetime
 from typing import Any, Dict
 
 from .config import Config
-from .influx import InfluxDBClient, write_points
+from .influx.client import InfluxDBClient, write_points
 from .window import Window
 
 
@@ -17,7 +17,11 @@ def run_monthly(
     """
     windows = config.get_windows(call_time)
 
-    for window in windows:
+    n = len(windows)
+    for idx, window in enumerate(windows, start=1):
+        client.info(
+            f"[{task_id}] [{idx}/{n}] monthly rollup window: {window.display()}"
+        )
         run_monthly_window(client, config, window, task_id)
 
 
@@ -26,8 +30,6 @@ def run_monthly_window(
 ) -> None:
     start_s = window.start_s
     in_window = window.in_window_sql()
-
-    client.info(f"[{task_id}] monthly rollup window: {window.display()}")
 
     # API-level (project_id) rollups from default_agg_stats
     api_sql = f"""

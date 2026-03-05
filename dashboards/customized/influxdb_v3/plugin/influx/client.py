@@ -1,29 +1,10 @@
 from collections.abc import Sequence
 from datetime import datetime, timezone
-from typing import Any, Dict, Iterable, Protocol, runtime_checkable
+from typing import Any, Dict, Iterable
 
-from .dates import parse_iso_date
+from ..dates import parse_iso_date
 from .mocks import create_line_builder
-
-
-@runtime_checkable
-class LineBuilderProtocol(Protocol):
-    def __init__(self, measurement: str) -> None: ...
-    def time_ns(self, value: int) -> None: ...
-    def tag(self, key: str, value: str) -> None: ...
-    def string_field(self, key: str, value: str) -> None: ...
-    def int64_field(self, key: str, value: int) -> None: ...
-    def float64_field(self, key: str, value: float) -> None: ...
-    def bool_field(self, key: str, value: bool) -> None: ...
-    def build(self) -> str: ...
-
-
-@runtime_checkable
-class InfluxDBClient(Protocol):
-    def query(self, query: str) -> list[Dict[str, Any]]: ...
-    def write_to_db(self, db_name: str, line: LineBuilderProtocol) -> None: ...
-    def info(self, msg: str) -> None: ...
-    def error(self, msg: str) -> None: ...
+from .types import InfluxDBClient
 
 
 def write_points(
@@ -78,7 +59,7 @@ def write_points(
         client.write_to_db(db_name, b)
         written += 1
 
-    client.info(f"[{task_id}] wrote {written} points -> {db_name}.{table_name}")
+    client.info(f"[{task_id}] wrote {written} points to {db_name}.{table_name}")
     return written
 
 

@@ -44,17 +44,13 @@
 }
 """
 
-import sys
-import tomllib
 import uuid
 from datetime import datetime, timezone
-from pathlib import Path
 
 from typing_extensions import assert_never
 
 from .config import Config, Mode
-from .influx import InfluxDBClient
-from .mocks import MockInfluxDBClient
+from .influx.client import InfluxDBClient
 from .rollup_hourly import run_hourly
 from .rollup_monthly import run_monthly
 
@@ -73,7 +69,7 @@ def process_scheduled_call(
     call_time = call_time.replace(tzinfo=timezone.utc)
 
     influxdb3_local.info(
-        f"[{task_id}] scheduled call mode={config.mode} call_time={call_time.isoformat()} args={args}"
+        f"[{task_id}] scheduled call mode={config.mode.value} call_time={call_time.isoformat()} args={args}"
     )
 
     try:
@@ -90,15 +86,3 @@ def process_scheduled_call(
     except Exception as e:
         influxdb3_local.error(f"[{task_id}] failed: {e}")
         raise
-
-
-if __name__ == "__main__":
-    config_file = sys.argv[1] if len(sys.argv) > 1 else "config.toml"
-    args = tomllib.loads(Path(config_file).read_text())
-
-    # Only reads InfluxDB; doesn't write, so it's safe to use a local client for testing.
-    process_scheduled_call(
-        influxdb3_local=MockInfluxDBClient(),
-        call_time=datetime.now(timezone.utc),
-        args=args,
-    )

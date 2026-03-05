@@ -1,23 +1,26 @@
 from typing import Any, Dict
 
-from .influx import InfluxDBClient, LineBuilderProtocol
+from .types import InfluxDBClient, LineBuilderProtocol
 
 
 class MockInfluxDBClient(InfluxDBClient):
     def query(self, query: str) -> list[Dict[str, Any]]:
-        print(f"MockInfluxDBClient.query:\n{query}\n")
+        query = _line_prefix("    | ", query.strip())
+        print(f"[INFLUX QUERY]\n{query}")
         return []
 
     def write_to_db(self, db_name: str, line: LineBuilderProtocol) -> None:
-        print(
-            f"MockInfluxDBClient.write_to_db:\ndb_name={db_name}\nline={line.build()}"
-        )
+        print(f"[INFLUX WRITE](db_name={db_name})\n{line.build()}")
 
     def info(self, msg: str) -> None:
-        print(f"INFO: {msg}")
+        print(f"[PLUGIN INFO] {msg}")
 
     def error(self, msg: str) -> None:
-        print(f"ERROR: {msg}")
+        print(f"[PLUGIN ERROR] {msg}")
+
+
+def _line_prefix(prefix: str, text: str) -> str:
+    return "\n".join(prefix + line for line in text.splitlines())
 
 
 class MockLineBuilder(LineBuilderProtocol):

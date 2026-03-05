@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime
+from typing import Any, Dict
 
 from .config import Config
 from .influx.client import InfluxDBClient, write_points
@@ -23,6 +24,24 @@ def run_hourly(
             f"[{task_id}] [{idx}/{n}] {config.window_hours}-hours rollup window: {window.display()}"
         )
         run_hourly_window(client, config, window, task_id)
+
+
+def _normalize_project_id(rows: list[Dict[str, Any]]) -> list[Dict[str, Any]]:
+    # Analytics may produce data points with missing (NULL) project_id
+    # We are filling the gaps with a default to ease further processing of the data.
+    for r in rows:
+        if r.get("project_id") is None:
+            r["project_id"] = "undefined"
+    return rows
+
+
+def _normalize_topic(rows: list[Dict[str, Any]]) -> list[Dict[str, Any]]:
+    # Analytics may produce data points with missing (NULL) topic
+    # We are filling the gaps with a default to ease further processing of the data.
+    for r in rows:
+        if r.get("topic") is None:
+            r["topic"] = "undefined"
+    return rows
 
 
 def run_hourly_window(
@@ -55,9 +74,9 @@ GROUP BY deployment, model, project_id, parent_deployment, language
     stats_rows = client.query(stats_sql)
     write_points(
         client,
-        db_name=config.agg_database,
-        table_name="default_agg_stats",
-        rows=stats_rows,
+        db=config.agg_database,
+        table="default_agg_stats",
+        rows=_normalize_project_id(stats_rows),
         time_col="time",
         tag_cols=(
             "deployment",
@@ -98,9 +117,9 @@ GROUP BY title, topic, model
     topic_rows = client.query(topic_sql)
     write_points(
         client,
-        db_name=config.agg_database,
-        table_name="default_agg_topic_2",
-        rows=topic_rows,
+        db=config.agg_database,
+        table="default_agg_topic_2",
+        rows=_normalize_topic(topic_rows),
         time_col="time",
         tag_cols=("title", "topic", "model"),
         field_cols=(
@@ -136,11 +155,11 @@ GROUP BY user_type
     token_rows = client.query(token_sql)
     write_points(
         client,
-        db_name=config.agg_database,
-        table_name="default_agg_topic",
+        db=config.agg_database,
+        table="default_agg_topic",
         rows=token_rows,
         time_col="time",
-        tag_cols=("user_type"),
+        tag_cols=("user_type",),
         field_cols=(
             "class_1",
             "class_2",
@@ -172,9 +191,9 @@ GROUP BY user_hash, project_id, parent_deployment, title
     kpi_rows = client.query(kpi_sql)
     write_points(
         client,
-        db_name=config.agg_database,
-        table_name="default_agg_kpi",
-        rows=kpi_rows,
+        db=config.agg_database,
+        table="default_agg_kpi",
+        rows=_normalize_project_id(kpi_rows),
         time_col="time",
         tag_cols=("user_hash", "project_id", "parent_deployment", "title"),
         field_cols=(
@@ -200,8 +219,8 @@ GROUP BY chat_id
     chat_rows = client.query(chat_sql)
     write_points(
         client,
-        db_name=config.agg_database,
-        table_name="default_agg_chatid",
+        db=config.agg_database,
+        table="default_agg_chatid",
         rows=chat_rows,
         time_col="time",
         tag_cols=("chat_id",),

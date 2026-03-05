@@ -76,8 +76,8 @@ FROM ({_get_kpi_sub_table(in_window)})
 
     write_points(
         client,
-        db_name=config.agg_database,
-        table_name="default_agg_month",
+        db=config.agg_database,
+        table="default_agg_month",
         rows=[merged],
         time_col="time",
         tag_cols=(),

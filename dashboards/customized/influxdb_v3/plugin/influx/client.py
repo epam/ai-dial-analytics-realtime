@@ -1,6 +1,6 @@
-from collections.abc import Sequence
+import json
 from datetime import datetime, timezone
-from typing import Any, Dict, Iterable
+from typing import Any, Dict, List, Tuple
 
 from ..dates import parse_iso_date
 from .line_builder import LineBuilder as LineBuilderImpl
@@ -11,29 +11,30 @@ from .types import InfluxDBClient, LineBuilderProtocol
 def write_points(
     client: InfluxDBClient,
     *,
-    db_name: str,
-    table_name: str,
-    rows: Iterable[Dict[str, Any]],
+    db: str,
+    table: str,
+    rows: List[Dict[str, Any]],
     time_col: str,
-    tag_cols: Sequence[str],
-    field_cols: Sequence[str],
+    tag_cols: Tuple[str, ...],
+    field_cols: Tuple[str, ...],
     task_id: str,
 ) -> int:
     """
     Write each row as a point into db_name.table_name.
-    time_col can be RFC3339 string, datetime, or ns int.
+    time_col can be ISO string, datetime, or ns int.
     """
     written = 0
 
-    for r in rows:
-        b = _create_line_builder(client, table_name)
+    for r_orig in rows:
+        r = r_orig.copy()
 
-        t = r.get(time_col)
-        if isinstance(t, int):
-            b.time_ns(t)
-        elif isinstance(t, datetime):
-            b.time_ns(_ns(t))
-        elif isinstance(t, str):
+        def r_json():
+            return json.dumps(r_orig)
+
+        b = _create_line_builder(client, table)
+
+        t = r.pop(time_col, None)
+        if isinstance(t, str):
             b.time_ns(_ns(parse_iso_date(f"{time_col!r} column", t)))
         else:
             raise ValueError(
@@ -41,26 +42,43 @@ def write_points(
             )
 
         for k in tag_cols:
-            if (v := r.get(k)) is not None:
-                b.tag(k, str(v))
+            if (v := r.pop(k, None)) is None:
+                raise ValueError(
+                    f"Expected to find a tag column {k!r}, but it's missing from the given row: {r_json()}"
+                )
+            if isinstance(v, str):
+                b.tag(k, v)
+            else:
+                raise ValueError(
+                    f"Unexpected tag value in the column '{k!r}': {v} of type {type(v)}, but tags are expected to always be strings."
+                )
 
         for k in field_cols:
-            if (v := r.get(k)) is not None:
-                if isinstance(v, bool):
-                    b.bool_field(k, v)
-                elif isinstance(v, int):
-                    b.int64_field(k, v)
-                elif isinstance(v, float):
-                    b.float64_field(k, v)
-                else:
-                    raise ValueError(
-                        f"Unexpected field value in the column '{k!r}': {v} of type {type(v)}"
-                    )
+            if (v := r.pop(k, None)) is None:
+                raise ValueError(
+                    f"Expected to find a field column {k!r}, but it's missing from the given row: {r_json()}"
+                )
 
-        client.write_to_db(db_name, b)
+            if isinstance(v, bool):
+                b.bool_field(k, v)
+            elif isinstance(v, int):
+                b.int64_field(k, v)
+            elif isinstance(v, float):
+                b.float64_field(k, v)
+            else:
+                raise ValueError(
+                    f"Unexpected field value in the column '{k!r}': {v} of type {type(v)}"
+                )
+
+        if r:
+            raise ValueError(
+                f"There are unhandled fields in the row: {r_json()}"
+            )
+
+        client.write_to_db(db, b)
         written += 1
 
-    client.info(f"[{task_id}] wrote {written} points to {db_name}.{table_name}")
+    client.info(f"[{task_id}] wrote {written} points to {db}.{table}")
     return written
 
 

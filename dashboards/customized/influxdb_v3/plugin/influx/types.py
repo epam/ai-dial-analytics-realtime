@@ -1,6 +1,8 @@
 from typing import Any, Dict, Protocol, Self, runtime_checkable
 
 
+# Find the actual implementation in Python:
+# https://github.com/influxdata/influxdb/blob/37ff7e6cd4598c312df3688026764a322969c1de/influxdb3_py_api/src/system_py.rs#L488-L613
 @runtime_checkable
 class LineBuilderProtocol(Protocol):
     def __init__(self, measurement: str) -> None: ...
@@ -13,6 +15,8 @@ class LineBuilderProtocol(Protocol):
     def build(self) -> str: ...
 
 
+# Find the actual implementation in Rust:
+# https://github.com/influxdata/influxdb/blob/37ff7e6cd4598c312df3688026764a322969c1de/influxdb3_py_api/src/system_py.rs#L203
 @runtime_checkable
 class InfluxDBClient(Protocol):
     def query(self, query: str) -> list[Dict[str, Any]]: ...

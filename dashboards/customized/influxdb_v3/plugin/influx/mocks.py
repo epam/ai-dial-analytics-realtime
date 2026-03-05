@@ -38,15 +38,13 @@ class ReadOnlyInfluxDBClient(InfluxDBClient):
         with urlopen(req) as resp:
             rows = json.load(resp)
 
-        prefix = json.dumps(rows[:3], indent=2)
-        print(
-            f"[INFLUX QUERY RESPONSE](rows={len(rows)}):\n{_prettify(prefix)}"
-        )
+        prefix = "\n".join(json.dumps(row) for row in rows[:3])
+        print(f"[INFLUX QUERY RESULT](rows={len(rows)}):\n{_prettify(prefix)}")
 
         return rows
 
     def write_to_db(self, db_name: str, line: LineBuilderProtocol) -> None:
-        print(f"[INFLUX WRITE](db_name={db_name})\n{line.build()}")
+        print(f"[INFLUX WRITE](db={db_name}) {line.build()}")
 
     def info(self, msg: str) -> None:
         print(f"[PLUGIN INFO] {msg}")

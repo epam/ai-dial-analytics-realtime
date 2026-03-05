@@ -30,17 +30,17 @@ class Config:
     def parse(cls, d: Dict[str, str] | None) -> "Config":
         d = d or {}
 
-        mode_s = d.get("mode") or "hourly"
+        mode_s = d.pop("mode", None) or "hourly"
         try:
             mode = Mode(mode_s.strip().lower())
         except Exception as e:
             raise ValueError(f"Unsupported mode: {mode_s!r}") from e
 
-        agg_database = d.get("agg_database") or "analytics_agg"
-        raw_table = d.get("raw_table") or "analytics"
+        agg_database = d.pop("agg_database", None) or "analytics_agg"
+        raw_table = d.pop("raw_table", None) or "analytics"
 
-        start_arg = d.get("start_time")
-        end_arg = d.get("end_time")
+        start_arg = d.pop("start_time", None)
+        end_arg = d.pop("end_time", None)
         start_time: datetime | None = (
             parse_iso_date("start_time", start_arg) if start_arg else None
         )
@@ -48,12 +48,14 @@ class Config:
             parse_iso_date("end_time", end_arg) if end_arg else None
         )
 
-        window_hours = int(d.get("window_hours") or 6)
-
+        window_hours = int(d.pop("window_hours", None) or 6)
         if 24 % window_hours:
             raise ValueError(
                 f"window_hours must divide 24 evenly (got {window_hours})"
             )
+
+        if d:
+            raise ValueError(f"Unexpected config keys: {', '.join(d.keys())}")
 
         return cls(
             mode=mode,

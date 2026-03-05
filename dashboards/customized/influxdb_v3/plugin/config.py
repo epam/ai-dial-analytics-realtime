@@ -66,6 +66,16 @@ class Config:
             window_hours=window_hours,
         )
 
+    @property
+    def input_database(self) -> str:
+        match self.mode:
+            case Mode.HOURLY:
+                return "default"
+            case Mode.MONTHLY:
+                return self.agg_database
+            case _:
+                assert_never(self.mode)
+
     def get_windows(self, call_time: datetime) -> List[Window]:
         call_time = call_time.astimezone(timezone.utc)
         if self.end_time:

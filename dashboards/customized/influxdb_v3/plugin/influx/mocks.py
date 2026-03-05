@@ -1,13 +1,49 @@
+import json
 from typing import Any, Dict
+from urllib.request import Request, urlopen
 
 from .types import InfluxDBClient, LineBuilderProtocol
 
 
-class MockInfluxDBClient(InfluxDBClient):
+class DryRunInfluxDBClient(InfluxDBClient):
+    _influxdb_url: str
+    _influxdb_token: str
+
+    _database: str
+
+    def __init__(self, *, url: str, token: str, database: str):
+        self._database = database
+        self._influxdb_url = url
+        self._influxdb_token = token
+
     def query(self, query: str) -> list[Dict[str, Any]]:
-        query = _line_prefix("    | ", query.strip())
-        print(f"[INFLUX QUERY]\n{query}")
-        return []
+        query = query.strip()
+        print(f"[INFLUX QUERY]\n{_line_prefix("    | ", query)}")
+
+        endpoint = f"{self._influxdb_url}/api/v3/query_sql"
+
+        payload = json.dumps(
+            {"formats": "json", "db": self._database, "q": query}
+        ).encode("utf-8")
+
+        req = Request(
+            endpoint,
+            data=payload,
+            method="POST",
+            headers={
+                "Authorization": f"Token {self._influxdb_token}",
+                "Content-Type": "application/json",
+            },
+        )
+
+        with urlopen(req) as resp:
+            rows = json.load(resp)
+
+        prefix = json.dumps(rows[:3], indent=2)
+        prefix = _line_prefix("    | ", prefix.strip())
+        print(f"[INFLUX QUERY RESPONSE](rows={len(rows)}):\n{prefix}")
+
+        return rows
 
     def write_to_db(self, db_name: str, line: LineBuilderProtocol) -> None:
         print(f"[INFLUX WRITE](db_name={db_name})\n{line.build()}")
@@ -60,7 +96,7 @@ class MockLineBuilder(LineBuilderProtocol):
 def create_line_builder(
     client: InfluxDBClient, table_name: str
 ) -> LineBuilderProtocol:
-    if isinstance(client, MockInfluxDBClient):
+    if isinstance(client, DryRunInfluxDBClient):
         return MockLineBuilder(table_name)
     else:
         # LineBuilder is available in the runtime:

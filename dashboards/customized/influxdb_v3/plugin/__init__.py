@@ -29,12 +29,6 @@
       "required": false
     },
     {
-      "name": "offset_minutes",
-      "example": "2",
-      "description": "For mode=hourly: shift end of window backward to avoid late data.",
-      "required": false
-    },
-    {
       "name": "start_time",
       "example": "2026-01-01T00:00:00Z",
       "description": "Optional backfill start (ISO 8601). If set with end_time, overrides call_time-derived window.",

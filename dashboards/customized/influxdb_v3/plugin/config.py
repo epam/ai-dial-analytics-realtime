@@ -18,7 +18,6 @@ class Config:
     raw_table: str
 
     window_hours: int
-    offset_minutes: int
 
     start_time: datetime | None
     end_time: datetime | None
@@ -45,7 +44,6 @@ class Config:
             parse_iso_datetime("end_time", end_arg) if end_arg else None
         )
 
-        offset_minutes = int(d.get("offset_minutes") or 2)
         window_hours = int(d.get("window_hours") or 6)
 
         if 24 % window_hours:
@@ -60,7 +58,6 @@ class Config:
             start_time=start_time,
             end_time=end_time,
             window_hours=window_hours,
-            offset_minutes=offset_minutes,
         )
 
     def get_window(self, call_time: datetime) -> Tuple[datetime, datetime]:
@@ -76,6 +73,6 @@ class Config:
                 )
             return self.start_time, self.end_time
 
-        end_time = call_time - timedelta(minutes=self.offset_minutes)
+        end_time = call_time
         start_time = end_time - timedelta(hours=self.window_hours)
         return start_time, end_time

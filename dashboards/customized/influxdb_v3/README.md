@@ -55,21 +55,24 @@ We define **two triggers**, both referencing the same plugin package.
 
 ### 6-Hour Aggregation Trigger
 
-Runs **exactly at**:
+Runs at the following UTC times every day:
 
 ```txt
-00:00, 06:00, 12:00, 18:00 (UTC)
+00:02, 06:02, 12:02, 18:02 (UTC)
 ```
+
+The 2-minute offset (`02` instead of `00`) ensures that all raw data for the previous window is ingested before aggregation runs.
 
 Trigger spec:
 
 ```txt
-cron:0 0 */6 * * *
+cron:2 0 */6 * * *
 ```
 
 What it does:
 
 * aggregates the previous 6-hour window of raw data
+* window bins are aligned to 6-hour boundaries (00:00, 06:00, 12:00, 18:00) which makes the query **idempotent** and backfill straightforward
 * writes results into:
 
   * `default_agg_stats`
@@ -84,8 +87,8 @@ Example trigger creation:
 influxdb3 create trigger \
   --database default \
   --path analytics_rollups \
-  --trigger-spec "cron:0 0 */6 * * *" \
-  --trigger-arguments mode=hourly,raw_table=analytics,agg_database=analytics_agg,window_hours=6,offset_minutes=2 \
+  --trigger-spec "cron:2 0 */6 * * *" \
+  --trigger-arguments mode=hourly,raw_table=analytics,agg_database=analytics_agg,window_hours=6 \
   analytics_6h_rollups
 ```
 
@@ -96,18 +99,21 @@ influxdb3 create trigger \
 Runs at:
 
 ```txt
-00:00:00 UTC on the 1st day of each month
+00:00:02 UTC on the 1st day of each month
 ```
+
+The 2-minute offset (`02` instead of `00`) ensures that all raw data for the previous window is ingested before aggregation runs.
 
 Trigger spec:
 
 ```txt
-cron:0 0 0 1 * *
+cron:2 0 0 1 * *
 ```
 
 What it does:
 
 * reads from 6-hour aggregate tables
+* window bins are aligned to monthly boundaries which makes the query **idempotent** and backfill straightforward
 * computes monthly totals, averages, and uniques
 * writes results into `default_agg_month`
 
@@ -117,7 +123,7 @@ Example trigger creation:
 influxdb3 create trigger \
   --database analytics_agg \
   --path analytics_rollups \
-  --trigger-spec "cron:0 0 0 1 * *" \
+  --trigger-spec "cron:2 0 0 1 * *" \
   --trigger-arguments mode=monthly,agg_database=analytics_agg \
   analytics_monthly_rollups
 ```
@@ -141,7 +147,8 @@ When provided, these **override the scheduled window**.
 Example (single 6-hour window):
 
 ```text
-mode=6h,
+mode=hourly,
+window_hours=6,
 raw_table=analytics,
 agg_database=analytics_agg,
 start_time=2026-01-01T00:00:00Z,

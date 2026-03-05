@@ -3,7 +3,8 @@ from __future__ import annotations
 from datetime import datetime
 
 from .config import Config
-from .utils import query_rows, to_iso, write_points
+from .influx import query_rows, write_points
+from .window import Window
 
 
 def run_hourly(
@@ -14,11 +15,20 @@ def run_hourly(
     Writes: default_agg_stats, default_agg_topic, default_agg_topic_2, default_agg_kpi, default_agg_chatid
     """
 
-    start, end = config.get_window(call_time)
-    start_s, end_s = to_iso(start), to_iso(end)
+    windows = config.get_windows(call_time)
+
+    for window in windows:
+        run_hourly_window(influxdb3_local, config, window, task_id)
+
+
+def run_hourly_window(
+    influxdb3_local, config: Config, window: Window, task_id: str
+) -> None:
+    start_s = window.start_s
+    in_window = window.in_window_sql()
 
     influxdb3_local.info(
-        f"[{task_id}] {config.window_hours}-hours rollup window: {start_s} .. {end_s}"
+        f"[{task_id}] {config.window_hours}-hours rollup window: {window.display()}"
     )
 
     # 1) default_agg_stats
@@ -38,7 +48,7 @@ SELECT
     COUNT(*)                     AS request_count,
     COUNT(DISTINCT user_hash)    AS unique_user_count
 FROM {config.raw_table}
-WHERE time >= '{start_s}' AND time < '{end_s}'
+WHERE {in_window}
 GROUP BY deployment, model, project_id, parent_deployment, language
 """
 
@@ -81,7 +91,7 @@ SELECT
     SUM(prompt_tokens)            AS prompt_tokens,
     SUM(completion_tokens)        AS completion_tokens
 FROM {config.raw_table}
-WHERE time >= '{start_s}' AND time < '{end_s}'
+WHERE {in_window}
 GROUP BY title, topic, model
 """
 
@@ -119,7 +129,7 @@ SELECT
     SUM(CAST(  100 <  prompt_tokens AND prompt_tokens <  1000 AS INT)) AS class_5,
     SUM(CAST(                           prompt_tokens <=  100 AS INT)) AS class_6
 FROM {config.raw_table}
-WHERE time >= '{start_s}' AND time < '{end_s}'
+WHERE {in_window}
 GROUP BY user_type
 """
 
@@ -155,7 +165,7 @@ SELECT
     SUM(prompt_tokens)     AS prompt_tokens,
     SUM(price)             AS cost
 FROM {config.raw_table}
-WHERE time >= '{start_s}' AND time < '{end_s}'
+WHERE {in_window}
 GROUP BY user_hash, project_id, parent_deployment, title
 """
 
@@ -183,7 +193,7 @@ SELECT
     chat_id,
     COUNT(*) AS request_count
 FROM {config.raw_table}
-WHERE time >= '{start_s}' AND time < '{end_s}'
+WHERE {in_window}
 GROUP BY chat_id
 """
 

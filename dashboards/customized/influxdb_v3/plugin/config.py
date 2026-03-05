@@ -1,9 +1,12 @@
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from enum import Enum
-from typing import Dict, Tuple
+from typing import Dict, List
 
-from .utils import parse_iso_datetime
+from typing_extensions import assert_never
+
+from .utils import parse_iso_date
+from .window import Window
 
 
 class Mode(Enum):
@@ -38,10 +41,10 @@ class Config:
         start_arg = d.get("start_time")
         end_arg = d.get("end_time")
         start_time: datetime | None = (
-            parse_iso_datetime("start_time", start_arg) if start_arg else None
+            parse_iso_date("start_time", start_arg) if start_arg else None
         )
         end_time: datetime | None = (
-            parse_iso_datetime("end_time", end_arg) if end_arg else None
+            parse_iso_date("end_time", end_arg) if end_arg else None
         )
 
         window_hours = int(d.get("window_hours") or 6)
@@ -60,19 +63,32 @@ class Config:
             window_hours=window_hours,
         )
 
-    def get_window(self, call_time: datetime) -> Tuple[datetime, datetime]:
-        """
-        If args contains start_time/end_time => backfill window.
-        Else uses call_time to compute [end - window, end) with optional offset.
-        """
+    def get_windows(self, call_time: datetime) -> List[Window]:
+        match self.mode:
 
-        if self.start_time and self.end_time:
-            if self.end_time <= self.start_time:
-                raise ValueError(
-                    f"end_time must be > start_time (got {self.start_time} .. {self.end_time})"
-                )
-            return self.start_time, self.end_time
+            case Mode.HOURLY:
+                if self.start_time and self.end_time:
+                    if self.end_time <= self.start_time:
+                        raise ValueError(
+                            f"end_time must be > start_time (got {self.start_time} .. {self.end_time})"
+                        )
+                    window = Window(start=self.start_time, end=self.end_time)
+                else:
+                    end_time = call_time
+                    start_time = end_time - timedelta(hours=self.window_hours)
+                    window = Window(start=start_time, end=end_time)
 
-        end_time = call_time
-        start_time = end_time - timedelta(hours=self.window_hours)
-        return start_time, end_time
+            case Mode.MONTHLY:
+                this_month = _month_start(call_time)
+                prev_month = _month_start(this_month - timedelta(days=2))
+                window = Window(start=prev_month, end=this_month)
+
+            case _:
+                assert_never(self.mode)
+
+        return [window]
+
+
+def _month_start(dt: datetime) -> datetime:
+    dt = dt.astimezone(timezone.utc)
+    return dt.replace(day=1, hour=0, minute=0, second=0, microsecond=0)

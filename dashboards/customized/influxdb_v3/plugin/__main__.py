@@ -22,13 +22,16 @@ def main() -> None:
         config_file = Path(sys.argv[1])
         args = tomllib.loads(Path(config_file).read_text())
     else:
-        args = None
+        args = {}
+
+    readonly = args.pop("readonly", "false").lower() == "true"
 
     url = _get_env("INFLUX_URL")
     token = _get_env("INFLUX_API_TOKEN")
+
     database = Config.parse(args or {}).input_database
     client = HTTPInfluxDBClient(
-        url=url, token=token, database=database, readonly=True
+        url=url, token=token, database=database, readonly=readonly
     )
 
     # Only reads InfluxDB; doesn't write, so it's safe to use a local client for testing.

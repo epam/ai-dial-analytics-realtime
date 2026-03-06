@@ -20,13 +20,16 @@ def run_monthly(
 
     n = len(windows)
     for idx, window in enumerate(windows, start=1):
-        client.info(f"[{idx}/{n}] monthly rollup window: {window.display()}")
-        run_monthly_window(client, config, window)
+        run_monthly_window(
+            client.add_prefix(f"[win|{idx:>2}/{n}]"), config, window
+        )
 
 
 def run_monthly_window(
     client: InfluxDBClientWrapper, config: Config, window: Window
 ) -> None:
+    client.info(f"monthly rollup window: {window.display()}")
+
     start_s = window.start_s
     in_window = window.in_window_sql()
 

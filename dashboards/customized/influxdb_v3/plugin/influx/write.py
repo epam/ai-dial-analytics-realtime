@@ -76,7 +76,7 @@ def write_points(
                 f"There are unhandled fields in the row: {r_json()}"
             )
 
-        client.add_prefix(f"[{row_idx}/{rows_n}] ").write_to_db(db, b)
+        client.add_prefix(f"[point|{row_idx:>2}/{rows_n}]").write_to_db(db, b)
         written += 1
 
     client.info(f"wrote {written} points to {db}.{table}")

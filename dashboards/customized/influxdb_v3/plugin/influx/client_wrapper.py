@@ -62,17 +62,16 @@ class InfluxDBClientWrapper(InfluxDBClient):
         if not lines:
             return
 
-        table_name = getattr(lines[0], "measurement", "na")
-
         n = len(lines)
         if isinstance(self._client, HTTPInfluxDBClient):
+            # TODO: missing info logs about the lines being written
             self._client.write_to_db(db_name, lines)
         else:
-            for idx, row in enumerate(lines, start=1):
+            for idx, line in enumerate(lines, start=1):
                 prefix = f"[row|{idx:>2}/{n}]"
-                self.add_prefix(prefix).write_to_db(db_name, row)
+                self.add_prefix(prefix).write_to_db(db_name, line)
 
-        self.info(f"wrote {n} rows to {db_name}.{table_name}")
+        self.info(f"wrote {n} rows to {db_name}")
 
     def write_to_db_batched(
         self,

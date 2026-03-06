@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
 from typing import Any, Dict
 
@@ -37,11 +38,11 @@ def run_monthly_window(
     api_sql = f"""
 SELECT
     '{start_s}' AS time,
-    SUM(price)         AS total_cost_per_api,
-    AVG(price)         AS avg_cost_per_api,
-    SUM(request_count) AS total_rc_per_api,
-    AVG(request_count) AS avg_rc_per_api,
-    COUNT(*)           AS active_apis
+    COALESCE(SUM(price),0)         AS total_cost_per_api,
+    COALESCE(AVG(price),0)         AS avg_cost_per_api,
+    COALESCE(SUM(request_count),0) AS total_rc_per_api,
+    COALESCE(AVG(request_count),0) AS avg_rc_per_api,
+    COUNT(*)                       AS active_apis
 FROM ({_get_stats_sub_table("project_id", in_window)})
 """
 
@@ -49,8 +50,9 @@ FROM ({_get_stats_sub_table("project_id", in_window)})
     model_sql = f"""
 SELECT
     '{start_s}' AS time,
-    SUM(price) AS total_cost_per_model,
-    AVG(price) AS avg_cost_per_model
+    COALESCE(SUM(price),0) AS total_cost_per_model,
+    COALESCE(AVG(price),0) AS avg_cost_per_model,
+    COUNT(*)   AS active_models
 FROM ({_get_stats_sub_table("model", in_window)})
 """
 
@@ -58,23 +60,39 @@ FROM ({_get_stats_sub_table("model", in_window)})
     user_sql = f"""
 SELECT
     '{start_s}' AS time,
-    SUM(cost) AS total_user_cost,
-    AVG(cost) AS avg_cost_per_user,
+    COALESCE(SUM(cost),0) AS total_user_cost,
+    COALESCE(AVG(cost),0) AS avg_cost_per_user,
     COUNT(*)  AS unique_users
 FROM ({_get_kpi_sub_table(in_window)})
 """
 
-    api_rows = client.query(api_sql)
-    model_rows = client.query(model_sql)
-    user_rows = client.query(user_sql)
+    jobs = [
+        lambda: client.add_prefix("[api  ]").query(api_sql),
+        lambda: client.add_prefix("[model]").query(model_sql),
+        lambda: client.add_prefix("[user ]").query(user_sql),
+    ]
+
+    results = []
+    with ThreadPoolExecutor(max_workers=3) as ex:
+        futures = [ex.submit(job) for job in jobs]
+        for fut in as_completed(futures):
+            results.append(fut.result())
 
     merged: Dict[str, Any] = {"time": start_s}
-    if api_rows:
-        merged.update(api_rows[0])
-    if model_rows:
-        merged.update(model_rows[0])
-    if user_rows:
-        merged.update(user_rows[0])
+    for result in results:
+        if result:
+            merged.update(result[0])
+
+    if (
+        merged.get("unique_users", 0)
+        + merged.get("active_apis", 0)
+        + merged.get("active_models", 0)
+        == 0
+    ):
+        client.info("No data. Skipping.")
+        return
+
+    merged.pop("active_models", None)
 
     write_points(
         client,

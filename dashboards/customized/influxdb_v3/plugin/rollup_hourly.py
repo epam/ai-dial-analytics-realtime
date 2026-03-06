@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
 from typing import Any, Dict
 
@@ -24,17 +25,9 @@ def run_hourly(
         run_hourly_window(client.add_prefix(f"[win|{idx}/{n}]"), config, window)
 
 
-def run_hourly_window(
-    client: InfluxDBClientWrapper, config: Config, window: Window
-) -> None:
-    client.info(
-        f"{config.window_hours}-hours rollup window: {window.display()}"
-    )
-
-    start_s = window.start_s
-    in_window = window.in_window_sql()
-
-    # 1) default_agg_stats
+def default_agg_stats(
+    client: InfluxDBClientWrapper, config: Config, start_s: str, in_window: str
+):
     stats_sql = f"""
 SELECT
     '{start_s}' AS time,
@@ -80,7 +73,10 @@ GROUP BY deployment, model, project_id, parent_deployment, language
         ),
     )
 
-    # 2) default_agg_topic_2
+
+def default_agg_topic_2(
+    client: InfluxDBClientWrapper, config: Config, start_s: str, in_window: str
+):
     topic_sql = f"""
 SELECT
     '{start_s}' AS time,
@@ -114,7 +110,10 @@ GROUP BY title, topic, model
         ),
     )
 
-    # 3) default_agg_topic - token class histogram
+
+def default_agg_topic(
+    client: InfluxDBClientWrapper, config: Config, start_s: str, in_window: str
+):
     token_sql = f"""
 SELECT
     '{start_s}' AS time,
@@ -152,7 +151,10 @@ GROUP BY user_type
         ),
     )
 
-    # 4) default_agg_kpi
+
+def default_agg_kpi(
+    client: InfluxDBClientWrapper, config: Config, start_s: str, in_window: str
+):
     kpi_sql = f"""
 SELECT
     '{start_s}' AS time,
@@ -185,7 +187,10 @@ GROUP BY user_hash, project_id, parent_deployment, title
         ),
     )
 
-    # 5) default_agg_chatid
+
+def default_agg_chatid(
+    client: InfluxDBClientWrapper, config: Config, start_s: str, in_window: str
+):
     chat_sql = f"""
 SELECT
     '{start_s}' AS time,
@@ -206,6 +211,37 @@ GROUP BY chat_id
         tag_cols=("chat_id",),
         field_cols=("request_count",),
     )
+
+
+def run_hourly_window(
+    client: InfluxDBClientWrapper, config: Config, window: Window
+) -> None:
+    client.info(
+        f"{config.window_hours}-hours rollup window: {window.display()}"
+    )
+
+    start_s = window.start_s
+    in_window = window.in_window_sql()
+
+    job_defs = [
+        ("default_agg_stats", default_agg_stats),
+        ("default_agg_topic_2", default_agg_topic_2),
+        ("default_agg_topic", default_agg_topic),
+        ("default_agg_kpi", default_agg_kpi),
+        ("default_agg_chatid", default_agg_chatid),
+    ]
+
+    jobs = [
+        lambda client=client, name=name, func=func: func(
+            client.add_prefix(f"[{name:<19}]"), config, start_s, in_window
+        )
+        for name, func in job_defs
+    ]
+
+    with ThreadPoolExecutor(max_workers=5) as ex:
+        futures = [ex.submit(job) for job in jobs]
+        for fut in as_completed(futures):
+            fut.result()
 
 
 def _normalize_project_id(rows: list[Dict[str, Any]]) -> list[Dict[str, Any]]:

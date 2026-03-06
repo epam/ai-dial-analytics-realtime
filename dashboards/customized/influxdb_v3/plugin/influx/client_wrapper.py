@@ -63,8 +63,8 @@ class InfluxDBClientWrapper(InfluxDBClient):
 
 
 def _prettify(text: str) -> str:
-    return _line_prefix("    | ", text.strip())
+    return _add_prefix_to_lines("    | ", text.strip())
 
 
-def _line_prefix(prefix: str, text: str) -> str:
+def _add_prefix_to_lines(prefix: str, text: str) -> str:
     return "\n".join(prefix + line for line in text.splitlines())

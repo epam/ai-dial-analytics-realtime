@@ -41,10 +41,10 @@ class InfluxDBClientWrapper(InfluxDBClient):
         if self._verbose:
             prefix = "\n".join(json.dumps(row) for row in rows[:3])
             self.info(
-                f"SQL query returned {len(rows)} rows. First 3 are:\n{_prettify(prefix)}"
+                f"SQL query returned {len(rows):>3} rows. First 3 are:\n{_prettify(prefix)}"
             )
         else:
-            self.info(f"SQL query returned {len(rows)} rows.")
+            self.info(f"SQL query returned {len(rows):>3} rows.")
 
         return rows
 
@@ -71,7 +71,7 @@ class InfluxDBClientWrapper(InfluxDBClient):
                 prefix = f"[row|{idx:>2}/{n}]"
                 self.add_prefix(prefix).write_to_db(db_name, line)
 
-        self.info(f"wrote {n} rows to {db_name}")
+        self.info(f"wrote {n:>3} rows to {db_name}")
 
     def write_to_db_batched(
         self,

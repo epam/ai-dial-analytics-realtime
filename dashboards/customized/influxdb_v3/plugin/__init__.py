@@ -51,6 +51,7 @@ from typing_extensions import assert_never
 
 from .config import Config, Mode
 from .influx.client import InfluxDBClient
+from .influx.decorator import LoggingDecorator
 from .rollup_hourly import run_hourly
 from .rollup_monthly import run_monthly
 
@@ -63,26 +64,30 @@ def process_scheduled_call(
     """
     InfluxDB 3 scheduled plugin entrypoint.
     """
-    task_id = str(uuid.uuid4())
-
     config = Config.parse(args)
     call_time = call_time.replace(tzinfo=timezone.utc)
 
+    influxdb3_local = LoggingDecorator(
+        task_id=str(uuid.uuid4()),
+        database=config.input_database,
+        client=influxdb3_local,
+    )
+
     influxdb3_local.info(
-        f"[{task_id}] scheduled call mode={config.mode.value} call_time={call_time.isoformat()} args={args}"
+        f"scheduled call mode={config.mode.value} call_time={call_time.isoformat()} args={args}"
     )
 
     try:
         match config.mode:
             case Mode.MONTHLY:
-                run_monthly(influxdb3_local, call_time, config, task_id=task_id)
+                run_monthly(influxdb3_local, call_time, config)
             case Mode.HOURLY:
-                run_hourly(influxdb3_local, call_time, config, task_id=task_id)
+                run_hourly(influxdb3_local, call_time, config)
             case _:
                 assert_never(config.mode)
 
-        influxdb3_local.info(f"[{task_id}] completed OK")
+        influxdb3_local.info("completed OK")
 
     except Exception as e:
-        influxdb3_local.error(f"[{task_id}] failed: {e}")
+        influxdb3_local.error(f"failed: {e}")
         raise

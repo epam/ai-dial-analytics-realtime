@@ -8,7 +8,7 @@ from pathlib import Path
 
 from . import process_scheduled_call
 from .config import Config
-from .influx.mocks import ReadOnlyInfluxDBClient
+from .influx.mocks import HTTPInfluxDBClient
 
 
 def _get_env(name: str) -> str:
@@ -27,7 +27,9 @@ def main() -> None:
     url = _get_env("INFLUX_URL")
     token = _get_env("INFLUX_API_TOKEN")
     database = Config.parse(args or {}).input_database
-    client = ReadOnlyInfluxDBClient(url=url, token=token, database=database)
+    client = HTTPInfluxDBClient(
+        url=url, token=token, database=database, readonly=True
+    )
 
     # Only reads InfluxDB; doesn't write, so it's safe to use a local client for testing.
     process_scheduled_call(

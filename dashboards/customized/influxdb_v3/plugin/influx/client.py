@@ -3,8 +3,9 @@ from datetime import datetime, timezone
 from typing import Any, Dict, List, Tuple
 
 from ..dates import parse_iso_date
+from .decorator import LoggingDecorator
 from .line_builder import LineBuilder as LineBuilderImpl
-from .mocks import ReadOnlyInfluxDBClient
+from .mocks import HTTPInfluxDBClient
 from .types import InfluxDBClient, LineBuilderProtocol
 
 
@@ -17,7 +18,6 @@ def write_points(
     time_col: str,
     tag_cols: Tuple[str, ...],
     field_cols: Tuple[str, ...],
-    task_id: str,
 ) -> int:
     """
     Write each row as a point into db_name.table_name.
@@ -78,7 +78,7 @@ def write_points(
         client.write_to_db(db, b)
         written += 1
 
-    client.info(f"[{task_id}] wrote {written} points to {db}.{table}")
+    client.info(f"wrote {written} points to {db}.{table}")
     return written
 
 
@@ -89,7 +89,11 @@ def _ns(dt: datetime) -> int:
 def _create_line_builder(
     client: InfluxDBClient, table_name: str
 ) -> LineBuilderProtocol:
-    if isinstance(client, ReadOnlyInfluxDBClient):
+    if (
+        isinstance(client, HTTPInfluxDBClient)
+        or isinstance(client, LoggingDecorator)
+        and isinstance(client._client, HTTPInfluxDBClient)
+    ):
         return LineBuilderImpl(table_name)
     else:
         # LineBuilder is available in the runtime:

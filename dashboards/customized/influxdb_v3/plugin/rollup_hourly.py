@@ -9,7 +9,7 @@ from .window import Window
 
 
 def run_hourly(
-    client: InfluxDBClient, call_time: datetime, config: Config, *, task_id: str
+    client: InfluxDBClient, call_time: datetime, config: Config
 ) -> None:
     """
     Reads: raw_table
@@ -21,9 +21,9 @@ def run_hourly(
     n = len(windows)
     for idx, window in enumerate(windows, start=1):
         client.info(
-            f"[{task_id}] [{idx}/{n}] {config.window_hours}-hours rollup window: {window.display()}"
+            f"[{idx}/{n}] {config.window_hours}-hours rollup window: {window.display()}"
         )
-        run_hourly_window(client, config, window, task_id)
+        run_hourly_window(client, config, window)
 
 
 def _normalize_project_id(rows: list[Dict[str, Any]]) -> list[Dict[str, Any]]:
@@ -45,7 +45,7 @@ def _normalize_topic(rows: list[Dict[str, Any]]) -> list[Dict[str, Any]]:
 
 
 def run_hourly_window(
-    client: InfluxDBClient, config: Config, window: Window, task_id: str
+    client: InfluxDBClient, config: Config, window: Window
 ) -> None:
     start_s = window.start_s
     in_window = window.in_window_sql()
@@ -94,7 +94,6 @@ GROUP BY deployment, model, project_id, parent_deployment, language
             "request_count",
             "unique_user_count",
         ),
-        task_id=task_id,
     )
 
     # 2) default_agg_topic_2
@@ -129,7 +128,6 @@ GROUP BY title, topic, model
             "prompt_tokens",
             "completion_tokens",
         ),
-        task_id=task_id,
     )
 
     # 3) default_agg_topic - token class histogram
@@ -168,7 +166,6 @@ GROUP BY user_type
             "class_5",
             "class_6",
         ),
-        task_id=task_id,
     )
 
     # 4) default_agg_kpi
@@ -202,7 +199,6 @@ GROUP BY user_hash, project_id, parent_deployment, title
             "completion_tokens",
             "prompt_tokens",
         ),
-        task_id=task_id,
     )
 
     # 5) default_agg_chatid
@@ -225,5 +221,4 @@ GROUP BY chat_id
         time_col="time",
         tag_cols=("chat_id",),
         field_cols=("request_count",),
-        task_id=task_id,
     )

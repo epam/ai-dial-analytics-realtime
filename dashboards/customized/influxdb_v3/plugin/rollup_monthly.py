@@ -9,7 +9,7 @@ from .window import Window
 
 
 def run_monthly(
-    client: InfluxDBClient, call_time: datetime, config: Config, *, task_id: str
+    client: InfluxDBClient, call_time: datetime, config: Config
 ) -> None:
     """
     Reads: default_agg_stats, default_agg_kpi
@@ -19,14 +19,12 @@ def run_monthly(
 
     n = len(windows)
     for idx, window in enumerate(windows, start=1):
-        client.info(
-            f"[{task_id}] [{idx}/{n}] monthly rollup window: {window.display()}"
-        )
-        run_monthly_window(client, config, window, task_id)
+        client.info(f"[{idx}/{n}] monthly rollup window: {window.display()}")
+        run_monthly_window(client, config, window)
 
 
 def run_monthly_window(
-    client: InfluxDBClient, config: Config, window: Window, task_id: str
+    client: InfluxDBClient, config: Config, window: Window
 ) -> None:
     start_s = window.start_s
     in_window = window.in_window_sql()
@@ -93,7 +91,6 @@ FROM ({_get_kpi_sub_table(in_window)})
             "total_cost_per_model",
             "avg_cost_per_model",
         ),
-        task_id=task_id,
     )
 
 

@@ -5,20 +5,19 @@ from urllib.request import Request, urlopen
 from .types import InfluxDBClient, LineBuilderProtocol
 
 
-class ReadOnlyInfluxDBClient(InfluxDBClient):
+class HTTPInfluxDBClient(InfluxDBClient):
     _influxdb_url: str
     _influxdb_token: str
-
     _database: str
+    _readonly: bool
 
-    def __init__(self, *, url: str, token: str, database: str):
+    def __init__(self, *, url: str, token: str, database: str, readonly: bool):
         self._database = database
         self._influxdb_url = url
         self._influxdb_token = token
+        self._readonly = readonly
 
     def query(self, query: str) -> list[Dict[str, Any]]:
-        print(f"[INFLUX QUERY]\n{_prettify(query)}")
-
         endpoint = f"{self._influxdb_url}/api/v3/query_sql"
 
         payload = json.dumps(
@@ -38,24 +37,31 @@ class ReadOnlyInfluxDBClient(InfluxDBClient):
         with urlopen(req) as resp:
             rows = json.load(resp)
 
-        prefix = "\n".join(json.dumps(row) for row in rows[:3])
-        print(f"[INFLUX QUERY RESULT](rows={len(rows)}):\n{_prettify(prefix)}")
-
         return rows
 
     def write_to_db(self, db_name: str, line: LineBuilderProtocol) -> None:
-        print(f"[INFLUX WRITE](db={db_name}) {line.build()}")
+        if self._readonly:
+            return
+
+        endpoint = f"{self._influxdb_url}/api/v3/write_lp?db={db_name}&precision=nanosecond&accept_partial=false"
+
+        req = Request(
+            endpoint,
+            data=line.build().encode(),
+            method="POST",
+            headers={
+                "Authorization": f"Token {self._influxdb_token}",
+                "Content-Type": "text/plain",
+            },
+        )
+
+        with urlopen(req):
+            # InfluxDB returns 204 on success.
+            # We are not interested in the response.
+            pass
 
     def info(self, msg: str) -> None:
-        print(f"[PLUGIN INFO] {msg}")
+        print(msg)
 
     def error(self, msg: str) -> None:
-        print(f"[PLUGIN ERROR] {msg}")
-
-
-def _prettify(text: str) -> str:
-    return _line_prefix("    | ", text.strip())
-
-
-def _line_prefix(prefix: str, text: str) -> str:
-    return "\n".join(prefix + line for line in text.splitlines())
+        print(msg)

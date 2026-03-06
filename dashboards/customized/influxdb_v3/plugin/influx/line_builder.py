@@ -1,6 +1,9 @@
 """
 Copied as is from the actual LineBuilder:
 https://github.com/influxdata/influxdb/blob/37ff7e6cd4598c312df3688026764a322969c1de/influxdb3_py_api/src/system_py.rs#L488-L613
+
+The line protocol itself:
+https://docs.influxdata.com/influxdb3/core/reference/line-protocol/
 """
 
 from collections import OrderedDict

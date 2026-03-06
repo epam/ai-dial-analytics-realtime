@@ -40,6 +40,12 @@
             "description": "Optional backfill end (ISO 8601)). If set with start_time, overrides call_time-derived window.",
             "required": false
         }
+        {
+            "name": "verbose",
+            "example": "true",
+            "description": "Enable verbose logging including SQL queries and data points written to InfluxDB. False by default.",
+            "required": false
+        }
     ]
 }
 """
@@ -68,7 +74,9 @@ def process_scheduled_call(
     call_time = call_time.replace(tzinfo=timezone.utc)
 
     client = InfluxDBClientWrapper(
-        client=influxdb3_local, database=config.input_database
+        client=influxdb3_local,
+        database=config.input_database,
+        verbose=config.verbose,
     ).add_prefix(f"[{str(uuid.uuid4())}]")
 
     client.info(

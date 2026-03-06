@@ -7,36 +7,52 @@ from .types import InfluxDBClient, LineBuilderProtocol
 class InfluxDBClientWrapper(InfluxDBClient):
     _log_prefix: str
     _database: str
+    _verbose: bool
     _client: InfluxDBClient
 
     def __init__(
-        self, *, client: InfluxDBClient, database: str, log_prefix: str = ""
+        self,
+        *,
+        client: InfluxDBClient,
+        database: str,
+        verbose: bool,
+        log_prefix: str = "",
     ):
         self._database = database
         self._log_prefix = log_prefix
         self._client = client
+        self._verbose = verbose
 
     def add_prefix(self, log_prefix: str) -> "InfluxDBClientWrapper":
         return InfluxDBClientWrapper(
             log_prefix=self._log_prefix + log_prefix,
+            verbose=self._verbose,
             database=self._database,
             client=self._client,
         )
 
     def query(self, query: str) -> list[Dict[str, Any]]:
-        print(f"{self._log_prefix}[QUERY REQUEST]\n{_prettify(query)}")
+        if self._verbose:
+            self.info(f"SQL query:\n{_prettify(query)}")
 
         rows = self._client.query(query)
 
-        prefix = "\n".join(json.dumps(row) for row in rows[:3])
-        print(
-            f"{self._log_prefix}[QUERY RESULT](rows={len(rows)}):\n{_prettify(prefix)}"
-        )
+        if self._verbose:
+            prefix = "\n".join(json.dumps(row) for row in rows[:3])
+            self.info(
+                f"SQL query returned {len(rows)} rows. First 3 are:\n{_prettify(prefix)}"
+            )
+        else:
+            self.info(f"SQL query returned {len(rows)} rows.")
 
         return rows
 
     def write_to_db(self, db_name: str, line: LineBuilderProtocol) -> None:
-        print(f"{self._log_prefix}[WRITE](db={db_name}) {line.build()}")
+        if self._verbose:
+            self.info(f"Writing to database {db_name}: {line.build()}")
+        else:
+            self.info(f"Writing to database {db_name}...")
+
         self._client.write_to_db(db_name, line)
 
     def info(self, msg: str) -> None:

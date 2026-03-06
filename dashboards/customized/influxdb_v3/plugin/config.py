@@ -26,6 +26,8 @@ class Config:
     start_time: datetime | None
     end_time: datetime | None
 
+    verbose: bool
+
     @classmethod
     def parse(cls, d: Dict[str, str] | None) -> "Config":
         d = d or {}
@@ -54,6 +56,8 @@ class Config:
                 f"window_hours must divide 24 evenly (got {window_hours})"
             )
 
+        verbose = (d.pop("verbose", None) or "false").lower() == "true"
+
         if d:
             raise ValueError(f"Unexpected config keys: {', '.join(d.keys())}")
 
@@ -64,6 +68,7 @@ class Config:
             start_time=start_time,
             end_time=end_time,
             window_hours=window_hours,
+            verbose=verbose,
         )
 
     @property

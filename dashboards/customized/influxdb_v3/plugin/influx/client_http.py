@@ -61,7 +61,7 @@ class HTTPInfluxDBClient(InfluxDBClient):
             pass
 
     def info(self, msg: str) -> None:
-        print(msg)
+        print(msg, flush=True)
 
     def error(self, msg: str) -> None:
-        print(msg)
+        print(msg, flush=True)

@@ -26,24 +26,6 @@ def run_hourly(
         run_hourly_window(client, config, window)
 
 
-def _normalize_project_id(rows: list[Dict[str, Any]]) -> list[Dict[str, Any]]:
-    # Analytics may produce data points with missing (NULL) project_id
-    # We are filling the gaps with a default to ease further processing of the data.
-    for r in rows:
-        if r.get("project_id") is None:
-            r["project_id"] = "undefined"
-    return rows
-
-
-def _normalize_topic(rows: list[Dict[str, Any]]) -> list[Dict[str, Any]]:
-    # Analytics may produce data points with missing (NULL) topic
-    # We are filling the gaps with a default to ease further processing of the data.
-    for r in rows:
-        if r.get("topic") is None:
-            r["topic"] = "undefined"
-    return rows
-
-
 def run_hourly_window(
     client: InfluxDBClient, config: Config, window: Window
 ) -> None:
@@ -222,3 +204,21 @@ GROUP BY chat_id
         tag_cols=("chat_id",),
         field_cols=("request_count",),
     )
+
+
+def _normalize_project_id(rows: list[Dict[str, Any]]) -> list[Dict[str, Any]]:
+    # Analytics may produce data points with missing (NULL) project_id field.
+    # We are filling the gaps with a default to ease further processing of the data.
+    for r in rows:
+        if r.get("project_id") is None:
+            r["project_id"] = "undefined"
+    return rows
+
+
+def _normalize_topic(rows: list[Dict[str, Any]]) -> list[Dict[str, Any]]:
+    # Analytics may produce data points with missing (NULL) topic field.
+    # We are filling the gaps with a default to ease further processing of the data.
+    for r in rows:
+        if r.get("topic") is None:
+            r["topic"] = "undefined"
+    return rows

@@ -50,8 +50,8 @@ from datetime import datetime, timezone
 from typing_extensions import assert_never
 
 from .config import Config, Mode
-from .influx.client import InfluxDBClient
-from .influx.decorator import LoggingDecorator
+from .influx.client_wrapper import InfluxDBClientWrapper
+from .influx.types import InfluxDBClient
 from .rollup_hourly import run_hourly
 from .rollup_monthly import run_monthly
 
@@ -67,27 +67,25 @@ def process_scheduled_call(
     config = Config.parse(args)
     call_time = call_time.replace(tzinfo=timezone.utc)
 
-    influxdb3_local = LoggingDecorator(
-        task_id=str(uuid.uuid4()),
-        database=config.input_database,
-        client=influxdb3_local,
-    )
+    client = InfluxDBClientWrapper(
+        client=influxdb3_local, database=config.input_database
+    ).add_prefix(f"[{str(uuid.uuid4())}]")
 
-    influxdb3_local.info(
+    client.info(
         f"scheduled call mode={config.mode.value} call_time={call_time.isoformat()} args={args}"
     )
 
     try:
         match config.mode:
             case Mode.MONTHLY:
-                run_monthly(influxdb3_local, call_time, config)
+                run_monthly(client, call_time, config)
             case Mode.HOURLY:
-                run_hourly(influxdb3_local, call_time, config)
+                run_hourly(client, call_time, config)
             case _:
                 assert_never(config.mode)
 
-        influxdb3_local.info("completed OK")
+        client.info("completed OK")
 
     except Exception as e:
-        influxdb3_local.error(f"failed: {e}")
+        client.error(f"failed: {e}")
         raise

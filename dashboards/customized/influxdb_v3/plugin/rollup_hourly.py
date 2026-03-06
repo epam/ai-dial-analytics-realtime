@@ -4,12 +4,13 @@ from datetime import datetime
 from typing import Any, Dict
 
 from .config import Config
-from .influx.client import InfluxDBClient, write_points
+from .influx.client_wrapper import InfluxDBClientWrapper
+from .influx.write import write_points
 from .window import Window
 
 
 def run_hourly(
-    client: InfluxDBClient, call_time: datetime, config: Config
+    client: InfluxDBClientWrapper, call_time: datetime, config: Config
 ) -> None:
     """
     Reads: raw_table
@@ -27,7 +28,7 @@ def run_hourly(
 
 
 def run_hourly_window(
-    client: InfluxDBClient, config: Config, window: Window
+    client: InfluxDBClientWrapper, config: Config, window: Window
 ) -> None:
     start_s = window.start_s
     in_window = window.in_window_sql()

@@ -8,7 +8,7 @@ from pathlib import Path
 
 from . import process_scheduled_call
 from .config import Config
-from .influx.mocks import HTTPInfluxDBClient
+from .influx.client_http import HTTPInfluxDBClient
 
 
 def _get_env(name: str) -> str:

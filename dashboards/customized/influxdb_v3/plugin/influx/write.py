@@ -3,14 +3,14 @@ from datetime import datetime, timezone
 from typing import Any, Dict, List, Tuple
 
 from ..dates import parse_iso_date
-from .decorator import LoggingDecorator
+from .client_http import HTTPInfluxDBClient
+from .client_wrapper import InfluxDBClientWrapper
 from .line_builder import LineBuilder as LineBuilderImpl
-from .mocks import HTTPInfluxDBClient
-from .types import InfluxDBClient, LineBuilderProtocol
+from .types import LineBuilderProtocol
 
 
 def write_points(
-    client: InfluxDBClient,
+    client: InfluxDBClientWrapper,
     *,
     db: str,
     table: str,
@@ -25,7 +25,8 @@ def write_points(
     """
     written = 0
 
-    for r_orig in rows:
+    rows_n = len(rows)
+    for row_idx, r_orig in enumerate(rows, start=1):
         r = r_orig.copy()
 
         def r_json():
@@ -75,7 +76,7 @@ def write_points(
                 f"There are unhandled fields in the row: {r_json()}"
             )
 
-        client.write_to_db(db, b)
+        client.add_prefix(f"[{row_idx}/{rows_n}] ").write_to_db(db, b)
         written += 1
 
     client.info(f"wrote {written} points to {db}.{table}")
@@ -87,13 +88,9 @@ def _ns(dt: datetime) -> int:
 
 
 def _create_line_builder(
-    client: InfluxDBClient, table_name: str
+    client: InfluxDBClientWrapper, table_name: str
 ) -> LineBuilderProtocol:
-    if (
-        isinstance(client, HTTPInfluxDBClient)
-        or isinstance(client, LoggingDecorator)
-        and isinstance(client._client, HTTPInfluxDBClient)
-    ):
+    if isinstance(client._client, HTTPInfluxDBClient):
         return LineBuilderImpl(table_name)
     else:
         # LineBuilder is available in the runtime:

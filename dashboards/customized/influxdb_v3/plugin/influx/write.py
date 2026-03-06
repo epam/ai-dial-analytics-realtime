@@ -18,27 +18,23 @@ def write_points(
     time_col: str,
     tag_cols: Tuple[str, ...],
     field_cols: Tuple[str, ...],
-) -> int:
+) -> None:
     """
     Write each row as a point into db_name.table_name.
     time_col can be ISO string, datetime, or ns int.
     """
-
-    n = len(rows)
-    for idx, row in enumerate(rows, start=1):
-        builder = _create_data_point(
+    lines = [
+        _create_data_point(
             _create_line_builder(client, table),
             row,
             time_col=time_col,
             tag_cols=tag_cols,
             field_cols=field_cols,
         )
+        for row in rows
+    ]
 
-        prefix = f"[point|{idx:>2}/{n}]"
-        client.add_prefix(prefix).write_to_db(db, builder)
-
-    client.info(f"wrote {n} points to {db}.{table}")
-    return n
+    client.write_to_db_batched(db, lines, batch_size=50)
 
 
 def _create_data_point(

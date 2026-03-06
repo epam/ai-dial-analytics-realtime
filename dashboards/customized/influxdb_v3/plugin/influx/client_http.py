@@ -1,5 +1,5 @@
 import json
-from typing import Any, Dict
+from typing import Any, Dict, List
 from urllib.request import Request, urlopen
 
 from .types import InfluxDBClient, LineBuilderProtocol
@@ -39,15 +39,22 @@ class HTTPInfluxDBClient(InfluxDBClient):
 
         return rows
 
-    def write_to_db(self, db_name: str, line: LineBuilderProtocol) -> None:
+    def write_to_db(
+        self,
+        db_name: str,
+        line: LineBuilderProtocol | List[LineBuilderProtocol],
+    ) -> None:
         if self._readonly:
             return
 
         endpoint = f"{self._influxdb_url}/api/v3/write_lp?db={db_name}&precision=nanosecond&accept_partial=false"
 
+        lines = line if isinstance(line, list) else [line]
+        data = "\n".join(line.build() for line in lines).encode()
+
         req = Request(
             endpoint,
-            data=line.build().encode(),
+            data=data,
             method="POST",
             headers={
                 "Authorization": f"Token {self._influxdb_token}",

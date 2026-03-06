@@ -1,6 +1,7 @@
 import json
-from typing import Any, Dict
+from typing import Any, Dict, List
 
+from .client_http import HTTPInfluxDBClient
 from .types import InfluxDBClient, LineBuilderProtocol
 
 
@@ -54,6 +55,38 @@ class InfluxDBClientWrapper(InfluxDBClient):
             self.info(f"Writing to database {db_name}...")
 
         self._client.write_to_db(db_name, line)
+
+    def write_to_db_many(
+        self, db_name: str, lines: List[LineBuilderProtocol]
+    ) -> None:
+        if not lines:
+            return
+
+        table_name = getattr(lines[0], "measurement", "na")
+
+        n = len(lines)
+        if isinstance(self._client, HTTPInfluxDBClient):
+            self._client.write_to_db(db_name, lines)
+        else:
+            for idx, row in enumerate(lines, start=1):
+                prefix = f"[row|{idx:>2}/{n}]"
+                self.add_prefix(prefix).write_to_db(db_name, row)
+
+        self.info(f"wrote {n} rows to {db_name}.{table_name}")
+
+    def write_to_db_batched(
+        self,
+        db_name: str,
+        lines: List[LineBuilderProtocol],
+        *,
+        batch_size: int = 50,
+    ) -> None:
+        n = (len(lines) // batch_size) + bool(len(lines) % batch_size)
+        for idx in range(1, n + 1):
+            batch = lines[:batch_size]
+            lines = lines[batch_size:]
+            prefix = f"[batch|{idx:>2}/{n}]"
+            self.add_prefix(prefix).write_to_db_many(db_name, batch)
 
     def info(self, msg: str) -> None:
         self._client.info(f"{self._log_prefix}[INFO] {msg}")

@@ -30,7 +30,7 @@ class Config:
 
     @classmethod
     def parse(cls, d: Dict[str, str] | None) -> "Config":
-        d = d or {}
+        d = (d or {}).copy()
 
         mode_s = d.pop("mode", None) or "hourly"
         try:
@@ -43,6 +43,7 @@ class Config:
 
         start_arg = d.pop("start_time", None)
         end_arg = d.pop("end_time", None)
+
         start_time: datetime | None = (
             parse_iso_date("start_time", start_arg) if start_arg else None
         )

@@ -45,6 +45,7 @@ class HTTPInfluxDBClient(InfluxDBClient):
         line: LineBuilderProtocol | List[LineBuilderProtocol],
     ) -> None:
         if self._readonly:
+            print("skipping writing...")
             return
 
         endpoint = f"{self._influxdb_url}/api/v3/write_lp?db={db_name}&precision=nanosecond&accept_partial=false"

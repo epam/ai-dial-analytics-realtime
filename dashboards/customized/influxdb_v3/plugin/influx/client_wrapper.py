@@ -79,7 +79,7 @@ class InfluxDBClientWrapper(InfluxDBClient):
         db_name: str,
         lines: List[LineBuilderProtocol],
         *,
-        batch_size: int = 50,
+        batch_size: int,
     ) -> None:
         n = (len(lines) // batch_size) + bool(len(lines) % batch_size)
         for idx in range(1, n + 1):

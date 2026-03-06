@@ -21,7 +21,7 @@ def run_monthly(
     n = len(windows)
     for idx, window in enumerate(windows, start=1):
         run_monthly_window(
-            client.add_prefix(f"[win|{idx:>2}/{n}]"), config, window
+            client.add_prefix(f"[win|{idx}/{n}]"), config, window
         )
 
 

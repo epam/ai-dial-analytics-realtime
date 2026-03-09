@@ -29,6 +29,7 @@ Aggregated data is written into the following **tables** (tables are created aut
 | `default_agg_chatid`  | Request counts grouped by `chat_id`                            |
 | `default_agg_month`   | Monthly roll-ups used by KPI dashboards                        |
 
+> [!NOTE]
 > Tables are **schema-on-write** in InfluxDB 3 — no explicit creation step is required.
 
 ---
@@ -163,44 +164,23 @@ end_time=2026-01-01T06:00:00Z
 
 ```sh
 influxdb3 update trigger analytics_6h_rollups --disable
+influxdb3 update trigger analytics_monthly_rollups --disable
 ```
 
-### Step 2: Backfill in deterministic 6-hour windows
+### Step 2: Backfill in deterministic windows
 
-* Run the plugin repeatedly for each window
-* Windows must not overlap
-* Use the same plugin and logic as production
+Run the plugin first in `hourly` mode, then in the `monthly` mode since the results of the former are used as inputs by the latter.
 
-Typical approaches:
+Set `start_time` and `end_time` parameters spanning the desired windows that are needed to be backfilled.
 
-* one-off Kubernetes Job
-* admin CLI loop
-* temporary high-frequency trigger
+Re-running the same window is safe and idempotent, because each aggregate point is written with a deterministic timestamp and the tags uniquely identify the aggregation dimensions.
 
 ### Step 3: Re-enable scheduled triggers
 
 ```bash
 influxdb3 update trigger analytics_6h_rollups --enable
+influxdb3 update trigger analytics_monthly_rollups --enable
 ```
-
-Because:
-
-* each aggregate point is written with a deterministic timestamp
-* tags uniquely identify the aggregation dimensions
-
-👉 **Re-running the same window is safe and idempotent.**
-
----
-
-## Validation
-
-After triggers are enabled:
-
-* Query `analytics_agg.default_agg_stats` to confirm 6-hour data
-* Query `analytics_agg.default_agg_month` after the first month boundary
-* Verify Grafana dashboards point to `analytics_agg` tables
-
----
 
 ## Running trigger manually
 
@@ -211,7 +191,7 @@ The plugin script could be ran manually on an InfluxDB instance configured by th
 |INFLUX_URL|URL to the InfluxDB to write the analytics data|
 |INFLUX_API_TOKEN|InfluxDB API Token with the write access to the target database|
 
-Go to script directory and run it with an optional parameter for a TOML configuration file:
+Go to script directory and run it with an optional configuration file:
 
 ```sh
 cd dashboards/customized/influxdb_v3

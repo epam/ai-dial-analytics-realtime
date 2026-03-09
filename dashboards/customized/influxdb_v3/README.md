@@ -61,7 +61,7 @@ Runs at the following UTC times every day:
 00:02, 06:02, 12:02, 18:02 (UTC)
 ```
 
-The 2-minute offset (`02` instead of `00`) ensures that all raw data for the previous window is ingested before aggregation runs.
+The 2-minute offset ensures that all raw data for the previous window is ingested before aggregation runs.
 
 Trigger spec:
 
@@ -99,15 +99,15 @@ influxdb3 create trigger \
 Runs at:
 
 ```txt
-00:00:02 UTC on the 1st day of each month
+00:00:10 UTC on the 1st day of each month
 ```
 
-The 2-minute offset (`02` instead of `00`) ensures that all raw data for the previous window is ingested before aggregation runs.
+The 10-minute offset ensures that the data for the last 6-hours window of the month was been processed by the [hourly trigger](#6-hour-aggregation-trigger) and was inserted into the aggregate tables.
 
 Trigger spec:
 
 ```txt
-cron:2 0 0 1 * *
+cron:10 0 0 1 * *
 ```
 
 What it does:
@@ -123,7 +123,7 @@ Example trigger creation:
 influxdb3 create trigger \
   --database analytics_agg \
   --path analytics_rollups \
-  --trigger-spec "cron:2 0 0 1 * *" \
+  --trigger-spec "cron:10 0 0 1 * *" \
   --trigger-arguments mode=monthly,agg_database=analytics_agg \
   analytics_monthly_rollups
 ```
@@ -199,3 +199,25 @@ After triggers are enabled:
 * Query `analytics_agg.default_agg_stats` to confirm 6-hour data
 * Query `analytics_agg.default_agg_month` after the first month boundary
 * Verify Grafana dashboards point to `analytics_agg` tables
+
+---
+
+## Running trigger manually
+
+The plugin script could be ran manually on an InfluxDB instance configured by the environment variables:
+
+|Variable|Description|
+|---|---|
+|INFLUX_URL|URL to the InfluxDB to write the analytics data|
+|INFLUX_API_TOKEN|InfluxDB API Token with the write access to the target database|
+
+Go to script directory and run it with an optional parameter for a TOML configuration file:
+
+```sh
+cd dashboards/customized/influxdb_v3
+export INFLUX_URL=...
+export INFLUX_API_TOKEN=...
+python -m plugin config.toml
+```
+
+Find the example configuration at `config.example.toml`.

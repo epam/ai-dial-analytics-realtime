@@ -21,6 +21,8 @@
     - [MCP requests](#mcp-requests)
   - [Configuration](#configuration)
     - [Connection to the InfluxDB](#connection-to-the-influxdb)
+      - [InfluxDB 2](#influxdb-2)
+      - [InfluxDB 3](#influxdb-3)
     - [Aggregated Dashboards (Optional)](#aggregated-dashboards-optional)
     - [Other configuration](#other-configuration)
   - [Development](#development)
@@ -127,16 +129,33 @@ Copy `.env.example` to `.env` and customize it for your environment.
 
 ### Connection to the InfluxDB
 
+#### InfluxDB 2
+
 You need to specify the connection options to the InfluxDB instance using the environment variables:
 
 |Variable|Description|
 |---|---|
-|INFLUX_URL|Url to the InfluxDB to write the analytics data|
+|INFLUX_URL|URL to the InfluxDB to write the analytics data|
 |INFLUX_ORG|Name of the InfluxDB organization to write the analytics data|
 |INFLUX_BUCKET|Name of the bucket to write the analytics data|
 |INFLUX_API_TOKEN|InfluxDB API Token|
 
-You can follow the [InfluxDB documentation](https://docs.influxdata.com/influxdb/v2/get-started/) to setup InfluxDB locally and acquire the required configuration parameters.
+You can follow the [InfluxDB 2 documentation](https://docs.influxdata.com/influxdb/v2/get-started/) to setup InfluxDB locally and acquire the required configuration parameters.
+
+#### InfluxDB 3
+
+You need to specify the connection options to the InfluxDB instance using the environment variables:
+
+|Variable|Description|
+|---|---|
+|INFLUX_URL|URL to the InfluxDB to write the analytics data|
+|INFLUX_DATABASE|Name of the InfluxDB 3 database to write the analytics data|
+|INFLUX_API_TOKEN|InfluxDB API Token with the write access to the target database|
+
+You can follow the [InfluxDB 3 documentation](https://docs.influxdata.com/influxdb3/core/get-started/) to setup InfluxDB locally and acquire the required configuration parameters.
+
+> [!IMPORTANT]
+> The `INFLUX_DATABASE` variable was introduced in version 0.22.0. For earlier versions set `INFLUX_BUCKET` variable to the target database name and `INFLUX_ORG` variable to any non-empty value (e.g. "ignored") to enable the InfluxDB 3 support.
 
 ### Aggregated Dashboards (Optional)
 
@@ -145,6 +164,9 @@ This project includes optional **aggregated Grafana dashboards** that visualize 
 To enable these dashboards, you must **manually create the required InfluxDB buckets and tasks**. These steps are **not automated** via Helm and must be applied manually.
 
 See [influxdb/README.md](dashboards/customized/influxdb/README.md) for full instructions.
+
+> [!IMPORTANT]
+> Aggregated Dashboards are only supported for InfluxDB 2.
 
 ### Other configuration
 

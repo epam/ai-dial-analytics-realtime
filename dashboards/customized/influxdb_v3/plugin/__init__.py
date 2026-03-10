@@ -52,8 +52,7 @@
 
 import uuid
 from datetime import datetime, timezone
-
-from typing_extensions import assert_never
+from typing import assert_never
 
 from .config import Config, Mode
 from .influx.client_wrapper import InfluxDBClientWrapper

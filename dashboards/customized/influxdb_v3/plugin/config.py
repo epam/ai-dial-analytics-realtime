@@ -1,9 +1,7 @@
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from enum import Enum
-from typing import Dict, List
-
-from typing_extensions import assert_never
+from typing import Dict, List, assert_never
 
 from .dates import parse_iso_date
 from .window import Window

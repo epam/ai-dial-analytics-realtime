@@ -2,7 +2,7 @@ import json
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Tuple
 
-from ..dates import parse_iso_date
+from ..utils.dates import parse_iso_date
 from .client_http import HTTPInfluxDBClient
 from .client_wrapper import InfluxDBClientWrapper
 from .line_builder import LineBuilder as LineBuilderImpl

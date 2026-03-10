@@ -34,7 +34,6 @@ def main() -> None:
         url=url, token=token, database=database, readonly=readonly
     )
 
-    # Only reads InfluxDB; doesn't write, so it's safe to use a local client for testing.
     process_scheduled_call(
         influxdb3_local=client,
         call_time=datetime.now(timezone.utc),

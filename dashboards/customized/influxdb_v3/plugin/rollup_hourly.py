@@ -7,7 +7,7 @@ from typing import Any, Dict
 from .config import Config
 from .influx.client_wrapper import InfluxDBClientWrapper
 from .influx.write import write_points
-from .window import Window
+from .utils.window import Window
 
 
 def run_hourly(

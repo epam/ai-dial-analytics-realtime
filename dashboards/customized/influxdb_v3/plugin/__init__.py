@@ -59,12 +59,14 @@ from .influx.client_wrapper import InfluxDBClientWrapper
 from .influx.types import InfluxDBClient
 from .rollup_hourly import run_hourly
 from .rollup_monthly import run_monthly
+from .utils.concurrency import Exec
 
 
 def process_scheduled_call(
     influxdb3_local: InfluxDBClient,
     call_time: datetime,
     args: dict | None = None,
+    exec: Exec | None = None,
 ):
     """
     InfluxDB 3 scheduled plugin entrypoint.
@@ -74,6 +76,7 @@ def process_scheduled_call(
 
     client = InfluxDBClientWrapper(
         client=influxdb3_local,
+        exec=exec,
         database=config.input_database,
         verbose=config.verbose,
     ).add_prefix(f"[{str(uuid.uuid4())}]")

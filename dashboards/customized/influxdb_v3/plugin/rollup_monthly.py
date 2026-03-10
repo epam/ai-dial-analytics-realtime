@@ -1,6 +1,3 @@
-from __future__ import annotations
-
-from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
 from typing import Any, Dict
 
@@ -72,11 +69,7 @@ FROM ({_get_kpi_sub_table(in_window)})
         lambda: client.add_prefix("[user ]").query(user_sql),
     ]
 
-    results = []
-    with ThreadPoolExecutor(max_workers=3) as ex:
-        futures = [ex.submit(job) for job in jobs]
-        for fut in as_completed(futures):
-            results.append(fut.result())
+    results = client.exec.run(jobs)
 
     merged: Dict[str, Any] = {"time": start_s}
     for result in results:

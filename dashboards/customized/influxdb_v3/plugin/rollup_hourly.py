@@ -1,6 +1,3 @@
-from __future__ import annotations
-
-from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
 from typing import Any, Dict
 
@@ -238,10 +235,7 @@ def run_hourly_window(
         for name, func in job_defs
     ]
 
-    with ThreadPoolExecutor(max_workers=5) as ex:
-        futures = [ex.submit(job) for job in jobs]
-        for fut in as_completed(futures):
-            fut.result()
+    client.exec.run(jobs)
 
 
 def _normalize_project_id(rows: list[Dict[str, Any]]) -> list[Dict[str, Any]]:

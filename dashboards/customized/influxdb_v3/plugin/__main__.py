@@ -9,6 +9,7 @@ from pathlib import Path
 from . import process_scheduled_call
 from .config import Config
 from .influx.client_http import HTTPInfluxDBClient
+from .utils.concurrency import ThreadPoolExec
 
 
 def _get_env(name: str) -> str:
@@ -38,6 +39,7 @@ def main() -> None:
         influxdb3_local=client,
         call_time=datetime.now(timezone.utc),
         args=args,
+        exec=ThreadPoolExec(),
     )
 
 

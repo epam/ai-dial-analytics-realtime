@@ -1,6 +1,7 @@
 import json
 from typing import Any, Dict, List
 
+from ..utils.concurrency import Exec, SequentialExec
 from .client_http import HTTPInfluxDBClient
 from .types import InfluxDBClient, LineBuilderProtocol
 
@@ -10,6 +11,7 @@ class InfluxDBClientWrapper(InfluxDBClient):
     _database: str
     _verbose: bool
     _client: InfluxDBClient
+    exec: Exec
 
     def __init__(
         self,
@@ -17,12 +19,14 @@ class InfluxDBClientWrapper(InfluxDBClient):
         client: InfluxDBClient,
         database: str,
         verbose: bool,
+        exec: Exec | None = None,
         log_prefix: str = "",
     ):
         self._database = database
         self._log_prefix = log_prefix
         self._client = client
         self._verbose = verbose
+        self.exec = exec or SequentialExec()
 
     def add_prefix(self, log_prefix: str) -> "InfluxDBClientWrapper":
         return InfluxDBClientWrapper(

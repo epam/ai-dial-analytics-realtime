@@ -45,19 +45,19 @@ echo "Bucket id: ${BUCKET_ID}"
 
 cd /tmp
 
-# Export and split into chunks 500K datapoints each
+# Export and split into chunks 1Mb at most each
 influxd inspect export-lp \
   --bucket-id "${BUCKET_ID}" \
   --engine-path /bitnami/influxdb \
   --output-path - \
-  | split -l 500000 - chunk_
+  | split -d -C 1M - chunk_
 
 # Upload chunks to InfluxDB 3 in parallel
 find . -maxdepth 1 -name 'chunk_*' -print0 \
   | xargs -0 -n1 -P4 -I{} \
     curl --fail -sS \
-      -X POST "${INFLUXDB3_URL}/api/v3/write_lp?db=default&precision=ns" \
-      -H "Authorization: Bearer ${INFLUXDB3_TOKEN}" \
+      -X POST "${INFLUX_URL}/api/v3/write_lp?db=default&precision=nanosecond&accept_partial=false" \
+      -H "Authorization: Bearer ${INFLUX_API_TOKEN}" \
       -H "Content-Type: text/plain; charset=utf-8" \
       --data-binary @{}
 ```

@@ -7,7 +7,7 @@ These aggregates are used by Grafana dashboards for AI DIAL Realtime Analytics.
 
 ## Database Layout
 
-We use **two databases**:
+We use two databases:
 
 | Database        | Purpose                                                    |
 | --------------- | ---------------------------------------------------------- |
@@ -182,7 +182,7 @@ influxdb3 update trigger analytics_6h_rollups --enable
 influxdb3 update trigger analytics_monthly_rollups --enable
 ```
 
-## Running trigger manually
+## Running the plugin manually
 
 The plugin script could be ran manually on an InfluxDB instance configured by the environment variables:
 

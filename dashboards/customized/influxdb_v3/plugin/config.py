@@ -17,9 +17,9 @@ class Mode(Enum):
 class Config:
     mode: Mode
     agg_database: str
-    raw_table: str
 
-    window_hours: int
+    raw_table: str  # used only in mode=hourly
+    window_hours: int  # used only in mode=hourly
 
     start_time: datetime | None
     end_time: datetime | None

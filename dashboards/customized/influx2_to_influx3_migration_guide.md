@@ -34,6 +34,16 @@ In this image the storage engine resides at:
 
 ## Migration script
 
+Set the environment variables pointing to the InfluxDB 3 instance.
+
+```init
+INFLUX_URL=<influxdb3 url>
+INFLUX_API_TOKEN=<the admin token for influxdb3>
+```
+
+Run the migration script on the InfluxDB 2 instance.
+The script exports the `default` bucket into multiple files and sends them to the InfluxDB 3 instance.
+
 ```sh
 set -euo pipefail
 

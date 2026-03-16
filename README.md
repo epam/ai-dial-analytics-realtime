@@ -26,7 +26,8 @@
     - [Aggregated Dashboards (Optional)](#aggregated-dashboards-optional)
     - [Other configuration](#other-configuration)
   - [Development](#development)
-    - [Development environment](#development-environment)
+    - [Development Environment](#development-environment)
+    - [Setup](#setup)
     - [Build](#build)
     - [Run](#run)
     - [Docker](#docker)
@@ -212,18 +213,33 @@ Example of the MODEL_RATES configuration:
 
 ## Development
 
-### Development environment
+### Development Environment
 
-This project uses [Python>=3.11](https://www.python.org/downloads/) and [Poetry>=2.1.1](https://python-poetry.org/) as a dependency manager.
-Check out Poetry's [documentation on how to install it](https://python-poetry.org/docs/#installation) on your system before proceeding.
+This project requires [Python ≥3.11](https://www.python.org/downloads/) and [Poetry ≥2.1.1](https://python-poetry.org/) for dependency management.
 
-To install requirements:
+### Setup
 
-```sh
-poetry install
-```
+1. Install Poetry. See the official [installation guide](https://python-poetry.org/docs/#installation).
 
-This will install all requirements for running the package, linting, formatting and tests.
+2. *(Optional)* Specify custom Python or Poetry executables in `.env.dev`. This is useful if multiple versions are installed. By default, `python` and `poetry` are used.
+
+   ```sh
+   POETRY_PYTHON=path-to-python-exe
+   POETRY=path-to-poetry-exe
+   ```
+
+3. Create and activate the virtual environment:
+
+   ```sh
+   make init_env
+   source .venv/bin/activate
+   ```
+
+4. Install project dependencies (including linting, formatting, and test tools):
+
+   ```sh
+   make install
+   ```
 
 ### Build
 

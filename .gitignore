@@ -1,6 +1,7 @@
 .DS_Store
 .venv
 .env
+.env.dev
 .nox
 .history
 __pycache__

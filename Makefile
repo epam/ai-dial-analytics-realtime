@@ -1,20 +1,22 @@
 PORT ?= 5001
 IMAGE_NAME ?= ai-dial-analytics-realtime
 VENV_DIR ?= .venv
-POETRY ?= $(VENV_DIR)/bin/poetry
-POETRY_VERSION ?= 2.1.1
-ARGS =
+POETRY ?= poetry
+POETRY_PYTHON ?= python
+ARGS ?=
+
+-include .env.dev
+export
 
 
-.PHONY: all init_env build serve docker_build docker_serve lint format test test_all docs clean help
+.PHONY: all init_env install build serve docker_build docker_serve lint format test test_all docs clean help
 
 
 all: build
 
 
 init_env:
-	python -m venv $(VENV_DIR)
-	$(VENV_DIR)/bin/pip install poetry==$(POETRY_VERSION) --quiet
+	$(POETRY) env use $(POETRY_PYTHON)
 
 
 install: init_env

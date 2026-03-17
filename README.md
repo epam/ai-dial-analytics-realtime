@@ -106,13 +106,13 @@ The logs for the `/mcp` endpoint are saved to the `mcp_analytics` measurement:
 |---|---|
 |project_id|The project ID for the request.|
 |title|The title of the person making the request.|
-|deployment|The deployment name of the model or application for the request.|
-|parent_deployment|The deployment name of the model or application that called the current deployment.|
+|deployment|The deployment name of a DIAL toolset corresponding to the MCP call.|
+|parent_deployment|The deployment name of the model or application that called the DIAL toolset.|
 |mcp_method|MCP method name such as `tools/list`, `tools/call` etc.|
 
 |Field|Type|Description|
 |---|---|---|
-|execution_path|string|A list of deployment calls representing the call stack of the request. E.g. `['app1', 'app2', 'model1']` means `app1` called `app2` and `app2` called `model1`. The last element of the list equals to the `deployment` tag. The penultimate element of the list *(when present)* equals to the `parent_deployment` tag.|
+|execution_path|string|A list of deployment calls representing the call stack of the request. E.g. `['app1', 'app2', 'toolset1']` means `app1` called `app2` and `app2` called `toolset1`. The last element of the list equals to the `deployment` tag. The penultimate element of the list *(when present)* equals to the `parent_deployment` tag.|
 |chat_id|string|The unique identifier for the conversation that this request is part of.|
 |user_hash|string|The unique hash identifying the user.|
 |upstream|string|The upstream endpoint of the DIAL toolset.|

@@ -10,7 +10,8 @@ from typing import Any
 import aiohttp
 import starlette.requests
 import uvicorn
-from aidial_sdk.telemetry.init import TelemetryConfig, init_telemetry
+from aidial_sdk.telemetry.init import init_telemetry
+from aidial_sdk.telemetry.types import TelemetryConfig
 from fastapi import Depends, FastAPI
 from fastapi.responses import JSONResponse
 

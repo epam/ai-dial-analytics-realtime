@@ -19,7 +19,7 @@ from aidial_analytics_realtime.analytics import (
     RequestType,
     make_mcp_point,
     make_rate_point,
-    make_routes_point,
+    make_route_point,
     on_message,
 )
 from aidial_analytics_realtime.influx_writer import (
@@ -32,9 +32,11 @@ from aidial_analytics_realtime.rates import RatesCalculator
 from aidial_analytics_realtime.time import parse_time
 from aidial_analytics_realtime.topic_model import TopicModel, create_topic_model
 from aidial_analytics_realtime.utils.concurrency import cpu_task_executor
-from aidial_analytics_realtime.utils.logging import add_logger_prefix
+from aidial_analytics_realtime.utils.logging import (
+    add_logger_prefix,
+    configure_loggers,
+)
 from aidial_analytics_realtime.utils.logging import app_logger as logger
-from aidial_analytics_realtime.utils.logging import configure_loggers
 from aidial_analytics_realtime.utils.request import (
     DataRequest,
     Message,
@@ -46,7 +48,7 @@ RATE_PATTERN = r"/v1/(.+?)/rate"
 CHAT_COMPLETION_PATTERN = r"/openai/deployments/(.+?)/chat/completions"
 EMBEDDING_PATTERN = r"/openai/deployments/(.+?)/embeddings"
 MCP_PATTERN = r"/v1/toolset/(.+?)/mcp"
-ROUTES_PATTERN = r"/v1/deployments/(.+?)/route/(.+?)"
+ROUTES_PATTERN = r"^/v1/deployments/(.+?)/route/(.+?)$"
 
 
 @contextlib.asynccontextmanager
@@ -251,20 +253,22 @@ async def on_routes_message(
     *,
     deployment: str,
     route: str,
-    method: str,
     project_id: str,
     chat_id: str,
     upstream_url: str,
     user_hash: str,
     user_title: str,
     timestamp: datetime,
+    request: dict,
     influx_writer: InfluxWriterAsync,
     parent_deployment: str | None,
     trace: dict | None,
     execution_path: list | None,
 ):
 
-    point = make_routes_point(
+    method = request["method"]
+
+    point = make_route_point(
         deployment=deployment,
         route=route,
         method=method,
@@ -379,22 +383,21 @@ async def on_log_message(
         )
 
     elif m := re.search(ROUTES_PATTERN, uri):
+        # TODO: extract to the top level
         if response["status"] != "200":
             return
 
-        method = request["method"]
-
-        route = m.group(2)
+        route = f"/{m.group(2)}"
         await on_routes_message(
             deployment=deployment,
             route=route,
-            method=method,
             project_id=project_id,
             chat_id=chat_id,
             upstream_url=upstream_url,
             user_hash=user_hash,
             user_title=user_title,
             timestamp=timestamp,
+            request=request,
             influx_writer=influx_writer,
             parent_deployment=parent_deployment,
             trace=trace,

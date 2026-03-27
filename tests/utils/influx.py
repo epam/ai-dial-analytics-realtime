@@ -13,7 +13,9 @@ from tests.utils.constants import (
     DEFAULT_MODEL,
     DEFAULT_PARENT_DEPLOYMENT,
     DEFAULT_PROJECT_ID,
+    DEFAULT_REQUEST_METHOD,
     DEFAULT_RESPONSE_ID,
+    DEFAULT_ROUTE_PATH,
     DEFAULT_TIMESTAMP,
     DEFAULT_TRACE_ID,
     DEFAULT_UPSTREAM_URI,
@@ -80,6 +82,42 @@ def create_mcp_point(
         .field("user_hash", user_hash or "undefined")
         .field("chat_id", chat_id or "undefined")
         .field("mcp_tool_call_name", mcp_tool_call_name or "undefined")
+        .time(timestamp)
+    )
+
+
+def create_route_point(
+    *,
+    parent_deployment: str = DEFAULT_PARENT_DEPLOYMENT,
+    deployment: str = DEFAULT_DEPLOYMENT,
+    route: str = DEFAULT_ROUTE_PATH,
+    http_method: str = DEFAULT_REQUEST_METHOD,
+    project_id: str = DEFAULT_PROJECT_ID,
+    chat_id: str | None = DEFAULT_CHAT_ID,
+    upstream: str | None = DEFAULT_UPSTREAM_URI,
+    user_hash: str | None = DEFAULT_USER_ID,
+    title: str | None = DEFAULT_USER_TITLE,
+    timestamp: datetime = DEFAULT_TIMESTAMP,
+    execution_path: str | None = DEFAULT_EXECUTION_PATH_STR,
+    trace_id: str | None = DEFAULT_TRACE_ID,
+    core_span_id: str | None = DEFAULT_CORE_SPAN_ID,
+    core_parent_span_id: str | None = DEFAULT_CORE_PARENT_SPAN_ID,
+):
+    return (
+        Point("mcp_analytics")
+        .tag("project_id", project_id)
+        .tag("title", title or "undefined")
+        .tag("deployment", deployment)
+        .tag("route", route)
+        .tag("method", http_method)
+        .tag("parent_deployment", parent_deployment or "undefined")
+        .field("execution_path", execution_path or "undefined")
+        .field("trace_id", trace_id or "undefined")
+        .field("core_span_id", core_span_id or "undefined")
+        .field("core_parent_span_id", core_parent_span_id or "undefined")
+        .field("upstream", upstream or "undefined")
+        .field("user_hash", user_hash or "undefined")
+        .field("chat_id", chat_id or "undefined")
         .time(timestamp)
     )
 

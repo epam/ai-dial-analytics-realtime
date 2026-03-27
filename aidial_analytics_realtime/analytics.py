@@ -230,7 +230,7 @@ def make_mcp_point(
     )
 
 
-def make_routes_point(
+def make_route_point(
     *,
     deployment: str,
     route: str,

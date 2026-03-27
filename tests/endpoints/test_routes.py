@@ -137,6 +137,7 @@ def test_route_unescaped_control_char_in_message(
         ("/v1/deployments/ID1/ID2/route/PATH1/PATH2", "/PATH1/PATH2"),
         ("/v1/deployments/ID1/ID2/routes/PATH1", None),
         ("/v1/deployment/ID1/ID2/route/PATH1", None),
+        ("/prefix/v1/deployments/PATH/PATH", None),
     ],
 )
 def test_route_request_uri(

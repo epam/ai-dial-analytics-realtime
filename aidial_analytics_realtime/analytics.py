@@ -230,6 +230,44 @@ def make_mcp_point(
     )
 
 
+def make_routes_point(
+    *,
+    deployment: str,
+    route: str,
+    method: str,
+    parent_deployment: str | None,
+    project_id: str,
+    chat_id: str | None,
+    upstream_url: str | None,
+    user_hash: str,
+    user_title: str,
+    timestamp: datetime,
+    trace: dict | None,
+    execution_path: list | None,
+):
+    trace = trace or {}
+
+    return (
+        Point("mcp_analytics")
+        .tag("project_id", project_id)
+        .tag("title", to_string(user_title))
+        .tag("deployment", deployment)
+        .tag("route", route)
+        .tag("method", method)
+        .tag("parent_deployment", to_string(parent_deployment))
+        .field("execution_path", build_execution_path(execution_path))
+        .field("trace_id", to_string(trace.get("trace_id")))
+        .field("core_span_id", to_string(trace.get("core_span_id")))
+        .field(
+            "core_parent_span_id", to_string(trace.get("core_parent_span_id"))
+        )
+        .field("upstream", to_string(upstream_url))
+        .field("user_hash", to_string(user_hash))
+        .field("chat_id", to_string(chat_id))
+        .time(timestamp)
+    )
+
+
 def make_rate_point(
     deployment: str,
     project_id: str,

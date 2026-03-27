@@ -258,11 +258,15 @@ async def on_routes_message(
     user_title: str,
     timestamp: datetime,
     request: dict,
+    response: dict,
     influx_writer: InfluxWriterAsync,
     parent_deployment: str | None,
     trace: dict | None,
     execution_path: list | None,
 ):
+    if response["status"] != "200":
+        return
+
     http_method = request["method"]
 
     point = make_route_point(
@@ -380,10 +384,6 @@ async def on_log_message(
         )
 
     elif m := re.search(ROUTES_PATTERN, uri):
-        # TODO: extract to the top level
-        if response["status"] != "200":
-            return
-
         route_path = f"/{m.group(2)}"
         await on_routes_message(
             deployment=deployment,
@@ -395,6 +395,7 @@ async def on_log_message(
             user_title=user_title,
             timestamp=timestamp,
             request=request,
+            response=response,
             influx_writer=influx_writer,
             parent_deployment=parent_deployment,
             trace=trace,

@@ -124,7 +124,7 @@ The logs for the `/mcp` endpoint are saved to the `mcp_analytics` measurement:
 
 ### Route request
 
-The logs for the round endpoints - `HTTP_METHOD /v1/deployments/DEPLOYMENT_NAME/route/ROUTE_PATH` - are saved to the `routes_analytics` measurement:
+The logs for the [DIAL route endpoints](https://github.com/epam/ai-dial-core/blob/19ee57beba4350f1e7b99f933175d5b0465f61d3/docs/dynamic-settings/routes.md#calling-route) - `HTTP_METHOD /v1/deployments/DEPLOYMENT_NAME/route/ROUTE_PATH` - are saved to the `routes_analytics` measurement:
 
 |Tag|Description|
 |---|---|

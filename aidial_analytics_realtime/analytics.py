@@ -233,8 +233,8 @@ def make_mcp_point(
 def make_route_point(
     *,
     deployment: str,
-    route: str,
-    method: str,
+    route_path: str,
+    http_method: str,
     parent_deployment: str | None,
     project_id: str,
     chat_id: str | None,
@@ -252,8 +252,8 @@ def make_route_point(
         .tag("project_id", project_id)
         .tag("title", to_string(user_title))
         .tag("deployment", deployment)
-        .tag("route", route)
-        .tag("method", method)
+        .tag("route_path", route_path)
+        .tag("http_method", http_method)
         .tag("parent_deployment", to_string(parent_deployment))
         .field("execution_path", build_execution_path(execution_path))
         .field("trace_id", to_string(trace.get("trace_id")))

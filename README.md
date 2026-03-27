@@ -131,8 +131,8 @@ The logs for the round endpoints - `HTTP_METHOD /v1/deployments/DEPLOYMENT_NAME/
 |project_id|The project ID for the request.|
 |title|The title of the person making the request.|
 |deployment|The deployment name of a DIAL toolset corresponding to the MCP call.|
-|route|Route path; always with a leading `/`.|
-|method|HTTP method.|
+|route_path|Route path; always with a leading `/`.|
+|http_method|HTTP method.|
 |parent_deployment|The deployment name of the model or application that called the DIAL toolset.|
 
 |Field|Type|Description|

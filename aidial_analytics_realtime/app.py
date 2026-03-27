@@ -32,11 +32,9 @@ from aidial_analytics_realtime.rates import RatesCalculator
 from aidial_analytics_realtime.time import parse_time
 from aidial_analytics_realtime.topic_model import TopicModel, create_topic_model
 from aidial_analytics_realtime.utils.concurrency import cpu_task_executor
-from aidial_analytics_realtime.utils.logging import (
-    add_logger_prefix,
-    configure_loggers,
-)
+from aidial_analytics_realtime.utils.logging import add_logger_prefix
 from aidial_analytics_realtime.utils.logging import app_logger as logger
+from aidial_analytics_realtime.utils.logging import configure_loggers
 from aidial_analytics_realtime.utils.request import (
     DataRequest,
     Message,
@@ -252,7 +250,7 @@ async def on_mcp_message(
 async def on_routes_message(
     *,
     deployment: str,
-    route: str,
+    route_path: str,
     project_id: str,
     chat_id: str,
     upstream_url: str,
@@ -265,13 +263,12 @@ async def on_routes_message(
     trace: dict | None,
     execution_path: list | None,
 ):
-
-    method = request["method"]
+    http_method = request["method"]
 
     point = make_route_point(
         deployment=deployment,
-        route=route,
-        method=method,
+        route_path=route_path,
+        http_method=http_method,
         project_id=project_id,
         chat_id=chat_id,
         upstream_url=upstream_url,
@@ -387,10 +384,10 @@ async def on_log_message(
         if response["status"] != "200":
             return
 
-        route = f"/{m.group(2)}"
+        route_path = f"/{m.group(2)}"
         await on_routes_message(
             deployment=deployment,
-            route=route,
+            route_path=route_path,
             project_id=project_id,
             chat_id=chat_id,
             upstream_url=upstream_url,

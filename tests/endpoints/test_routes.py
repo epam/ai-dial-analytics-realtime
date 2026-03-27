@@ -151,7 +151,7 @@ def test_route_request_uri(
     assert response.json() == [{"status": "success"}]
 
     if route_path is not None:
-        influx.match_points(create_route_point(route=route_path))
+        influx.match_points(create_route_point(route_path=route_path))
     else:
         influx.match_points()
         assert f"Unsupported message type: {request_uri!r}" in caplog.text

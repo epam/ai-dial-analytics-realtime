@@ -90,7 +90,7 @@ def create_route_point(
     *,
     parent_deployment: str = DEFAULT_PARENT_DEPLOYMENT,
     deployment: str = DEFAULT_DEPLOYMENT,
-    route: str = DEFAULT_ROUTE_PATH,
+    route_path: str = DEFAULT_ROUTE_PATH,
     http_method: str = DEFAULT_REQUEST_METHOD,
     project_id: str = DEFAULT_PROJECT_ID,
     chat_id: str | None = DEFAULT_CHAT_ID,
@@ -108,8 +108,8 @@ def create_route_point(
         .tag("project_id", project_id)
         .tag("title", title or "undefined")
         .tag("deployment", deployment)
-        .tag("route", route)
-        .tag("method", http_method)
+        .tag("route_path", route_path)
+        .tag("http_method", http_method)
         .tag("parent_deployment", parent_deployment or "undefined")
         .field("execution_path", execution_path or "undefined")
         .field("trace_id", trace_id or "undefined")

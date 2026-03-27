@@ -35,7 +35,9 @@ def test_route_baseline_reject_non_200(
     influx.match_points()
 
 
-@pytest.mark.parametrize("http_method", ["GET", "POST", "PATCH", "DELETE"])
+@pytest.mark.parametrize(
+    "http_method", ["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD"]
+)
 def test_route_http_method(
     client: Client, influx: InfluxWriterMock, http_method: str
 ):
@@ -74,11 +76,11 @@ def test_route_request_time(client: Client, influx: InfluxWriterMock):
 def test_route_many_messages(client: Client, influx: InfluxWriterMock):
     n = 50
     messages = [
-        create_route_message(chat_id=f"mcp-{idx}") for idx in range(0, n)
+        create_route_message(chat_id=f"route-{idx}") for idx in range(0, n)
     ]
     client(*messages).raise_for_status()
 
-    points = [create_route_point(chat_id=f"mcp-{idx}") for idx in range(0, n)]
+    points = [create_route_point(chat_id=f"route-{idx}") for idx in range(0, n)]
     influx.match_points(*points)
 
 

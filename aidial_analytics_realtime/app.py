@@ -19,6 +19,7 @@ from aidial_analytics_realtime.analytics import (
     RequestType,
     make_mcp_point,
     make_rate_point,
+    make_route_point,
     on_message,
 )
 from aidial_analytics_realtime.influx_writer import (
@@ -45,6 +46,7 @@ RATE_PATTERN = r"/v1/(.+?)/rate"
 CHAT_COMPLETION_PATTERN = r"/openai/deployments/(.+?)/chat/completions"
 EMBEDDING_PATTERN = r"/openai/deployments/(.+?)/embeddings"
 MCP_PATTERN = r"/v1/toolset/(.+?)/mcp"
+ROUTES_PATTERN = r"^/v1/deployments/(.+?)/route/(.+?)$"
 
 
 @contextlib.asynccontextmanager
@@ -245,6 +247,45 @@ async def on_mcp_message(
     await influx_writer(point)
 
 
+async def on_routes_message(
+    *,
+    deployment: str,
+    route_path: str,
+    project_id: str,
+    chat_id: str,
+    upstream_url: str,
+    user_hash: str,
+    user_title: str,
+    timestamp: datetime,
+    request: dict,
+    response: dict,
+    influx_writer: InfluxWriterAsync,
+    parent_deployment: str | None,
+    trace: dict | None,
+    execution_path: list | None,
+):
+    if response["status"] != "200":
+        return
+
+    http_method = request["method"]
+
+    point = make_route_point(
+        deployment=deployment,
+        route_path=route_path,
+        http_method=http_method,
+        project_id=project_id,
+        chat_id=chat_id,
+        upstream_url=upstream_url,
+        user_hash=user_hash,
+        user_title=user_title,
+        timestamp=timestamp,
+        parent_deployment=parent_deployment,
+        trace=trace,
+        execution_path=execution_path,
+    )
+    await influx_writer(point)
+
+
 async def on_log_message(
     message: dict,
     influx_writer: InfluxWriterAsync,
@@ -328,6 +369,25 @@ async def on_log_message(
     elif re.search(MCP_PATTERN, uri):
         await on_mcp_message(
             deployment=deployment,
+            project_id=project_id,
+            chat_id=chat_id,
+            upstream_url=upstream_url,
+            user_hash=user_hash,
+            user_title=user_title,
+            timestamp=timestamp,
+            request=request,
+            response=response,
+            influx_writer=influx_writer,
+            parent_deployment=parent_deployment,
+            trace=trace,
+            execution_path=execution_path,
+        )
+
+    elif m := re.search(ROUTES_PATTERN, uri):
+        route_path = f"/{m.group(2)}"
+        await on_routes_message(
+            deployment=deployment,
+            route_path=route_path,
             project_id=project_id,
             chat_id=chat_id,
             upstream_url=upstream_url,

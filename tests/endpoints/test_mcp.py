@@ -8,8 +8,6 @@ from tests.mocks import (
 )
 from tests.utils.client import Client
 from tests.utils.influx import create_mcp_point
-
-# from tests.utils.message.base import on_request_body
 from tests.utils.message.mcp import create_mcp_message, create_mcp_request
 
 

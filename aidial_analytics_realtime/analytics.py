@@ -248,7 +248,7 @@ def make_route_point(
     trace = trace or {}
 
     return (
-        Point("mcp_analytics")
+        Point("routes_analytics")
         .tag("project_id", project_id)
         .tag("title", to_string(user_title))
         .tag("deployment", deployment)

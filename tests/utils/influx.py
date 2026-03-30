@@ -104,7 +104,7 @@ def create_route_point(
     core_parent_span_id: str | None = DEFAULT_CORE_PARENT_SPAN_ID,
 ):
     return (
-        Point("mcp_analytics")
+        Point("routes_analytics")
         .tag("project_id", project_id)
         .tag("title", title or "undefined")
         .tag("deployment", deployment)

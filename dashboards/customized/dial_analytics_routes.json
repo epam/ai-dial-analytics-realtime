@@ -590,7 +590,7 @@
             "type": "influxdb",
             "uid": "${datasource}"
           },
-          "query": "bucket = \"${INFLUX_BUCKET}\"\nfrom(bucket: bucket)\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"routes_analytics\")\n  |> pivot(rowKey:[\"_time\"], columnKey: [\"_field\"], valueColumn: \"_value\")\n  |> map(fn: (r) => ({\n      _time: r._time,\n      project_id: if exists r.project_id then r.project_id else \"undefined\",\n      deployment: if exists r.deployment then r.deployment else \"undefined\",\n      parent_deployment: if exists r.parent_deployment then r.parent_deployment else \"undefined\",\n      route_path: if exists r.route_path then r.route_path else \"undefined\",\n      http_method: if exists r.http_method then r.http_method else \"undefined\",\n      upstream: if exists r.upstream then r.upstream else \"\",\n      trace_id: if exists r.trace_id then r.trace_id else \"\"\n  }))\n  |> group()\n  |> sort(columns: [\"_time\"], desc: true)\n  |> limit(n: 100)",
+          "query": "bucket = \"${INFLUX_BUCKET}\"\nfrom(bucket: bucket)\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"routes_analytics\")\n  |> pivot(rowKey:[\"_time\"], columnKey: [\"_field\"], valueColumn: \"_value\")\n  |> map(fn: (r) => ({\n      _time: r._time,\n      project_id: if exists r.project_id then r.project_id else \"undefined\",\n      deployment: if exists r.deployment then r.deployment else \"undefined\",\n      route_path: if exists r.route_path then r.route_path else \"undefined\",\n      http_method: if exists r.http_method then r.http_method else \"undefined\",\n      upstream: if exists r.upstream then r.upstream else \"\",\n      trace_id: if exists r.trace_id then r.trace_id else \"\"\n  }))\n  |> group()\n  |> sort(columns: [\"_time\"], desc: true)\n  |> limit(n: 100)",
           "refId": "A"
         }
       ],
@@ -678,7 +678,7 @@
   },
   "timepicker": {},
   "timezone": "",
-  "title": "DIAL Routes Analytics",
+  "title": "DIAL Analytics Routes",
   "uid": "683906e8-5b34-41e1-9c3a-388083b519b0",
-  "version": 7
+  "version": 8
 }

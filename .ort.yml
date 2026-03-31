@@ -7,3 +7,8 @@ excludes:
   - pattern: "test"
     reason: "TEST_DEPENDENCY_OF"
     comment: "Packages for testing only."
+resolutions:
+  rule_violations:
+    - message: ".*PyPI::(opentelemetry|networkx|scipy|fastapi|starlette|typing-extensions|setuptools|sentencepiece|aidial-sdk|scikit-learn|anyio|pillow|urllib3).*"
+      reason: "CANT_FIX_EXCEPTION"
+      comment: "ORT cannot pick up license information"

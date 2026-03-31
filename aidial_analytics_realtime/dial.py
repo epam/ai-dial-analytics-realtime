@@ -64,11 +64,12 @@ def _chat_completion_message_contents(message: dict) -> Iterator[str]:
         yield from _non_empty_string(content)
     elif isinstance(content, list):
         for content_part in content:
-            if isinstance(content_part, dict):
-                if content_part.get("type") == "text" and (
-                    text := content_part.get("text")
-                ):
-                    yield from _non_empty_string(text)
+            if (
+                isinstance(content_part, dict)
+                and content_part.get("type") == "text"
+                and (text := content_part.get("text"))
+            ):
+                yield from _non_empty_string(text)
     else:
         logger.warning(f"Unexpected message content type: {type(content)}")
 

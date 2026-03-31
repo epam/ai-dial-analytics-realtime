@@ -19,7 +19,8 @@ def create_influx_writer() -> Tuple[InfluxDBClientAsync, InfluxWriterAsync]:
         database := os.getenv("INFLUX_DATABASE")
     ):
         raise ValueError(
-            "Both INFLUX_BUCKET and INFLUX_DATABASE env variables are set. Only one of them should be set."
+            "Both INFLUX_BUCKET and INFLUX_DATABASE env variables are set. "
+            "Only one of them should be set."
         )
 
     if bucket:
@@ -32,7 +33,8 @@ def create_influx_writer() -> Tuple[InfluxDBClientAsync, InfluxWriterAsync]:
         bucket_or_database = database
     else:
         raise ValueError(
-            "Neither INFLUX_BUCKET nor INFLUX_DATABASE env variable is set. Only one of them should be set."
+            "Neither INFLUX_BUCKET nor INFLUX_DATABASE env variable is set. "
+            "Only one of them should be set."
         )
 
     client = InfluxDBClientAsync(

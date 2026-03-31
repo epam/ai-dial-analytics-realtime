@@ -23,8 +23,10 @@ class InfluxWriterMock:
 
     def match_points(self, *expected_points: Point):
         assert len(expected_points) == len(self.points)
-        expected_strings = sorted(list(expected_points), key=str)
-        for expected, actual in zip(expected_strings, self.influx_points):
+        expected_strings = sorted(expected_points, key=str)
+        for expected, actual in zip(
+            expected_strings, self.influx_points, strict=False
+        ):
             assert str(expected) == str(actual)
 
 

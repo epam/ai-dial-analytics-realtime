@@ -61,7 +61,4 @@ EXPOSE 5000
 HEALTHCHECK  --interval=10s --timeout=5s --start-period=30s --retries=6 \
     CMD wget --no-verbose --tries=1 --spider http://localhost:5000/health || exit 1
 
-# Disable syntax warnings in the hdbscan package.
-ENV PYTHONWARNINGS="ignore:invalid escape sequence:SyntaxWarning"
-
 CMD ["uvicorn", "aidial_analytics_realtime.app:app", "--host", "0.0.0.0", "--port", "5000"]

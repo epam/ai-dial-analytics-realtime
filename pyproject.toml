@@ -81,6 +81,8 @@ filterwarnings = [
     "ignore::DeprecationWarning:bertopic._bertopic:17",
     "ignore:.*datetime\\.datetime\\.utcfromtimestamp\\(\\) is deprecated and scheduled for removal in a future version*:DeprecationWarning",
     "ignore:.*Tensorflow not installed; ParametricUMAP will be unavailable:ImportWarning",
+    # Disable syntax warnings in the hdbscan package.
+    "ignore:invalid escape sequence:SyntaxWarning",
 ]
 
 [tool.ruff]
@@ -100,6 +102,7 @@ select = [
     "I",    # flake8-isort
     "S",    # flake8-bandit
     "FURB", # refurb
+    "UP",   #  pyupgrade
 ]
 ignore = [
     "S101", # Use of `assert` detected

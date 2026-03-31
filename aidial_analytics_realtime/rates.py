@@ -1,6 +1,6 @@
 import os
 from decimal import Decimal
-from typing import Annotated, Dict, Literal, Union
+from typing import Annotated, Literal
 
 from pydantic import BaseModel, Field, parse_raw_as
 
@@ -47,10 +47,10 @@ class CharWithoutSpaceModelRate(ModelRate):
         )
 
 
-Rates = Dict[
+Rates = dict[
     str,
     Annotated[
-        Union[TokenModelRate, CharWithoutSpaceModelRate],
+        TokenModelRate | CharWithoutSpaceModelRate,
         Field(discriminator="unit"),
     ],
 ]

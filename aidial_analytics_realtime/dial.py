@@ -1,9 +1,9 @@
-from typing import Iterator, List
+from collections.abc import Iterator
 
 from aidial_analytics_realtime.utils.logging import app_logger as logger
 
 
-def get_chat_completion_request_contents(request: dict | None) -> List[str]:
+def get_chat_completion_request_contents(request: dict | None) -> list[str]:
     if request is None:
         return []
     try:
@@ -13,7 +13,7 @@ def get_chat_completion_request_contents(request: dict | None) -> List[str]:
         return []
 
 
-def get_chat_completion_response_contents(response: dict | None) -> List[str]:
+def get_chat_completion_response_contents(response: dict | None) -> list[str]:
     if response is None:
         return []
     try:
@@ -23,7 +23,7 @@ def get_chat_completion_response_contents(response: dict | None) -> List[str]:
         return []
 
 
-def get_embeddings_request_contents(request: dict | None) -> List[str]:
+def get_embeddings_request_contents(request: dict | None) -> list[str]:
     if request is None:
         return []
     try:

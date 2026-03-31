@@ -1,5 +1,3 @@
-from typing import Dict
-
 import pytest
 
 from aidial_analytics_realtime.langid import LangID
@@ -14,7 +12,7 @@ def language_classifier():
     return LangID.create()
 
 
-_test_cases: Dict[str, str | None] = {
+_test_cases: dict[str, str | None] = {
     "How are you doing? Do you speak english?": "en",
     "Longtemps, je me suis couché de bonne heure.": "fr",
     "qwerty-uiop": None,

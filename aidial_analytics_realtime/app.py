@@ -490,7 +490,7 @@ async def process_message(
         return _error("client disconnect")
     except aiohttp.ClientConnectionError:
         return _error("connection error")
-    except asyncio.TimeoutError:
+    except TimeoutError:
         return _error("timeout")
     except Exception:
         return _error()

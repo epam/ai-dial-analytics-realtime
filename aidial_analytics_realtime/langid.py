@@ -1,4 +1,5 @@
-from typing import Callable, Self, Tuple
+from collections.abc import Callable
+from typing import Self
 
 from aidial_analytics_realtime.utils.concurrency import (
     run_in_cpu_tasks_executor,
@@ -6,7 +7,7 @@ from aidial_analytics_realtime.utils.concurrency import (
 from aidial_analytics_realtime.utils.logging import app_logger as logger
 from aidial_analytics_realtime.utils.timer import Timer
 
-_Classifier = Callable[[str], Tuple[str, float]]
+_Classifier = Callable[[str], tuple[str, float]]
 
 
 class LangID:

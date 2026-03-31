@@ -9,7 +9,7 @@ ARGS ?=
 export
 
 
-.PHONY: all init_env install build serve docker_build docker_serve lint format test test_all docs clean help
+.PHONY: all init_env install build serve docker_build docker_serve lint format test test_fast docs clean help
 
 
 all: build
@@ -50,12 +50,12 @@ format: init_env
 	$(POETRY) run nox -s format
 
 
-test: init_env
+test_fast: init_env
 	$(POETRY) install --only nox
 	$(POETRY) run -- nox -s tests -- -m "not with_external" $(ARGS)
 
 
-test_all: init_env
+test: init_env
 	$(POETRY) install --only nox
 	$(POETRY) run -- nox -s tests -- $(ARGS)
 

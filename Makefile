@@ -60,6 +60,10 @@ test: init_env
 	$(POETRY) run -- nox -s tests -- $(ARGS)
 
 
+install_git_hooks: install
+	$(VENV_DIR)/bin/pre-commit install
+
+
 docs:
 	# Do nothing
 
@@ -75,6 +79,7 @@ help:
 	@echo 'build                        - build the source and wheels archives'
 	@echo 'docker_build                 - build the docker image'
 	@echo 'clean                        - clean virtual env and build artifacts'
+	@echo 'install_git_hooks            - install the git hooks'
 	@echo '-- LINTING --'
 	@echo 'format                       - run code formatters'
 	@echo 'lint                         - run linters'

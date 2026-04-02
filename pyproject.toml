@@ -64,6 +64,7 @@ flake8 = "^6.1.0"
 autoflake = "^2.2.1"
 pyright = "^1.1.325"
 nox = "^2023.4.22"
+pre-commit = "^4.5.1"
 
 [tool.poetry.group.nox.dependencies]
 nox = "^2023.4.22"

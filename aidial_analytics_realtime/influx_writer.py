@@ -1,5 +1,5 @@
 import os
-from typing import Awaitable, Callable, Tuple
+from collections.abc import Awaitable, Callable
 
 from influxdb_client import Point
 from influxdb_client.client.influxdb_client_async import InfluxDBClientAsync
@@ -11,7 +11,7 @@ from aidial_analytics_realtime.utils.timer import Timer
 InfluxWriterAsync = Callable[[Point], Awaitable[None]]
 
 
-def create_influx_writer() -> Tuple[InfluxDBClientAsync, InfluxWriterAsync]:
+def create_influx_writer() -> tuple[InfluxDBClientAsync, InfluxWriterAsync]:
     influx_url = get_env("INFLUX_URL")
     influx_api_token = get_env("INFLUX_API_TOKEN")
 
@@ -19,7 +19,8 @@ def create_influx_writer() -> Tuple[InfluxDBClientAsync, InfluxWriterAsync]:
         database := os.getenv("INFLUX_DATABASE")
     ):
         raise ValueError(
-            "Both INFLUX_BUCKET and INFLUX_DATABASE env variables are set. Only one of them should be set."
+            "Both INFLUX_BUCKET and INFLUX_DATABASE env variables are set. "
+            "Only one of them should be set."
         )
 
     if bucket:
@@ -32,7 +33,8 @@ def create_influx_writer() -> Tuple[InfluxDBClientAsync, InfluxWriterAsync]:
         bucket_or_database = database
     else:
         raise ValueError(
-            "Neither INFLUX_BUCKET nor INFLUX_DATABASE env variable is set. Only one of them should be set."
+            "Neither INFLUX_BUCKET nor INFLUX_DATABASE env variable is set. "
+            "Only one of them should be set."
         )
 
     client = InfluxDBClientAsync(

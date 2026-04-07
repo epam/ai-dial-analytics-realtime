@@ -32,9 +32,11 @@ from aidial_analytics_realtime.rates import RatesCalculator
 from aidial_analytics_realtime.time import parse_time
 from aidial_analytics_realtime.topic_model import TopicModel, create_topic_model
 from aidial_analytics_realtime.utils.concurrency import cpu_task_executor
-from aidial_analytics_realtime.utils.logging import add_logger_prefix
+from aidial_analytics_realtime.utils.logging import (
+    add_logger_prefix,
+    configure_loggers,
+)
 from aidial_analytics_realtime.utils.logging import app_logger as logger
-from aidial_analytics_realtime.utils.logging import configure_loggers
 from aidial_analytics_realtime.utils.request import (
     DataRequest,
     Message,
@@ -409,10 +411,10 @@ async def on_log_message(
 @app.post("/data")
 async def on_log_messages(
     data: DataRequest,
-    influx_writer: InfluxWriterAsync = Depends(),
-    topic_model: TopicModel = Depends(),
-    rates_calculator: RatesCalculator = Depends(),
-    lang_id: LangID = Depends(),
+    influx_writer: InfluxWriterAsync = Depends(),  # noqa: B008
+    topic_model: TopicModel = Depends(),  # noqa: B008
+    rates_calculator: RatesCalculator = Depends(),  # noqa: B008
+    lang_id: LangID = Depends(),  # noqa: B008
 ):
     messages = data.__root__
     n = len(messages)
@@ -424,7 +426,7 @@ async def on_log_messages(
             trace_id, span_id = get_tracing_ids(message)
 
             add_logger_prefix(
-                f"[{i}/{n}] [trace_id={trace_id or 'na'} span_id={span_id or 'na'}]"
+                f"[{i}/{n}] [trace_id={trace_id or 'na'} span_id={span_id or 'na'}]"  # noqa: E501
             )
 
             async with Timer(logger.debug, format="message {elapsed}"):
@@ -444,7 +446,8 @@ async def on_log_messages(
         logger.debug(f"response: {json.dumps(statuses)}")
 
     # Returning 200 code even if processing of some messages has failed,
-    # since the log broker that sends the messages may decide to retry the failed requests.
+    # since the log broker that sends the messages may decide
+    # to retry the failed requests.
     return JSONResponse(content=statuses, status_code=200)
 
 
@@ -487,7 +490,7 @@ async def process_message(
         return _error("client disconnect")
     except aiohttp.ClientConnectionError:
         return _error("connection error")
-    except asyncio.TimeoutError:
+    except TimeoutError:
         return _error("timeout")
     except Exception:
         return _error()

@@ -84,13 +84,13 @@ def test_embeddings_trade_ids_in_log_messages(
         if (
             record.levelname == "DEBUG"
             and record.message
-            == f"[1/1] [trace_id={trace['trace_id']} span_id={trace["core_span_id"]}] success"
+            == f"[1/1] [trace_id={trace['trace_id']} span_id={trace['core_span_id']}] success"
         ):
             found = True
             break
-    assert (
-        found
-    ), f"Cannot find the expected log line among the following:\n{caplog.text}"
+    assert found, (
+        f"Cannot find the expected log line among the following:\n{caplog.text}"
+    )
 
 
 @pytest.mark.parametrize(

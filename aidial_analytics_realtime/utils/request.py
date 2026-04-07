@@ -1,11 +1,11 @@
 import re
-from typing import Any, List, Tuple
+from typing import Any
 
 from pydantic import BaseModel
 
 
 class DataRequest(BaseModel):
-    __root__: List[Any]
+    __root__: list[Any]
 
 
 class Message(BaseModel):
@@ -15,7 +15,7 @@ class Message(BaseModel):
 _TRACE_IDS_RE = re.compile(r"\"(trace_id|core_span_id)\"\s*:\s*\"(\w+)\"")
 
 
-def get_tracing_ids(request_message: Any) -> Tuple[str | None, str | None]:
+def get_tracing_ids(request_message: Any) -> tuple[str | None, str | None]:
     if not isinstance(request_message, dict):
         return None, None
 

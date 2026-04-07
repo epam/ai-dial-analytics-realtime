@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta, timezone
 
 import pytest
 
@@ -10,7 +10,7 @@ from aidial_analytics_realtime.time import parse_time
     [
         (
             "2011-12-03T10:15:30",
-            datetime(2011, 12, 3, 10, 15, 30, tzinfo=timezone.utc),
+            datetime(2011, 12, 3, 10, 15, 30, tzinfo=UTC),
         ),
         (
             "2011-12-03T10:15:30+01:00",
@@ -20,31 +20,31 @@ from aidial_analytics_realtime.time import parse_time
         ),
         (
             "2011-12-03T10:15:30.1",
-            datetime(2011, 12, 3, 10, 15, 30, 100000, tzinfo=timezone.utc),
+            datetime(2011, 12, 3, 10, 15, 30, 100000, tzinfo=UTC),
         ),
         (
             "2011-12-03T10:15:30.12",
-            datetime(2011, 12, 3, 10, 15, 30, 120000, tzinfo=timezone.utc),
+            datetime(2011, 12, 3, 10, 15, 30, 120000, tzinfo=UTC),
         ),
         (
             "2011-12-03T10:15:30.123",
-            datetime(2011, 12, 3, 10, 15, 30, 123000, tzinfo=timezone.utc),
+            datetime(2011, 12, 3, 10, 15, 30, 123000, tzinfo=UTC),
         ),
         (
             "2011-12-03T10:15:30.1234",
-            datetime(2011, 12, 3, 10, 15, 30, 123400, tzinfo=timezone.utc),
+            datetime(2011, 12, 3, 10, 15, 30, 123400, tzinfo=UTC),
         ),
         (
             "2011-12-03T10:15:30.12345",
-            datetime(2011, 12, 3, 10, 15, 30, 123450, tzinfo=timezone.utc),
+            datetime(2011, 12, 3, 10, 15, 30, 123450, tzinfo=UTC),
         ),
         (
             "2011-12-03T10:15:30.123456",
-            datetime(2011, 12, 3, 10, 15, 30, 123456, tzinfo=timezone.utc),
+            datetime(2011, 12, 3, 10, 15, 30, 123456, tzinfo=UTC),
         ),
         (
             "2011-12-03T10:15:30.1234567",
-            datetime(2011, 12, 3, 10, 15, 30, 123456, tzinfo=timezone.utc),
+            datetime(2011, 12, 3, 10, 15, 30, 123456, tzinfo=UTC),
         ),  # Python's datetime supports up to microsecond precision
     ],
 )

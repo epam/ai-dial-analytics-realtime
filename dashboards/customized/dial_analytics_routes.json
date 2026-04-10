@@ -638,11 +638,14 @@
     "list": [
       {
         "current": {
-          "text": "InfluxDB",
-          "value": "P951FEA4DE68E13C5"
+          "selected": false,
+          "text": "default",
+          "value": "default"
         },
+        "hide": 0,
         "includeAll": false,
         "label": "Data Source",
+        "multi": false,
         "name": "datasource",
         "options": [],
         "query": "influxdb",
@@ -680,5 +683,5 @@
   "timezone": "",
   "title": "DIAL Analytics Routes",
   "uid": "683906e8-5b34-41e1-9c3a-388083b519b0",
-  "version": 8
+  "version": 1
 }

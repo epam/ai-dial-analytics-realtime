@@ -84,6 +84,9 @@ filterwarnings = [
     "ignore::DeprecationWarning:bertopic._bertopic:17",
     "ignore:.*datetime\\.datetime\\.utcfromtimestamp\\(\\) is deprecated and scheduled for removal in a future version*:DeprecationWarning",
     "ignore:.*Tensorflow not installed; ParametricUMAP will be unavailable:ImportWarning",
+    # Ignoring warning from SWIG in order to avoid segmentation fault errors
+    # occurring during the pytest tear down: https://github.com/google/sentencepiece/issues/1145
+    "ignore:.*(SwigPyPacked|SwigPyObject|swigvarlink).*:DeprecationWarning",
 ]
 
 [tool.ruff]

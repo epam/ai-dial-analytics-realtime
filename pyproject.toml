@@ -36,7 +36,7 @@ torch = [
     { version = "2.10.0", source = "PyPI", markers = "sys_platform == 'darwin'" },
     { version = "2.10.0+cpu", source = "pytorch", markers = "sys_platform != 'darwin'" },
 ]
-transformers = "4.53.0"
+transformers = "5.0.0rc3"
 llvmlite = "0.42.0"
 numpy = "1.26.0"
 numba = "0.59.1"
@@ -84,6 +84,9 @@ filterwarnings = [
     "ignore::DeprecationWarning:bertopic._bertopic:17",
     "ignore:.*datetime\\.datetime\\.utcfromtimestamp\\(\\) is deprecated and scheduled for removal in a future version*:DeprecationWarning",
     "ignore:.*Tensorflow not installed; ParametricUMAP will be unavailable:ImportWarning",
+    # Ignoring warning from SWIG in order to avoid segmentation fault errors
+    # occurring during the pytest tear down: https://github.com/google/sentencepiece/issues/1145
+    "ignore:.*(SwigPyPacked|SwigPyObject|swigvarlink).*:DeprecationWarning",
 ]
 
 [tool.ruff]

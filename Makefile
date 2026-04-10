@@ -9,7 +9,7 @@ ARGS ?=
 export
 
 
-.PHONY: all init_env install build serve docker_build docker_serve lint format test test_all docs clean help
+.PHONY: all init_env install build serve docker_build docker_serve lint format test test_fast docs clean help
 
 
 all: build
@@ -50,14 +50,18 @@ format: init_env
 	$(POETRY) run nox -s format
 
 
-test: init_env
+test_fast: init_env
 	$(POETRY) install --only nox
 	$(POETRY) run -- nox -s tests -- -m "not with_external" $(ARGS)
 
 
-test_all: init_env
+test: init_env
 	$(POETRY) install --only nox
 	$(POETRY) run -- nox -s tests -- $(ARGS)
+
+
+install_git_hooks: install
+	$(VENV_DIR)/bin/pre-commit install
 
 
 docs:
@@ -75,6 +79,7 @@ help:
 	@echo 'build                        - build the source and wheels archives'
 	@echo 'docker_build                 - build the docker image'
 	@echo 'clean                        - clean virtual env and build artifacts'
+	@echo 'install_git_hooks            - install the git hooks'
 	@echo '-- LINTING --'
 	@echo 'format                       - run code formatters'
 	@echo 'lint                         - run linters'

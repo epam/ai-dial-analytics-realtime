@@ -37,7 +37,7 @@ def configure_loggers():
     # if they are already configured
     if stderr_handler is None:
         formatter = DefaultFormatter(
-            fmt="%(levelprefix)s | %(asctime)s | %(process)d | %(name)s | %(message)s",
+            fmt="%(levelprefix)s | %(asctime)s | %(process)d | %(name)s | %(message)s",  # noqa: E501
             use_colors=True,
         )
 

@@ -1,10 +1,10 @@
 from datetime import datetime
 from decimal import Decimal
 from enum import Enum
+from typing import assert_never
 from uuid import uuid4
 
 from influxdb_client import Point
-from typing_extensions import assert_never
 
 from aidial_analytics_realtime.dial import (
     get_chat_completion_request_contents,

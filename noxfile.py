@@ -3,27 +3,25 @@ import nox
 nox.options.reuse_existing_virtualenvs = True
 nox.options.sessions = ["lint", "tests"]
 
-SRC = "."
+SRC = ["aidial_analytics_realtime", "tests", "noxfile.py"]
 
 
 @nox.session(python=["3.12"])
 def lint(session):
     """Runs linters and fixers"""
-    session.run("poetry", "install", external=True)
+    session.run("poetry", "install", "--with", "lint", external=True)
     session.run("poetry", "check", "--lock", "--strict", external=True)
-    session.run("isort", "--check", SRC)
-    session.run("black", "--check", SRC)
-    session.run("flake8", SRC)
-    session.run("pyright", SRC)
+    session.run("ruff", "check", *SRC)
+    session.run("ruff", "format", "--check", *SRC)
+    session.run("pyright", *SRC)
 
 
 @nox.session(python=["3.12"])
 def format(session):
     """Runs linters and fixers"""
-    session.run("poetry", "install", external=True)
-    session.run("isort", SRC)
-    session.run("black", SRC)
-    session.run("autoflake", SRC)
+    session.run("poetry", "install", "--only", "lint", external=True)
+    session.run("ruff", "check", "--fix", *SRC)
+    session.run("ruff", "format", *SRC)
 
 
 @nox.session(python=["3.12"])

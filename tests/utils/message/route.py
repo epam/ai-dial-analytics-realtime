@@ -7,47 +7,37 @@ from tests.utils.constants import (
     DEFAULT_REQUEST_METHOD,
     DEFAULT_RESPONSE_STATUS,
     DEFAULT_RESPONSE_TIME,
+    DEFAULT_ROUTE_PATH,
     DEFAULT_UPSTREAM_URI,
     DEFAULT_USER_ID,
     DEFAULT_USER_TITLE,
 )
-from tests.utils.message.base import (
-    create_message,
-    default_token_usage,
-    default_trace,
-)
+from tests.utils.message.base import create_message, default_trace
 
 
-def _default_embedding_request_body() -> dict:
-    return {"input": ["default-embedding-input"]}
-
-
-def _default_embedding_response_body() -> dict:
-    return {
-        "object": "list",
-        "model": "text-embedding-3-small",
-        "data": [{"index": 0, "object": "embedding", "embedding": [0.1, 0.2]}],
-        "usage": {"prompt_tokens": 43, "total_tokens": 43},
-    }
-
-
-def create_embedding_message(
+def create_route_message(
     *,
     chat_id: str = DEFAULT_CHAT_ID,
     project_id: str = DEFAULT_PROJECT_ID,
     user_id: str = DEFAULT_USER_ID,
     user_title: str = DEFAULT_USER_TITLE,
     deployment: str = DEFAULT_DEPLOYMENT,
-    request_uri: str = "/openai/deployments/whatever-deployment-id/embeddings",
-    token_usage: dict | None = default_token_usage(),
+    request_uri: str = f"/v1/deployments/whatever-deployment-id/route{DEFAULT_ROUTE_PATH}",
+    token_usage: dict | None = None,
     parent_deployment: str | None = DEFAULT_PARENT_DEPLOYMENT,
     trace: dict | None = default_trace(),
     execution_path: list | None = DEFAULT_EXECUTION_PATH_LIST,
     request_http_method: str = DEFAULT_REQUEST_METHOD,
     request_time: str = DEFAULT_RESPONSE_TIME,
-    request_body: str | dict | None = _default_embedding_request_body(),
-    response_assembled: str | dict | None = None,
-    response_body: str | dict | None = _default_embedding_response_body(),
+    # request body is never inspected by the analytics for route requests,
+    # therefore, no need to make it realistic.
+    request_body: str | dict | None = "whatever-request-body",
+    # response_assembled is never inspected by the analytics for route requests,
+    # therefore, no need to make it realistic.
+    response_assembled: str | dict | None = "whatever-response-assembled",
+    # response.body is never inspected by the analytics for mcp requests,
+    # therefore, no need to make it realistic.
+    response_body: str | dict | None = "whatever-response-body",
     response_upstream_uri: str | None = DEFAULT_UPSTREAM_URI,
     response_status: str = DEFAULT_RESPONSE_STATUS,
 ) -> dict:

@@ -1,11 +1,10 @@
 from functools import cached_property
-from typing import List
 
 from influxdb_client import Point
 
 
 class InfluxWriterMock:
-    _points: List[Point]
+    _points: list[Point]
 
     def __init__(self):
         self._points = []
@@ -14,17 +13,19 @@ class InfluxWriterMock:
         self._points.append(record)
 
     @cached_property
-    def points(self) -> List[str]:
+    def points(self) -> list[str]:
         return sorted(map(str, self._points))
 
     @cached_property
-    def influx_points(self) -> List[Point]:
+    def influx_points(self) -> list[Point]:
         return sorted(self._points, key=str)
 
     def match_points(self, *expected_points: Point):
         assert len(expected_points) == len(self.points)
-        expected_strings = sorted(list(expected_points), key=str)
-        for expected, actual in zip(expected_strings, self.influx_points):
+        expected_strings = sorted(expected_points, key=str)
+        for expected, actual in zip(
+            expected_strings, self.influx_points, strict=False
+        ):
             assert str(expected) == str(actual)
 
 

@@ -1,5 +1,3 @@
-from typing import Dict
-
 import pytest
 
 import aidial_analytics_realtime.app as app
@@ -14,7 +12,7 @@ def topic_model():
     return app.create_topic_model(topic_model="davanstrien/chat_topics")
 
 
-_test_cases: Dict[str, str] = {
+_test_cases: dict[str, str] = {
     "let's play chess": "22_chess_chessboard_practice_strategy",
     "what's the third planet from Sun?": "31_planets_sun_earth_planet",
     "what's the best programming language?": "5_rust_haskell_programming_java",

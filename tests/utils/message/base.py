@@ -1,5 +1,5 @@
 import json
-from typing import Callable
+from collections.abc import Callable
 
 from tests.utils.constants import (
     DEFAULT_CORE_PARENT_SPAN_ID,
@@ -40,6 +40,7 @@ def create_message(
     trace: dict | None,
     execution_path: list | None,
     request_time: str,
+    request_http_method: str,
     request_body: str | dict | None,
     response_status: str | None,
     response_assembled: str | dict | None,
@@ -68,7 +69,7 @@ def create_message(
         "execution_path": execution_path,
         "request": {
             "protocol": "HTTP/1.1",
-            "method": "POST",
+            "method": request_http_method,
             "uri": request_uri,
             "time": request_time,
             "body": request_body,

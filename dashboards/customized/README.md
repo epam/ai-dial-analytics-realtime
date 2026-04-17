@@ -6,6 +6,7 @@ This directory contains the Grafana dashboards for the AI DIAL Realtime Analytic
 
 - [DIAL Analytics](dial_analytics.json) - This dashboard contains common metrics and visualizations
 - [DIAL Analytics MCP](dial_analytics_mcp.json) - This dashboard contains common metrics and visualizations for MCP requests
+- [DIAL Analytics Routes](dial_analytics_routes.json) - This dashboard contains common metrics and visualizations for route requests
 - [DIAL Analytics Raw Data](dial_analytics_raw_data.json) - This dashboard contains simple time-series view
 - [DIAL Analytics Aggregated Reports](dial_analytics_agg.json) - This dashboard is the aggregated version of DIAL Analytics.
 - [DIAL Application Insights](dial_application_insights.json) -  - This dashboard offers application-specific insights, including usage patterns and cost breakdowns.

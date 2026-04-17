@@ -10,7 +10,8 @@ from typing import Any
 import aiohttp
 import starlette.requests
 import uvicorn
-from aidial_sdk.telemetry.init import TelemetryConfig, init_telemetry
+from aidial_sdk.telemetry.init import init_telemetry
+from aidial_sdk.telemetry.types import TelemetryConfig
 from fastapi import Depends, FastAPI
 from fastapi.responses import JSONResponse
 
@@ -18,6 +19,7 @@ from aidial_analytics_realtime.analytics import (
     RequestType,
     make_mcp_point,
     make_rate_point,
+    make_route_point,
     on_message,
 )
 from aidial_analytics_realtime.influx_writer import (
@@ -30,9 +32,11 @@ from aidial_analytics_realtime.rates import RatesCalculator
 from aidial_analytics_realtime.time import parse_time
 from aidial_analytics_realtime.topic_model import TopicModel, create_topic_model
 from aidial_analytics_realtime.utils.concurrency import cpu_task_executor
-from aidial_analytics_realtime.utils.logging import add_logger_prefix
+from aidial_analytics_realtime.utils.logging import (
+    add_logger_prefix,
+    configure_loggers,
+)
 from aidial_analytics_realtime.utils.logging import app_logger as logger
-from aidial_analytics_realtime.utils.logging import configure_loggers
 from aidial_analytics_realtime.utils.request import (
     DataRequest,
     Message,
@@ -44,6 +48,7 @@ RATE_PATTERN = r"/v1/(.+?)/rate"
 CHAT_COMPLETION_PATTERN = r"/openai/deployments/(.+?)/chat/completions"
 EMBEDDING_PATTERN = r"/openai/deployments/(.+?)/embeddings"
 MCP_PATTERN = r"/v1/toolset/(.+?)/mcp"
+ROUTES_PATTERN = r"^/v1/deployments/(.+?)/route/(.+?)$"
 
 
 @contextlib.asynccontextmanager
@@ -244,6 +249,45 @@ async def on_mcp_message(
     await influx_writer(point)
 
 
+async def on_routes_message(
+    *,
+    deployment: str,
+    route_path: str,
+    project_id: str,
+    chat_id: str,
+    upstream_url: str,
+    user_hash: str,
+    user_title: str,
+    timestamp: datetime,
+    request: dict,
+    response: dict,
+    influx_writer: InfluxWriterAsync,
+    parent_deployment: str | None,
+    trace: dict | None,
+    execution_path: list | None,
+):
+    if response["status"] != "200":
+        return
+
+    http_method = request["method"]
+
+    point = make_route_point(
+        deployment=deployment,
+        route_path=route_path,
+        http_method=http_method,
+        project_id=project_id,
+        chat_id=chat_id,
+        upstream_url=upstream_url,
+        user_hash=user_hash,
+        user_title=user_title,
+        timestamp=timestamp,
+        parent_deployment=parent_deployment,
+        trace=trace,
+        execution_path=execution_path,
+    )
+    await influx_writer(point)
+
+
 async def on_log_message(
     message: dict,
     influx_writer: InfluxWriterAsync,
@@ -341,6 +385,25 @@ async def on_log_message(
             execution_path=execution_path,
         )
 
+    elif m := re.search(ROUTES_PATTERN, uri):
+        route_path = f"/{m.group(2)}"
+        await on_routes_message(
+            deployment=deployment,
+            route_path=route_path,
+            project_id=project_id,
+            chat_id=chat_id,
+            upstream_url=upstream_url,
+            user_hash=user_hash,
+            user_title=user_title,
+            timestamp=timestamp,
+            request=request,
+            response=response,
+            influx_writer=influx_writer,
+            parent_deployment=parent_deployment,
+            trace=trace,
+            execution_path=execution_path,
+        )
+
     else:
         logger.warning(f"Unsupported message type: {uri!r}")
 
@@ -348,10 +411,10 @@ async def on_log_message(
 @app.post("/data")
 async def on_log_messages(
     data: DataRequest,
-    influx_writer: InfluxWriterAsync = Depends(),
-    topic_model: TopicModel = Depends(),
-    rates_calculator: RatesCalculator = Depends(),
-    lang_id: LangID = Depends(),
+    influx_writer: InfluxWriterAsync = Depends(),  # noqa: B008
+    topic_model: TopicModel = Depends(),  # noqa: B008
+    rates_calculator: RatesCalculator = Depends(),  # noqa: B008
+    lang_id: LangID = Depends(),  # noqa: B008
 ):
     messages = data.__root__
     n = len(messages)
@@ -363,7 +426,7 @@ async def on_log_messages(
             trace_id, span_id = get_tracing_ids(message)
 
             add_logger_prefix(
-                f"[{i}/{n}] [trace_id={trace_id or 'na'} span_id={span_id or 'na'}]"
+                f"[{i}/{n}] [trace_id={trace_id or 'na'} span_id={span_id or 'na'}]"  # noqa: E501
             )
 
             async with Timer(logger.debug, format="message {elapsed}"):
@@ -383,7 +446,8 @@ async def on_log_messages(
         logger.debug(f"response: {json.dumps(statuses)}")
 
     # Returning 200 code even if processing of some messages has failed,
-    # since the log broker that sends the messages may decide to retry the failed requests.
+    # since the log broker that sends the messages may decide
+    # to retry the failed requests.
     return JSONResponse(content=statuses, status_code=200)
 
 
@@ -426,7 +490,7 @@ async def process_message(
         return _error("client disconnect")
     except aiohttp.ClientConnectionError:
         return _error("connection error")
-    except asyncio.TimeoutError:
+    except TimeoutError:
         return _error("timeout")
     except Exception:
         return _error()

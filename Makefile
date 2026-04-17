@@ -1,20 +1,22 @@
 PORT ?= 5001
 IMAGE_NAME ?= ai-dial-analytics-realtime
 VENV_DIR ?= .venv
-POETRY ?= $(VENV_DIR)/bin/poetry
-POETRY_VERSION ?= 2.1.1
-ARGS =
+POETRY ?= poetry
+POETRY_PYTHON ?= python
+ARGS ?=
+
+-include .env.dev
+export
 
 
-.PHONY: all init_env build serve docker_build docker_serve lint format test test_all docs clean help
+.PHONY: all init_env install build serve docker_build docker_serve lint format test test_fast docs clean help
 
 
 all: build
 
 
 init_env:
-	python -m venv $(VENV_DIR)
-	$(VENV_DIR)/bin/pip install poetry==$(POETRY_VERSION) --quiet
+	$(POETRY) env use $(POETRY_PYTHON)
 
 
 install: init_env
@@ -48,14 +50,18 @@ format: init_env
 	$(POETRY) run nox -s format
 
 
-test: init_env
+test_fast: init_env
 	$(POETRY) install --only nox
 	$(POETRY) run -- nox -s tests -- -m "not with_external" $(ARGS)
 
 
-test_all: init_env
+test: init_env
 	$(POETRY) install --only nox
 	$(POETRY) run -- nox -s tests -- $(ARGS)
+
+
+install_git_hooks: install
+	$(VENV_DIR)/bin/pre-commit install
 
 
 docs:
@@ -73,6 +79,7 @@ help:
 	@echo 'build                        - build the source and wheels archives'
 	@echo 'docker_build                 - build the docker image'
 	@echo 'clean                        - clean virtual env and build artifacts'
+	@echo 'install_git_hooks            - install the git hooks'
 	@echo '-- LINTING --'
 	@echo 'format                       - run code formatters'
 	@echo 'lint                         - run linters'

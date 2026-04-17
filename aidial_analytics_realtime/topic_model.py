@@ -67,7 +67,8 @@ class TopicModelBERT:
             topic = self.model.get_topic_info(topics[0])
 
             if "GeneratedName" in topic:
-                # "GeneratedName" is an expected name for the human readable topic representation
+                # "GeneratedName" is an expected name for the human readable
+                # topic representation
                 return topic["GeneratedName"][0][0][0]  # type: ignore
 
             return topic["Name"][0]  # type: ignore

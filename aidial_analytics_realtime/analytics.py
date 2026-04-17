@@ -1,10 +1,10 @@
 from datetime import datetime
 from decimal import Decimal
 from enum import Enum
+from typing import assert_never
 from uuid import uuid4
 
 from influxdb_client import Point
-from typing_extensions import assert_never
 
 from aidial_analytics_realtime.dial import (
     get_chat_completion_request_contents,
@@ -226,6 +226,44 @@ def make_mcp_point(
         .field("user_hash", to_string(user_hash))
         .field("chat_id", to_string(chat_id))
         .field("mcp_tool_call_name", to_string(mcp_tool_call_name))
+        .time(timestamp)
+    )
+
+
+def make_route_point(
+    *,
+    deployment: str,
+    route_path: str,
+    http_method: str,
+    parent_deployment: str | None,
+    project_id: str,
+    chat_id: str | None,
+    upstream_url: str | None,
+    user_hash: str,
+    user_title: str,
+    timestamp: datetime,
+    trace: dict | None,
+    execution_path: list | None,
+):
+    trace = trace or {}
+
+    return (
+        Point("routes_analytics")
+        .tag("project_id", project_id)
+        .tag("title", to_string(user_title))
+        .tag("deployment", deployment)
+        .tag("route_path", route_path)
+        .tag("http_method", http_method)
+        .tag("parent_deployment", to_string(parent_deployment))
+        .field("execution_path", build_execution_path(execution_path))
+        .field("trace_id", to_string(trace.get("trace_id")))
+        .field("core_span_id", to_string(trace.get("core_span_id")))
+        .field(
+            "core_parent_span_id", to_string(trace.get("core_parent_span_id"))
+        )
+        .field("upstream", to_string(upstream_url))
+        .field("user_hash", to_string(user_hash))
+        .field("chat_id", to_string(chat_id))
         .time(timestamp)
     )
 

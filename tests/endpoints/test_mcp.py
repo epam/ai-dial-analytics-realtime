@@ -123,6 +123,8 @@ def test_mcp_trace(client: Client, influx: InfluxWriterMock):
     [
         ([None, "b", "c"], "undefined/b/c"),
         (["a", "b", "c"], "a/b/c"),
+        (["a/b", "c"], "a\\/b/c"),
+        (["a", "b/c"], "a/b\\/c"),
     ],
 )
 def test_mcp_execution_path(

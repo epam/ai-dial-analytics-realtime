@@ -13,7 +13,6 @@ from aidial_analytics_realtime.dial import (
 )
 from aidial_analytics_realtime.influx_writer import InfluxWriterAsync
 from aidial_analytics_realtime.langid import LangID
-from aidial_analytics_realtime.rates import RatesCalculator
 from aidial_analytics_realtime.topic_model import TopicModel
 
 
@@ -65,52 +64,42 @@ async def make_point(
     request_type: RequestType,
     usage: dict | None,
     topic_model: TopicModel,
-    rates_calculator: RatesCalculator,
     lang_id: LangID,
     parent_deployment: str | None,
     trace: dict | None,
     execution_path: list | None,
 ):
     topic = None
-    response_content = ""
-    request_content = ""
 
-    match request_type:
-        case RequestType.CHAT_COMPLETION:
-            response_contents = get_chat_completion_response_contents(response)
-            request_contents = get_chat_completion_request_contents(request)
+    if chat_id:
+        match request_type:
+            case RequestType.CHAT_COMPLETION:
+                response_contents = get_chat_completion_response_contents(
+                    response
+                )
+                request_contents = get_chat_completion_request_contents(request)
 
-            request_content = "\n".join(request_contents)
-            response_content = "\n".join(response_contents)
-
-            if chat_id:
                 topic = to_string(
                     await topic_model.get_topic_by_text(
                         "\n\n".join(request_contents + response_contents),
                     )
                 )
-        case RequestType.EMBEDDING:
-            request_contents = get_embeddings_request_contents(request)
+            case RequestType.EMBEDDING:
+                request_contents = get_embeddings_request_contents(request)
 
-            request_content = "\n".join(request_contents)
-            if chat_id:
                 topic = to_string(
                     await topic_model.get_topic_by_text(
                         "\n\n".join(request_contents)
                     )
                 )
-        case _:
-            assert_never(request_type)
+            case _:
+                assert_never(request_type)
 
     price = Decimal(0)
     deployment_price = Decimal(0)
     if usage is not None and usage.get("price") is not None:
         price = usage["price"]
         deployment_price = usage.get("deployment_price", Decimal(0))
-    else:
-        price = rates_calculator.calculate_price(
-            deployment, model, request_content, response_content, usage
-        )
 
     point = (
         Point("analytics")
@@ -329,7 +318,6 @@ async def on_message(
     response: dict | None,
     type: RequestType,
     topic_model: TopicModel,
-    rates_calculator: RatesCalculator,
     lang_id: LangID,
     token_usage: dict | None,
     parent_deployment: str | None,
@@ -354,7 +342,6 @@ async def on_message(
             type,
             token_usage,
             topic_model,
-            rates_calculator,
             lang_id,
             parent_deployment,
             trace,
@@ -376,7 +363,6 @@ async def on_message(
             type,
             response_usage,
             topic_model,
-            rates_calculator,
             lang_id,
             parent_deployment,
             trace,
@@ -398,7 +384,6 @@ async def on_message(
             type,
             None,
             topic_model,
-            rates_calculator,
             lang_id,
             parent_deployment,
             trace,
@@ -421,7 +406,6 @@ async def on_message(
                 type,
                 usage,
                 topic_model,
-                rates_calculator,
                 lang_id,
                 parent_deployment,
                 trace,

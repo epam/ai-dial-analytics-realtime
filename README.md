@@ -203,41 +203,9 @@ Also, following environment valuables can be used to configure the service behav
 
 |Variable|Default|Description|
 |---|---|---|
-|MODEL_RATES|{}|Specifies per-token price rates for models in JSON format|
 |TOPIC_MODEL||Specifies the name or path for the topic model. If the model is specified by name, it will be downloaded from the [Huggingface]( https://huggingface.co/). When unset or set to an empty string, the topic classification feature is disabled.|
 |TOPIC_EMBEDDINGS_MODEL||Specifies the name or path for the embeddings model used with the topic model. If the model is specified by name, it will be downloaded from the [Huggingface]( https://huggingface.co/). When unset or set to an empty string, the name will be used from the topic model config.|
 |LOG_LEVEL|INFO|The server logging level. Use DEBUG for dev purposes and INFO in prod|
-
-Example of the MODEL_RATES configuration:
-
-```json
-{
-    "gpt-4": {
-        "unit":"token",
-        "prompt_price":"0.00003",
-        "completion_price":"0.00006"
-    },
-    "gpt-35-turbo": {
-        "unit":"token",
-        "prompt_price":"0.0000015",
-        "completion_price":"0.000002"
-    },
-    "gpt-4-32k": {
-        "unit":"token",
-        "prompt_price":"0.00006",
-        "completion_price":"0.00012"
-    },
-    "text-embedding-ada-002": {
-        "unit":"token",
-        "prompt_price":"0.0000001"
-    },
-    "chat-bison@001": {
-        "unit":"char_without_whitespace",
-        "prompt_price":"0.0000005",
-        "completion_price":"0.0000005"
-    }
-}
-```
 
 ## Development
 

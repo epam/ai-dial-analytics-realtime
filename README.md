@@ -102,14 +102,17 @@ The logs for the `/rate` endpoint are saved to the `rate_analytics` measurement:
 
 ### MCP requests
 
-The logs for the `/mcp` endpoint are saved to the `mcp_analytics` measurement:
+The logs for the `/mcp` endpoint are saved to the `mcp_analytics` measurement. Both toolset and application MCP endpoints are supported:
+
+- `HTTP_METHOD /v1/toolset/TOOLSET_NAME/mcp` — DIAL toolset MCP endpoint.
+- `HTTP_METHOD /v1/deployments/DEPLOYMENT_NAME/mcp` — Application MCP endpoint.
 
 |Tag|Description|
 |---|---|
 |project_id|The project ID for the request.|
 |title|The title of the person making the request.|
-|deployment|The deployment name of a DIAL toolset corresponding to the MCP call.|
-|parent_deployment|The deployment name of the model or application that called the DIAL toolset.|
+|deployment|The deployment name of a DIAL toolset or application corresponding to the MCP call.|
+|parent_deployment|The deployment name of the model or application that called the DIAL toolset or application.|
 |mcp_method|MCP method name such as `tools/list`, `tools/call` etc.|
 
 |Field|Type|Description|

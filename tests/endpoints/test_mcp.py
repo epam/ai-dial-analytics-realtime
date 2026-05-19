@@ -174,3 +174,31 @@ def test_mcp_request_uri(
     else:
         influx.match_points()
         assert f"Unsupported message type: {request_uri!r}" in caplog.text
+
+
+@pytest.mark.parametrize(
+    "request_uri, is_valid",
+    [
+        ("/v1/deployments/ID/mcp", True),
+        ("/v1/deployments/ID1/ID2/mcp", True),
+        ("/v1/deployments/ID1/ID2/mcp/abc/efg", True),
+        ("/v1/deployments/ID/mpc", False),
+        ("/v1/deployment/ID/mcp", False),
+    ],
+)
+def test_application_mcp_request_uri(
+    caplog,
+    client: Client,
+    influx: InfluxWriterMock,
+    request_uri: str,
+    is_valid: bool,
+):
+    message = create_mcp_message(request_uri=request_uri)
+    response = client(message).raise_for_status()
+    assert response.json() == [{"status": "success"}]
+
+    if is_valid:
+        influx.match_points(create_mcp_point())
+    else:
+        influx.match_points()
+        assert f"Unsupported message type: {request_uri!r}" in caplog.text

@@ -47,7 +47,7 @@ from aidial_analytics_realtime.utils.timer import Timer
 RATE_PATTERN = r"/v1/(.+?)/rate"
 CHAT_COMPLETION_PATTERN = r"/openai/deployments/(.+?)/chat/completions"
 EMBEDDING_PATTERN = r"/openai/deployments/(.+?)/embeddings"
-MCP_PATTERN = r"/v1/toolset/(.+?)/mcp"
+MCP_PATTERN = r"/v1/(toolset|deployments)/(.+?)/mcp"
 ROUTES_PATTERN = r"^/v1/deployments/(.+?)/route/(.+?)$"
 
 

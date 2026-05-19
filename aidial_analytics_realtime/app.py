@@ -31,6 +31,7 @@ from aidial_analytics_realtime.log_request.message import get_assembled_response
 from aidial_analytics_realtime.time import parse_time
 from aidial_analytics_realtime.topic_model import TopicModel, create_topic_model
 from aidial_analytics_realtime.utils.concurrency import cpu_task_executor
+from aidial_analytics_realtime.utils.deprecations import check_deprecations
 from aidial_analytics_realtime.utils.logging import (
     add_logger_prefix,
     configure_loggers,
@@ -71,6 +72,8 @@ app = FastAPI(lifespan=lifespan)
 init_telemetry(app, TelemetryConfig())
 
 configure_loggers()
+
+check_deprecations()
 
 
 async def on_rate_message(

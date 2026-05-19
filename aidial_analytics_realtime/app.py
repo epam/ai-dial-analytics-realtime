@@ -48,6 +48,7 @@ RATE_PATTERN = r"/v1/(.+?)/rate"
 CHAT_COMPLETION_PATTERN = r"/openai/deployments/(.+?)/chat/completions"
 EMBEDDING_PATTERN = r"/openai/deployments/(.+?)/embeddings"
 MCP_PATTERN = r"/v1/toolset/(.+?)/mcp"
+APPLICATION_MCP_PATTERN = r"/v1/deployments/(.+?)/mcp"
 ROUTES_PATTERN = r"^/v1/deployments/(.+?)/route/(.+?)$"
 
 
@@ -368,7 +369,7 @@ async def on_log_message(
             execution_path,
         )
 
-    elif re.search(MCP_PATTERN, uri):
+    elif re.search(MCP_PATTERN, uri) or re.search(APPLICATION_MCP_PATTERN, uri):
         await on_mcp_message(
             deployment=deployment,
             project_id=project_id,

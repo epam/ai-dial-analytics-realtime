@@ -108,6 +108,8 @@ def test_route_trace(client: Client, influx: InfluxWriterMock):
     [
         ([None, "b", "c"], "undefined/b/c"),
         (["a", "b", "c"], "a/b/c"),
+        (["a/b", "c"], "a\\/b/c"),
+        (["a", "b/c"], "a/b\\/c"),
     ],
 )
 def test_route_execution_path(

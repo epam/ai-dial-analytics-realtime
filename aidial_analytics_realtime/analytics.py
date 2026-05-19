@@ -46,7 +46,9 @@ def to_string(obj: str | None) -> str:
 
 
 def build_execution_path(path: list | None):
-    return "undefined" if not path else "/".join(map(to_string, path))
+    if not path:
+        return "undefined"
+    return "/".join(to_string(segment).replace("/", "\\/") for segment in path)
 
 
 async def make_point(

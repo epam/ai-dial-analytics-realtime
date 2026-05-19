@@ -28,10 +28,10 @@ from aidial_analytics_realtime.influx_writer import (
 )
 from aidial_analytics_realtime.langid import LangID
 from aidial_analytics_realtime.log_request.message import get_assembled_response
-from aidial_analytics_realtime.rates import RatesCalculator
 from aidial_analytics_realtime.time import parse_time
 from aidial_analytics_realtime.topic_model import TopicModel, create_topic_model
 from aidial_analytics_realtime.utils.concurrency import cpu_task_executor
+from aidial_analytics_realtime.utils.deprecations import check_deprecations
 from aidial_analytics_realtime.utils.logging import (
     add_logger_prefix,
     configure_loggers,
@@ -61,9 +61,6 @@ async def lifespan(app: FastAPI):
             topic_model = create_topic_model()
             app.dependency_overrides[TopicModel] = lambda: topic_model
 
-            rates_calculator = RatesCalculator()
-            app.dependency_overrides[RatesCalculator] = lambda: rates_calculator
-
             lang_id = LangID.create()
             app.dependency_overrides[LangID] = lambda: lang_id
 
@@ -75,6 +72,8 @@ app = FastAPI(lifespan=lifespan)
 init_telemetry(app, TelemetryConfig())
 
 configure_loggers()
+
+check_deprecations()
 
 
 async def on_rate_message(
@@ -114,7 +113,6 @@ async def on_chat_completion_message(
     response_body: dict | None,
     influx_writer: InfluxWriterAsync,
     topic_model: TopicModel,
-    rates_calculator: RatesCalculator,
     lang_id: LangID,
     token_usage: dict | None,
     parent_deployment: str | None,
@@ -145,7 +143,6 @@ async def on_chat_completion_message(
         response_body,
         RequestType.CHAT_COMPLETION,
         topic_model,
-        rates_calculator,
         lang_id,
         token_usage,
         parent_deployment,
@@ -166,7 +163,6 @@ async def on_embedding_message(
     response: dict,
     influx_writer: InfluxWriterAsync,
     topic_model: TopicModel,
-    rates_calculator: RatesCalculator,
     lang_id: LangID,
     token_usage: dict | None,
     parent_deployment: str | None,
@@ -200,7 +196,6 @@ async def on_embedding_message(
         response_body,
         RequestType.EMBEDDING,
         topic_model,
-        rates_calculator,
         lang_id,
         token_usage,
         parent_deployment,
@@ -292,7 +287,6 @@ async def on_log_message(
     message: dict,
     influx_writer: InfluxWriterAsync,
     topic_model: TopicModel,
-    rates_calculator: RatesCalculator,
     lang_id: LangID,
 ):
     request = message["request"]
@@ -339,7 +333,6 @@ async def on_log_message(
             response_body,
             influx_writer,
             topic_model,
-            rates_calculator,
             lang_id,
             token_usage,
             parent_deployment,
@@ -360,7 +353,6 @@ async def on_log_message(
             response,
             influx_writer,
             topic_model,
-            rates_calculator,
             lang_id,
             token_usage,
             parent_deployment,
@@ -413,7 +405,6 @@ async def on_log_messages(
     data: DataRequest,
     influx_writer: InfluxWriterAsync = Depends(),  # noqa: B008
     topic_model: TopicModel = Depends(),  # noqa: B008
-    rates_calculator: RatesCalculator = Depends(),  # noqa: B008
     lang_id: LangID = Depends(),  # noqa: B008
 ):
     messages = data.__root__
@@ -434,7 +425,6 @@ async def on_log_messages(
                     message,
                     influx_writer,
                     topic_model,
-                    rates_calculator,
                     lang_id,
                 )
 
@@ -455,7 +445,6 @@ async def process_message(
     request_message: Any,
     influx_writer: InfluxWriterAsync,
     topic_model: TopicModel,
-    rates_calculator: RatesCalculator,
     lang_id: LangID,
 ) -> dict:
     def _error(reason: str | None = None) -> dict:
@@ -481,9 +470,7 @@ async def process_message(
         return _error("invalid JSON in request message")
 
     try:
-        await on_log_message(
-            message_dict, influx_writer, topic_model, rates_calculator, lang_id
-        )
+        await on_log_message(message_dict, influx_writer, topic_model, lang_id)
         logger.debug("success")
         return {"status": "success"}
     except starlette.requests.ClientDisconnect:

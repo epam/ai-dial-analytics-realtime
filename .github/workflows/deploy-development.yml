@@ -18,9 +18,9 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - environment-name: "development"
+          - environment-name: "development-influxdb2"
             gitlab-project-id: "3018"
-          - environment-name: "development-test"
+          - environment-name: "development-influxdb3"
             gitlab-project-id: "3174"
 
     name: Deploy to ${{ matrix.environment-name }}

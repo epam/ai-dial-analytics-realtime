@@ -10,27 +10,26 @@ def test_invalid_data_message(client: Client):
         ],
     ).raise_for_status()
 
-    assert response.json() == [
-        {
-            "status": "error",
-            "error": """
-1 validation error for Message
-__root__
-  Message expected dict not str (type=type_error)
-""".strip(),
-            "reason": "invalid request message",
-        },
-        {
-            "status": "error",
-            "error": "Expecting value: line 1 column 1 (char 0)",
-            "reason": "invalid JSON in request message",
-        },
-        {
-            "status": "error",
-            "error": "Unterminated string starting at: line 1 column 2 (char 1)",
-            "reason": "invalid JSON in request message",
-        },
-    ]
+    response_json = response.json()
+
+    assert response_json[0]["status"] == "error"
+    assert response_json[0]["reason"] == "invalid request message"
+    assert "1 validation error for Message" in response_json[0]["error"]
+    assert (
+        "Input should be a valid dictionary or instance of Message"
+        in response_json[0]["error"]
+    )
+
+    assert response_json[1] == {
+        "status": "error",
+        "error": "Expecting value: line 1 column 1 (char 0)",
+        "reason": "invalid JSON in request message",
+    }
+    assert response_json[2] == {
+        "status": "error",
+        "error": "Unterminated string starting at: line 1 column 2 (char 1)",
+        "reason": "invalid JSON in request message",
+    }
 
 
 def test_invalid_data_request_json(client: Client):
@@ -59,9 +58,10 @@ def test_invalid_data_request_type(client: Client):
     assert response.json() == {
         "detail": [
             {
-                "loc": ["body", "__root__"],
-                "msg": "value is not a valid list",
-                "type": "type_error.list",
+                "type": "list_type",
+                "loc": ["body"],
+                "msg": "Input should be a valid list",
+                "input": {"foo": "bar"},
             }
         ]
     }

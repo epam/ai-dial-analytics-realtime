@@ -10,15 +10,17 @@ def test_invalid_data_message(client: Client):
         ],
     ).raise_for_status()
 
-    assert response.json() == [
+    response_json = response.json()
+    assert "1 validation error for Message" in response_json[0]["error"]
+    assert (
+        "Input should be a valid dictionary or instance of Message"
+        in response_json[0]["error"]
+    )
+    assert response_json == [
         {
             "status": "error",
-            "error": """
-1 validation error for Message
-__root__
-  Message expected dict not str (type=type_error)
-""".strip(),
             "reason": "invalid request message",
+            "error": response_json[0]["error"],
         },
         {
             "status": "error",
@@ -59,9 +61,10 @@ def test_invalid_data_request_type(client: Client):
     assert response.json() == {
         "detail": [
             {
-                "loc": ["body", "__root__"],
-                "msg": "value is not a valid list",
-                "type": "type_error.list",
+                "type": "list_type",
+                "loc": ["body"],
+                "msg": "Input should be a valid list",
+                "input": {"foo": "bar"},
             }
         ]
     }

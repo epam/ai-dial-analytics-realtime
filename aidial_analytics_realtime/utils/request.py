@@ -1,11 +1,9 @@
 import re
 from typing import Any
 
-from pydantic import BaseModel
+from pydantic import BaseModel, RootModel
 
-
-class DataRequest(BaseModel):
-    __root__: list[Any]
+DataRequest = RootModel[list[Any]]
 
 
 class Message(BaseModel):

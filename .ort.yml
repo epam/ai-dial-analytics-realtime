@@ -9,6 +9,6 @@ excludes:
     comment: "Packages for testing only."
 resolutions:
   rule_violations:
-    - message: ".*PyPI::(opentelemetry|networkx|scipy|fastapi|starlette|typing-extensions|setuptools|sentencepiece|aidial-sdk|scikit-learn|anyio|pillow|urllib3|httpx|httpcore|idna|typer|pygments).*"
+    - message: "NO_LICENSE_IN_DEPENDENCY - PyPI::(opentelemetry-exporter-otlp-proto-grpc|opentelemetry-semantic-conventions|opentelemetry-proto|aidial-sdk|opentelemetry-api|networkx|typer|typing-extensions|setuptools|httpx|fastapi|pygments|httpcore|starlette|idna|opentelemetry-exporter-prometheus|opentelemetry-exporter-otlp-proto-common|opentelemetry-sdk|typing-inspection|sentencepiece|scikit-learn|anyio|scipy|urllib3).*"
       reason: "CANT_FIX_EXCEPTION"
       comment: "ORT cannot pick up license information for these packages with no clear license metadata"

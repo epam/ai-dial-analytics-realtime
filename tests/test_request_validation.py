@@ -11,25 +11,28 @@ def test_invalid_data_message(client: Client):
     ).raise_for_status()
 
     response_json = response.json()
-
-    assert response_json[0]["status"] == "error"
-    assert response_json[0]["reason"] == "invalid request message"
     assert "1 validation error for Message" in response_json[0]["error"]
     assert (
         "Input should be a valid dictionary or instance of Message"
         in response_json[0]["error"]
     )
-
-    assert response_json[1] == {
-        "status": "error",
-        "error": "Expecting value: line 1 column 1 (char 0)",
-        "reason": "invalid JSON in request message",
-    }
-    assert response_json[2] == {
-        "status": "error",
-        "error": "Unterminated string starting at: line 1 column 2 (char 1)",
-        "reason": "invalid JSON in request message",
-    }
+    assert response_json == [
+        {
+            "status": "error",
+            "reason": "invalid request message",
+            "error": response_json[0]["error"],
+        },
+        {
+            "status": "error",
+            "error": "Expecting value: line 1 column 1 (char 0)",
+            "reason": "invalid JSON in request message",
+        },
+        {
+            "status": "error",
+            "error": "Unterminated string starting at: line 1 column 2 (char 1)",
+            "reason": "invalid JSON in request message",
+        },
+    ]
 
 
 def test_invalid_data_request_json(client: Client):

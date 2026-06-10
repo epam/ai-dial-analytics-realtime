@@ -3,9 +3,7 @@ from typing import Any
 
 from pydantic import BaseModel, RootModel
 
-
-class DataRequest(RootModel[list[Any]]):
-    pass
+DataRequest = RootModel[list[Any]]
 
 
 class Message(BaseModel):

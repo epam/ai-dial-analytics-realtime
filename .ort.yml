@@ -9,9 +9,6 @@ excludes:
     comment: "Packages for testing only."
 resolutions:
   rule_violations:
-    - message: ".*PyPI::setuptools:78\\.1\\.1.*"
+    - message: ".*PyPI::(opentelemetry|networkx|scipy|fastapi|starlette|typing-extensions|setuptools|sentencepiece|aidial-sdk|scikit-learn|anyio|pillow|urllib3|httpx|httpcore|idna|typer|pygments).*"
       reason: "CANT_FIX_EXCEPTION"
-      comment: "BSD 3-Clause New or Revised License: https://github.com/pypa/setuptools/blob/v78.1.1/LICENSE"
-    - message: ".*PyPI::(opentelemetry|networkx|scipy|fastapi|starlette|typing-extensions|setuptools|sentencepiece|aidial-sdk|scikit-learn|anyio|pillow|urllib3).*"
-      reason: "CANT_FIX_EXCEPTION"
-      comment: "ORT cannot pick up license information"
+      comment: "ORT cannot pick up license information for these packages with no clear license metadata"

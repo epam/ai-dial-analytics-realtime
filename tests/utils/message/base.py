@@ -1,5 +1,5 @@
 import json
-from typing import Callable
+from collections.abc import Callable
 
 from tests.utils.constants import (
     DEFAULT_CORE_PARENT_SPAN_ID,

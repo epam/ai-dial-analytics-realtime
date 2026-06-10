@@ -2,7 +2,7 @@ import os
 from decimal import Decimal
 from typing import Annotated, Literal
 
-from pydantic import BaseModel, Field, parse_raw_as
+from pydantic import BaseModel, Field, TypeAdapter
 
 
 class ModelRate(BaseModel):
@@ -61,7 +61,7 @@ class RatesCalculator:
         if rates_str is None:
             rates_str = os.environ.get("MODEL_RATES", "{}")
         assert rates_str is not None
-        self.rates = parse_raw_as(Rates, rates_str)
+        self.rates = TypeAdapter(Rates).validate_json(rates_str)
 
     def get_rate(self, deployment: str, model: str):
         deployment_rate = self.rates.get(deployment)

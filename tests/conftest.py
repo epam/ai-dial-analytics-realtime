@@ -1,5 +1,7 @@
+from typing import cast
 from unittest.mock import patch
 
+import httpx
 import pytest
 from fastapi.testclient import TestClient
 
@@ -44,5 +46,8 @@ def client(influx, language_classifier, topic_model) -> Client:
     app.app.dependency_overrides[app.InfluxWriterAsync] = lambda: influx  # type: ignore
     app.app.dependency_overrides[app.TopicModel] = lambda: topic_model
     return Client(
-        http_client=TestClient(app.app, raise_server_exceptions=False)
+        http_client=cast(
+            httpx.Client,
+            TestClient(app.app, raise_server_exceptions=False),
+        )
     )

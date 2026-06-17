@@ -20,15 +20,16 @@ Repository = "https://github.com/epam/ai-dial-analytics-realtime"
 package-mode = false
 
 [tool.poetry.dependencies]
-aiohttp = "3.13.4"
-fastapi = "0.120.2"
+aiohttp = "3.14.0"
+fastapi = "0.135.1"
+starlette = ">=1.3.1,<2"
 uvicorn = "0.22.0"
 influxdb-client = "1.37.0"
 langid = "1.1.6"
 bertopic = "^0.15.0"
 python-dotenv = "^1.2.2"
 python-dateutil = "^2.8.2"
-pydantic = "1.10.17"
+pydantic = "2.7.0"
 aidial-sdk = { version = "0.33.1", extras = ["telemetry"] }
 
 # Indirect dependencies
@@ -36,7 +37,7 @@ torch = [
     { version = "2.10.0", source = "PyPI", markers = "sys_platform == 'darwin'" },
     { version = "2.10.0+cpu", source = "pytorch", markers = "sys_platform != 'darwin'" },
 ]
-transformers = "5.0.0rc3"
+transformers = "5.3.0"
 llvmlite = "0.42.0"
 numpy = "1.26.0"
 numba = "0.59.1"
@@ -55,6 +56,7 @@ priority = "explicit"
 [tool.poetry.group.test.dependencies]
 pytest = "^9.0.3"
 httpx = "^0.25.2"
+httpx2 = "^2.0.0"
 pytest-env = "1.1.1"
 
 [tool.poetry.group.dev.dependencies]

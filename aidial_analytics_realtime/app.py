@@ -407,7 +407,7 @@ async def on_log_messages(
     topic_model: TopicModel = Depends(),  # noqa: B008
     lang_id: LangID = Depends(),  # noqa: B008
 ):
-    messages = data.__root__
+    messages = data.root
     n = len(messages)
     logger.info(f"number of messages: {n}")
 
@@ -460,7 +460,7 @@ async def process_message(
         return ret
 
     try:
-        message_str = Message.parse_obj(request_message).message
+        message_str = Message.model_validate(request_message).message
     except Exception:
         return _error("invalid request message")
 

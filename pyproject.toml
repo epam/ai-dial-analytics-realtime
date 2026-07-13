@@ -37,7 +37,7 @@ torch = [
     { version = "2.10.0", source = "PyPI", markers = "sys_platform == 'darwin'" },
     { version = "2.10.0+cpu", source = "pytorch", markers = "sys_platform != 'darwin'" },
 ]
-transformers = "5.3.0"
+transformers = "5.5.0"
 llvmlite = "0.42.0"
 numpy = "1.26.0"
 numba = "0.59.1"

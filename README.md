@@ -215,7 +215,15 @@ Logging is provided by the DIAL SDK. The `LOG_LEVEL` variable sets the severity 
 By default logs are emitted as human-readable text.
 Set `DIAL_SDK_LOG_FORMAT=json` for structured JSON logging.
 The format is controlled by `DIAL_SDK_TEXT_LOG_FORMAT` / `DIAL_SDK_JSON_LOG_FORMAT` (both optional),
-which use Python's `%`-style [logging attributes](https://docs.python.org/3/library/logging.html#logrecord-attributes).
+which use Python's `%`-style [logging attributes](https://docs.python.org/3/library/logging.html#logrecord-attributes)
+and default to the values shown below.
+
+Text logging (default):
+
+```txt
+DIAL_SDK_LOG_FORMAT=text
+DIAL_SDK_TEXT_LOG_FORMAT='%(levelprefix)s | %(asctime)s | %(process)d | %(name)s | %(message)s'
+```
 
 Structured JSON logging:
 

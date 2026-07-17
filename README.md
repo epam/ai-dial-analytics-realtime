@@ -26,6 +26,7 @@
       - [InfluxDB 3](#influxdb-3)
     - [Aggregated Dashboards (Optional)](#aggregated-dashboards-optional)
     - [Other configuration](#other-configuration)
+    - [Logging](#logging)
   - [Development](#development)
     - [Development Environment](#development-environment)
     - [Setup](#setup)
@@ -205,7 +206,25 @@ Also, following environment valuables can be used to configure the service behav
 |---|---|---|
 |TOPIC_MODEL||Specifies the name or path for the topic model. If the model is specified by name, it will be downloaded from the [Huggingface]( https://huggingface.co/). When unset or set to an empty string, the topic classification feature is disabled.|
 |TOPIC_EMBEDDINGS_MODEL||Specifies the name or path for the embeddings model used with the topic model. If the model is specified by name, it will be downloaded from the [Huggingface]( https://huggingface.co/). When unset or set to an empty string, the name will be used from the topic model config.|
-|LOG_LEVEL|INFO|The server logging level. Use DEBUG for dev purposes and INFO in prod|
+|LOG_LEVEL|INFO|Application log level. Use DEBUG for dev purposes and INFO in prod|
+
+### Logging
+
+Logging is provided by the DIAL SDK. The `LOG_LEVEL` variable sets the severity threshold for the application's own logs (`INFO` by default; use `DEBUG` for development).
+
+By default logs are emitted as human-readable text.
+Set `DIAL_SDK_LOG_FORMAT=json` for structured JSON logging.
+The format is controlled by `DIAL_SDK_TEXT_LOG_FORMAT` / `DIAL_SDK_JSON_LOG_FORMAT` (both optional),
+which use Python's `%`-style [logging attributes](https://docs.python.org/3/library/logging.html#logrecord-attributes).
+
+Structured JSON logging:
+
+```txt
+DIAL_SDK_LOG_FORMAT=json
+DIAL_SDK_JSON_LOG_FORMAT='{"level": "%(levelname)s", "time": "%(asctime)s", "logger": "%(name)s", "process": "%(process)d", "message": "%(message)s"}'
+```
+
+See the [full logging documentation](https://github.com/epam/ai-dial-sdk/blob/0.38.0/docs/logging.md) for details.
 
 ## Development
 

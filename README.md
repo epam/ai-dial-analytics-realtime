@@ -222,7 +222,7 @@ Text logging (default):
 
 ```txt
 DIAL_SDK_LOG_FORMAT=text
-DIAL_SDK_TEXT_LOG_FORMAT='%(levelprefix)s | %(asctime)s | %(process)d | %(name)s | %(message)s'
+DIAL_SDK_TEXT_LOG_FORMAT='%(levelprefix)s | %(asctime)s | %(name)s | %(process)d | %(message)s'
 ```
 
 Structured JSON logging:

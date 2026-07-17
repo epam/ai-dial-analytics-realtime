@@ -9,6 +9,6 @@ excludes:
     comment: "Packages for testing only."
 resolutions:
   rule_violations:
-    - message: ".*PyPI::(opentelemetry|networkx|scipy|fastapi|starlette|typing-extensions|setuptools|sentencepiece|aidial-sdk|scikit-learn|anyio|pillow|urllib3|httpx|httpcore|idna|typer|pygments|annotated-types|typing-inspection).*"
+    - message: ".*PyPI::(opentelemetry|networkx|scipy|fastapi|starlette|typing-extensions|setuptools|sentencepiece|aidial-sdk|scikit-learn|anyio|pillow|urllib3|httpx|httpcore|idna|typer|pygments|annotated-types|typing-inspection|regex).*"
       reason: "CANT_FIX_EXCEPTION"
       comment: "ORT cannot pick up license information for these packages with no clear license metadata"

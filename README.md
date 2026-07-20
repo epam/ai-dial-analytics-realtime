@@ -82,7 +82,7 @@ graph TD
 DIAL **models** and DIAL **applications** are disjoint deployment kinds:
 
 - **Model** — makes the actual LLM call. Always a leaf: it never calls another DIAL deployment.
-- **Application** — ad-hoc logic; either answers on its own or fans out to other applications/models and composes their answers. Always an inner node (or a childless root).
+- **Application** — ad-hoc logic; either answers on its own or fans out to other applications/models and composes their answers.
 
 For the tree above, `trace_id` is shared by all 4 spans; `core_parent_span_id`/`execution_path` encode the edges:
 

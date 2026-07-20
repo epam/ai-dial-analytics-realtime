@@ -16,6 +16,7 @@
 - [Overview](#overview)
   - [Usage](#usage)
   - [InfluxDB schema](#influxdb-schema)
+    - [Distributed tracing data model](#distributed-tracing-data-model)
     - [Chat completion and embedding requests](#chat-completion-and-embedding-requests)
     - [Rate requests](#rate-requests)
     - [MCP requests](#mcp-requests)
@@ -52,6 +53,69 @@ Check the [AI DIAL Core](https://github.com/epam/ai-dial-core) documentation to 
 
 The realtime analytics server analyzes the logs stream provided by [Vector](https://vector.dev/docs/reference/configuration/sinks/http/) in the realtime and writes metrics to the InfluxDB.
 
+### Distributed tracing data model
+
+Every row in every measurement below is one **span** in the usual distributed-tracing sense — one DIAL request. Field-to-tracing-terms mapping:
+
+|Field|Distributed tracing equivalent|
+|---|---|
+|`trace_id`|Trace ID — groups every span caused by one DIAL Client request.|
+|`core_span_id`|Span ID. `trace_id` + `core_span_id` uniquely identifies a span (a DIAL request).|
+|`core_parent_span_id`|Parent span ID — the span that directly triggered this one. Empty/absent for the root span. Walking these links reconstructs the whole call tree.|
+|`execution_path`|The full ancestor chain as deployment names, root-first, current span's deployment last. Empty for the root span.|
+
+A root DIAL Client call can fan out into a whole tree, because a DIAL application can itself call other DIAL deployments to build its answer:
+
+```mermaid
+graph TD
+    client([DIAL Client]) --> app1["app1 : Application"]
+    app1 --> app2["app2 : Application"]
+    app1 --> model2["model2 : Model"]
+    app2 --> model1["model1 : Model"]
+
+    classDef app fill:#e8f0fe,stroke:#4285f4;
+    classDef model fill:#fce8e6,stroke:#ea4335;
+    class app1,app2 app;
+    class model1,model2 model;
+```
+
+DIAL **models** and DIAL **applications** are disjoint deployment kinds:
+
+- **Model** — makes the actual LLM call. Always a leaf: it never calls another DIAL deployment.
+- **Application** — ad-hoc logic; either answers on its own or fans out to other applications/models and composes their answers.
+
+For the tree above, `trace_id` is shared by all 4 spans; `core_parent_span_id`/`execution_path` encode the edges:
+
+|deployment|execution_path|parent_deployment|
+|---|---|---|
+|app1|*(empty)*|*(none)* — root|
+|app2|app1|app1|
+|model2|app1|app1|
+|model1|app1/app2|app2|
+
+#### Avoiding double counting when summing price
+
+`deployment_price` is the cost of *that one span only*. `price` is cumulative — that span's `deployment_price` plus `price` of everything below it in the tree. So a span's `price` already includes its descendants' cost, and summing `price` across a whole bundle counts shared ancestors' subtrees multiple times.
+
+```mermaid
+graph TD
+    client([DIAL Client]) --> app1["app1<br/>deployment_price=0<br/>price=0.08"]
+    app1 --> app2["app2<br/>deployment_price=0<br/>price=0.05"]
+    app1 --> model2["model2<br/>deployment_price=0.03<br/>price=0.03"]
+    app2 --> model1["model1<br/>deployment_price=0.05<br/>price=0.05"]
+
+    classDef app fill:#e8f0fe,stroke:#4285f4;
+    classDef model fill:#fce8e6,stroke:#ea4335;
+    class app1,app2 app;
+    class model1,model2 model;
+```
+
+The true total cost of the user's request is **0.08**. Two correct ways to get it, one wrong way:
+
+- ✅ `price` of the root span only (`execution_path` empty): **app1.price = 0.08**.
+- ✅ `sum(deployment_price)` over every span sharing the `trace_id`: `0 + 0 + 0.03 + 0.05 = 0.08`.
+- ❌ `sum(price)` over every span sharing the `trace_id`: `0.08 + 0.05 + 0.03 + 0.05 = 0.21` — `model1`'s cost is counted once in its own `price` and again inside `app2.price` and again inside `app1.price`.
+
 ### Chat completion and embedding requests
 
 The logs for `/chat/completions` and `/embeddings` endpoints are saved to the `analytics` measurement with the following tags and fields:
@@ -82,6 +146,9 @@ The logs for `/chat/completions` and `/embeddings` endpoints are saved to the `a
 |prompt_tokens|int|The number of tokens in the request.|
 |cached_prompt_tokens|int|The number of tokens read from the model cache. `cached_prompt_tokens` <= `prompt_tokens`|
 |completion_tokens|int|The number of tokens in the response.|
+
+> [!NOTE]
+> Token counts (`prompt_tokens`, `cached_prompt_tokens`, `completion_tokens`) are expected only from DIAL **models**. Tokens are meaningless for a DIAL **application**: an application may call several models with different, incomparable token kinds, so there is no coherent way to aggregate them. Accordingly, DIAL Core lets you configure [token pricing for models](https://github.com/epam/ai-dial-core/blob/0.45.5/docs/dynamic-settings/models.md#modelsmodel_namepricing) but [not for applications](https://github.com/epam/ai-dial-core/blob/0.45.5/docs/dynamic-settings/applications.md#L4). If an application does report token usage it is an application bug — the analytics server will still pick it up and write it to InfluxDB.
 
 ### Rate requests
 

@@ -147,6 +147,9 @@ The logs for `/chat/completions` and `/embeddings` endpoints are saved to the `a
 |cached_prompt_tokens|int|The number of tokens read from the model cache. `cached_prompt_tokens` <= `prompt_tokens`|
 |completion_tokens|int|The number of tokens in the response.|
 
+> [!NOTE]
+> Token counts (`prompt_tokens`, `cached_prompt_tokens`, `completion_tokens`) are expected only from DIAL **models**. Tokens are meaningless for a DIAL **application**: an application may call several models with different, incomparable token kinds, so there is no coherent way to aggregate them. Accordingly, DIAL Core lets you configure [token pricing for models](https://github.com/epam/ai-dial-core/blob/1cab68874937e4e5e32b3d92795790315b368b6d/docs/dynamic-settings/models.md#modelsmodel_namepricing) but [not for applications](https://github.com/epam/ai-dial-core/blob/1cab68874937e4e5e32b3d92795790315b368b6d/docs/dynamic-settings/applications.md#L4). If an application does report token usage it is an application bug — the analytics server will still pick it up and write it to InfluxDB.
+
 ### Rate requests
 
 The logs for the `/rate` endpoint are saved to the `rate_analytics` measurement:

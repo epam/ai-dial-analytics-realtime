@@ -71,6 +71,8 @@ app = FastAPI(lifespan=lifespan)
 
 init_telemetry(app, TelemetryConfig())
 
+# NOTE: configuring loggers after the DIAL telemetry is initialized,
+# because it may have configured the root logger on its own.
 configure_loggers()
 
 check_deprecations()

@@ -30,7 +30,7 @@ bertopic = "^0.15.0"
 python-dotenv = "^1.2.2"
 python-dateutil = "^2.8.2"
 pydantic = "2.7.0"
-aidial-sdk = { version = "0.33.1", extras = ["telemetry"] }
+aidial-sdk = { version = "0.38.0", extras = ["telemetry"] }
 
 # Indirect dependencies
 torch = [

@@ -286,24 +286,6 @@ def make_rate_point(
     return point
 
 
-async def parse_usage_per_model(response: dict | None):
-    if response is None:
-        return []
-
-    statistics = response.get("statistics")
-    if statistics is None:
-        return []
-
-    if not isinstance(statistics, dict) or "usage_per_model" not in statistics:
-        return []
-
-    usage_per_model = statistics["usage_per_model"]
-    if not isinstance(usage_per_model, list):
-        return []
-
-    return usage_per_model
-
-
 async def on_message(
     influx_writer: InfluxWriterAsync,
     deployment: str,
@@ -324,91 +306,25 @@ async def on_message(
     trace: dict | None,
     execution_path: list | None,
 ):
-    usage_per_model = await parse_usage_per_model(response)
     response_usage = None if response is None else response.get("usage")
 
-    if token_usage is not None:
-        point = await make_point(
-            deployment,
-            model,
-            project_id,
-            chat_id,
-            upstream_url,
-            user_hash,
-            user_title,
-            timestamp,
-            request,
-            response,
-            type,
-            token_usage,
-            topic_model,
-            lang_id,
-            parent_deployment,
-            trace,
-            execution_path,
-        )
-        await influx_writer(point)
-    elif len(usage_per_model) == 0:
-        point = await make_point(
-            deployment,
-            model,
-            project_id,
-            chat_id,
-            upstream_url,
-            user_hash,
-            user_title,
-            timestamp,
-            request,
-            response,
-            type,
-            response_usage,
-            topic_model,
-            lang_id,
-            parent_deployment,
-            trace,
-            execution_path,
-        )
-        await influx_writer(point)
-    else:
-        point = await make_point(
-            deployment,
-            model,
-            project_id,
-            chat_id,
-            upstream_url,
-            user_hash,
-            user_title,
-            timestamp,
-            request,
-            response,
-            type,
-            None,
-            topic_model,
-            lang_id,
-            parent_deployment,
-            trace,
-            execution_path,
-        )
-        await influx_writer(point)
-
-        for usage in usage_per_model:
-            point = await make_point(
-                deployment,
-                usage["model"],
-                project_id,
-                None,
-                None,
-                user_hash,
-                user_title,
-                timestamp,
-                request,
-                response,
-                type,
-                usage,
-                topic_model,
-                lang_id,
-                parent_deployment,
-                trace,
-                execution_path,
-            )
-            await influx_writer(point)
+    point = await make_point(
+        deployment,
+        model,
+        project_id,
+        chat_id,
+        upstream_url,
+        user_hash,
+        user_title,
+        timestamp,
+        request,
+        response,
+        type,
+        token_usage or response_usage,
+        topic_model,
+        lang_id,
+        parent_deployment,
+        trace,
+        execution_path,
+    )
+    await influx_writer(point)

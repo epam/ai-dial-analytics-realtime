@@ -99,16 +99,18 @@ For the tree above, `trace_id` is shared by all 4 spans; `core_parent_span_id`/`
 
 ```mermaid
 graph TD
-    client([DIAL Client]) --> app1["app1<br/>deployment_price=0<br/>price=0.08"]
-    app1 --> app2["app2<br/>deployment_price=0<br/>price=0.05"]
-    app1 --> model2["model2<br/>deployment_price=0.03<br/>price=0.03"]
-    app2 --> model1["model1<br/>deployment_price=0.05<br/>price=0.05"]
+    client([DIAL Client]) --> app1["app1<br/>trace_id=t1<br/>core_span_id=s1<br/>prompt_tokens=150<br/>deployment_price=0<br/>price=0.08"]
+    app1 --> app2["app2<br/>trace_id=t1<br/>core_span_id=s2<br/>prompt_tokens=100<br/>deployment_price=0<br/>price=0.05"]
+    app1 --> model2["model2<br/>trace_id=t1<br/>core_span_id=s3<br/>prompt_tokens=50<br/>deployment_price=0.03<br/>price=0.03"]
+    app2 --> model1["model1<br/>trace_id=t1<br/>core_span_id=s4<br/>prompt_tokens=100<br/>deployment_price=0.05<br/>price=0.05"]
 
     classDef app fill:#e8f0fe,stroke:#4285f4;
     classDef model fill:#fce8e6,stroke:#ea4335;
     class app1,app2 app;
     class model1,model2 model;
 ```
+
+Note how `trace_id=t1` is shared by every span in the tree, while each span gets its own `core_span_id`. Like `price`, the `*_tokens` fields (`prompt_tokens` shown here) on an application span are cumulative — DIAL Core sets them to the sum over that span's whole subtree — so the same double-counting caveat applies when aggregating them.
 
 The true total cost of the user's request is **0.08**. Two correct ways to get it, one wrong way:
 
@@ -146,9 +148,6 @@ The logs for `/chat/completions` and `/embeddings` endpoints are saved to the `a
 |prompt_tokens|int|The number of tokens in the request.|
 |cached_prompt_tokens|int|The number of tokens read from the model cache. `cached_prompt_tokens` <= `prompt_tokens`|
 |completion_tokens|int|The number of tokens in the response.|
-
-> [!NOTE]
-> Token counts (`prompt_tokens`, `cached_prompt_tokens`, `completion_tokens`) are expected only from DIAL **models**. Tokens are meaningless for a DIAL **application**: an application may call several models with different, incomparable token kinds, so there is no coherent way to aggregate them. Accordingly, DIAL Core lets you configure [token pricing for models](https://github.com/epam/ai-dial-core/blob/0.45.5/docs/dynamic-settings/models.md#modelsmodel_namepricing) but [not for applications](https://github.com/epam/ai-dial-core/blob/0.45.5/docs/dynamic-settings/applications.md#L4). If an application does report token usage it is an application bug — the analytics server will still pick it up and write it to InfluxDB.
 
 ### Rate requests
 

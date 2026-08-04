@@ -162,6 +162,26 @@ def test_chat_usage_from_top_level(client: Client, influx: InfluxWriterMock):
     influx.match_points(point)
 
 
+def test_chat_cache_write_prompt_tokens(
+    client: Client, influx: InfluxWriterMock
+):
+    message = create_chat_message(
+        token_usage={"prompt_tokens_details": {"cache_write_tokens": 77}}
+    )
+    client(message).raise_for_status()
+    influx.match_points(create_chat_point(cache_write_prompt_tokens=77))
+
+
+def test_chat_reasoning_completion_tokens(
+    client: Client, influx: InfluxWriterMock
+):
+    message = create_chat_message(
+        token_usage={"completion_tokens_details": {"reasoning_tokens": 88}}
+    )
+    client(message).raise_for_status()
+    influx.match_points(create_chat_point(reasoning_completion_tokens=88))
+
+
 def test_chat_parent_deployment(client: Client, influx: InfluxWriterMock):
     message = create_chat_message(parent_deployment="test-parent-deployment")
     client(message).raise_for_status()

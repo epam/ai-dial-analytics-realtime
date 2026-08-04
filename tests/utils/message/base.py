@@ -13,7 +13,8 @@ def default_token_usage() -> dict:
         "prompt_tokens": 0,
         "completion_tokens": 0,
         "total_tokens": 0,
-        "prompt_tokens_details": {"cached_tokens": 0},
+        "prompt_tokens_details": {"cached_tokens": 0, "cache_write_tokens": 0},
+        "completion_tokens_details": {"reasoning_tokens": 0},
         "deployment_price": 0.0,
         "price": 0.0,
     }

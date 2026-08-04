@@ -144,6 +144,8 @@ def _create_point(
     prompt_tokens: int,
     completion_tokens: int,
     cached_prompt_tokens: int,
+    cache_write_prompt_tokens: int,
+    reasoning_completion_tokens: int,
     deployment_price: float,
     price: float,
 ) -> Point:
@@ -170,6 +172,8 @@ def _create_point(
         .field("completion_tokens", completion_tokens)
         .field("prompt_tokens", prompt_tokens)
         .field("cached_prompt_tokens", cached_prompt_tokens)
+        .field("cache_write_prompt_tokens", cache_write_prompt_tokens)
+        .field("reasoning_completion_tokens", reasoning_completion_tokens)
         .time(timestamp)
     )
 
@@ -196,6 +200,8 @@ def create_chat_point(
     prompt_tokens: int = 0,
     completion_tokens: int = 0,
     cached_prompt_tokens: int = 0,
+    cache_write_prompt_tokens: int = 0,
+    reasoning_completion_tokens: int = 0,
     deployment_price: float = 0.0,
     price: float = 0.0,
 ) -> Point:
@@ -223,6 +229,8 @@ def create_embeddings_point(
     prompt_tokens: int = 0,
     completion_tokens: int = 0,
     cached_prompt_tokens: int = 0,
+    cache_write_prompt_tokens: int = 0,
+    reasoning_completion_tokens: int = 0,
     deployment_price: float = 0.0,
     price: float = 0.0,
 ) -> Point:

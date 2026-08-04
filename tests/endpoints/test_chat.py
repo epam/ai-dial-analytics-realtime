@@ -116,6 +116,12 @@ def test_chat_usage_from_response(client: Client, influx: InfluxWriterMock):
         prompt_tokens=usage["prompt_tokens"],
         completion_tokens=usage["completion_tokens"],
         cached_prompt_tokens=usage["prompt_tokens_details"]["cached_tokens"],
+        cache_write_prompt_tokens=usage["prompt_tokens_details"][
+            "cache_write_tokens"
+        ],
+        reasoning_completion_tokens=usage["completion_tokens_details"][
+            "reasoning_tokens"
+        ],
     )
 
     influx.match_points(point)
@@ -131,7 +137,11 @@ def test_chat_usage_from_top_level(client: Client, influx: InfluxWriterMock):
             "prompt_tokens": 111,
             "completion_tokens": 222,
             "total_tokens": 333,
-            "prompt_tokens_details": {"cached_tokens": 44},
+            "prompt_tokens_details": {
+                "cached_tokens": 44,
+                "cache_write_tokens": 55,
+            },
+            "completion_tokens_details": {"reasoning_tokens": 66},
             "deployment_price": 0.001,
             "price": 0.002,
         },
@@ -143,6 +153,8 @@ def test_chat_usage_from_top_level(client: Client, influx: InfluxWriterMock):
         prompt_tokens=111,
         completion_tokens=222,
         cached_prompt_tokens=44,
+        cache_write_prompt_tokens=55,
+        reasoning_completion_tokens=66,
         deployment_price=0.001,
         price=0.002,
     )

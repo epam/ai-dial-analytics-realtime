@@ -46,7 +46,11 @@ def create_chat_assembled_response(
             "completion_tokens": 189,
             "prompt_tokens": 22,
             "total_tokens": 211,
-            "prompt_tokens_details": {"cached_tokens": 10},
+            "prompt_tokens_details": {
+                "cached_tokens": 10,
+                "cache_write_tokens": 5,
+            },
+            "completion_tokens_details": {"reasoning_tokens": 100},
         },
     }
 

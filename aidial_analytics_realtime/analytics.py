@@ -171,8 +171,20 @@ async def make_point(
     point.field("completion_tokens", usage.get("completion_tokens") or 0)
     point.field("prompt_tokens", usage.get("prompt_tokens") or 0)
 
-    details = usage.get("prompt_tokens_details") or {}
-    point.field("cached_prompt_tokens", details.get("cached_tokens") or 0)
+    prompt_details = usage.get("prompt_tokens_details") or {}
+    point.field(
+        "cached_prompt_tokens", prompt_details.get("cached_tokens") or 0
+    )
+    point.field(
+        "cache_write_prompt_tokens",
+        prompt_details.get("cache_write_tokens") or 0,
+    )
+
+    completion_details = usage.get("completion_tokens_details") or {}
+    point.field(
+        "reasoning_completion_tokens",
+        completion_details.get("reasoning_tokens") or 0,
+    )
 
     return point
 

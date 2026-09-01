@@ -20,6 +20,7 @@ from aidial_analytics_realtime.analytics import (
     make_anthropic_messages_point,
     make_mcp_point,
     make_rate_point,
+    make_responses_point,
     make_route_point,
     on_message,
 )
@@ -48,6 +49,7 @@ from aidial_analytics_realtime.utils.timer import Timer
 RATE_PATTERN = r"/v1/(.+?)/rate"
 CHAT_COMPLETION_PATTERN = r"/openai/deployments/(.+?)/chat/completions"
 EMBEDDING_PATTERN = r"/openai/deployments/(.+?)/embeddings"
+RESPONSES_PATTERN = r"^/+openai/v1/responses(\?|$)"
 ANTHROPIC_MESSAGES_PATTERN = r"^/+anthropic/v1/messages(\?|$)"
 MCP_PATTERN = r"/v1/(toolset|deployments)/(.+?)/mcp"
 ROUTES_PATTERN = r"^/v1/deployments/(.+?)/route/(.+?)$"
@@ -153,6 +155,57 @@ async def on_chat_completion_message(
         trace,
         execution_path,
     )
+
+
+async def on_responses_message(
+    *,
+    deployment: str,
+    project_id: str,
+    chat_id: str,
+    upstream_url: str,
+    user_hash: str,
+    user_title: str,
+    timestamp: datetime,
+    request: dict,
+    response: dict,
+    response_body: dict | None,
+    influx_writer: InfluxWriterAsync,
+    topic_model: TopicModel,
+    lang_id: LangID,
+    token_usage: dict | None,
+    parent_deployment: str | None,
+    trace: dict | None,
+    execution_path: list | None,
+):
+    if response["status"] != "200":
+        return
+
+    request_body = None
+    model: str | None = None
+
+    if (request_body_str := request.get("body")) is not None:
+        request_body = json.loads(request_body_str)
+        model = request_body.get("model") or deployment
+
+    point = await make_responses_point(
+        deployment=deployment,
+        model=model or deployment,
+        parent_deployment=parent_deployment,
+        project_id=project_id,
+        chat_id=chat_id,
+        upstream_url=upstream_url,
+        user_hash=user_hash,
+        user_title=user_title,
+        timestamp=timestamp,
+        request=request_body,
+        response=response_body,
+        usage=token_usage,
+        topic_model=topic_model,
+        lang_id=lang_id,
+        trace=trace,
+        execution_path=execution_path,
+    )
+    await influx_writer(point)
 
 
 async def on_anthropic_messages_message(
@@ -393,6 +446,27 @@ async def on_log_message(
             parent_deployment,
             trace,
             execution_path,
+        )
+
+    elif re.search(RESPONSES_PATTERN, uri):
+        await on_responses_message(
+            deployment=deployment,
+            project_id=project_id,
+            chat_id=chat_id,
+            upstream_url=upstream_url,
+            user_hash=user_hash,
+            user_title=user_title,
+            timestamp=timestamp,
+            request=request,
+            response=response,
+            response_body=get_assembled_response(message),
+            influx_writer=influx_writer,
+            topic_model=topic_model,
+            lang_id=lang_id,
+            token_usage=token_usage,
+            parent_deployment=parent_deployment,
+            trace=trace,
+            execution_path=execution_path,
         )
 
     elif re.search(ANTHROPIC_MESSAGES_PATTERN, uri):

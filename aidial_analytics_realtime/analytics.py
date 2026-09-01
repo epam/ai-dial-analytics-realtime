@@ -17,6 +17,10 @@ from aidial_analytics_realtime.dial import (
 )
 from aidial_analytics_realtime.influx_writer import InfluxWriterAsync
 from aidial_analytics_realtime.langid import LangID
+from aidial_analytics_realtime.responses_api import (
+    get_responses_request_contents,
+    get_responses_response_contents,
+)
 from aidial_analytics_realtime.topic_model import TopicModel
 
 
@@ -191,6 +195,111 @@ async def make_point(
     )
 
     return point
+
+
+def _get_number_responses_inputs(request: dict | None) -> int:
+    if request is None:
+        return 0
+    inp = request.get("input")
+    # A bare string input is a shorthand for a single user message.
+    return 1 if isinstance(inp, str) else len(inp or [])
+
+
+async def make_responses_point(
+    *,
+    deployment: str,
+    model: str,
+    parent_deployment: str | None,
+    project_id: str,
+    chat_id: str | None,
+    upstream_url: str | None,
+    user_hash: str,
+    user_title: str,
+    timestamp: datetime,
+    request: dict | None,
+    response: dict | None,
+    usage: dict | None,
+    topic_model: TopicModel,
+    lang_id: LangID,
+    trace: dict | None,
+    execution_path: list | None,
+):
+    trace = trace or {}
+    usage = usage or {}
+
+    topic = "undefined"
+    language = "undefined"
+
+    if chat_id:
+        request_contents = get_responses_request_contents(request)
+        response_contents = get_responses_response_contents(response)
+
+        topic = to_string(
+            await topic_model.get_topic_by_text(
+                "\n\n".join(request_contents + response_contents)
+            )
+        )
+
+        if request is not None and response is not None:
+            # Only the latest request message is relevant for the language.
+            language = to_string(
+                await lang_id.detect_language(
+                    "\n\n".join(request_contents[-1:] + response_contents)
+                )
+            )
+
+    price = Decimal(0)
+    if (v := usage.get("price")) is not None:
+        price = v
+
+    deployment_price = Decimal(0)
+    if (v := usage.get("deployment_price")) is not None:
+        deployment_price = v
+
+    prompt_details = usage.get("prompt_tokens_details") or {}
+    completion_details = usage.get("completion_tokens_details") or {}
+
+    response_id = (
+        response["id"]
+        if response is not None and "id" in response
+        else str(uuid4())
+    )
+
+    return (
+        Point("responses_analytics")
+        .tag("project_id", project_id)
+        .tag("title", to_string(user_title))
+        .tag("deployment", deployment)
+        .tag("model", model)
+        .tag("parent_deployment", to_string(parent_deployment))
+        .tag("language", language)
+        .tag("topic", topic)
+        .field("execution_path", build_execution_path(execution_path))
+        .field("trace_id", to_string(trace.get("trace_id")))
+        .field("core_span_id", to_string(trace.get("core_span_id")))
+        .field(
+            "core_parent_span_id", to_string(trace.get("core_parent_span_id"))
+        )
+        .field("upstream", to_string(upstream_url))
+        .field("user_hash", to_string(user_hash))
+        .field("chat_id", to_string(chat_id))
+        .field("response_id", response_id)
+        .field("number_request_messages", _get_number_responses_inputs(request))
+        .field("price", float(price))
+        .field("deployment_price", float(deployment_price))
+        .field("prompt_tokens", usage.get("prompt_tokens") or 0)
+        .field("cached_prompt_tokens", prompt_details.get("cached_tokens") or 0)
+        .field(
+            "cache_write_prompt_tokens",
+            prompt_details.get("cache_write_tokens") or 0,
+        )
+        .field("completion_tokens", usage.get("completion_tokens") or 0)
+        .field(
+            "reasoning_completion_tokens",
+            completion_details.get("reasoning_tokens") or 0,
+        )
+        .time(timestamp)
+    )
 
 
 def _get_number_anthropic_messages(request: dict | None) -> int:

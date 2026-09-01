@@ -208,6 +208,62 @@ def create_chat_point(
     return _create_point(**locals())
 
 
+def create_anthropic_messages_point(
+    *,
+    parent_deployment: str | None = DEFAULT_PARENT_DEPLOYMENT,
+    execution_path: str | None = DEFAULT_EXECUTION_PATH_STR,
+    model: str = DEFAULT_MODEL,
+    deployment: str = DEFAULT_DEPLOYMENT,
+    trace_id: str | None = DEFAULT_TRACE_ID,
+    core_span_id: str | None = DEFAULT_CORE_SPAN_ID,
+    core_parent_span_id: str | None = DEFAULT_CORE_PARENT_SPAN_ID,
+    project_id: str = DEFAULT_PROJECT_ID,
+    language: str | None = None,
+    response_id: str = DEFAULT_RESPONSE_ID,
+    user_hash: str | None = DEFAULT_USER_ID,
+    chat_id: str | None = DEFAULT_CHAT_ID,
+    number_request_messages: int = 1,
+    upstream: str | None = DEFAULT_UPSTREAM_URI,
+    topic: str | None = None,
+    title: str | None = DEFAULT_USER_TITLE,
+    timestamp: datetime = DEFAULT_TIMESTAMP,
+    prompt_tokens: int = 0,
+    completion_tokens: int = 0,
+    cached_prompt_tokens: int = 0,
+    cache_write_prompt_tokens: int = 0,
+    reasoning_completion_tokens: int = 0,
+    deployment_price: float = 0.0,
+    price: float = 0.0,
+) -> Point:
+    return (
+        Point("anthropic_messages_analytics")
+        .tag("project_id", project_id)
+        .tag("title", title or "undefined")
+        .tag("deployment", deployment)
+        .tag("model", model)
+        .tag("parent_deployment", parent_deployment or "undefined")
+        .tag("language", language or "undefined")
+        .tag("topic", topic or "undefined")
+        .field("execution_path", execution_path or "undefined")
+        .field("trace_id", trace_id or "undefined")
+        .field("core_span_id", core_span_id or "undefined")
+        .field("core_parent_span_id", core_parent_span_id or "undefined")
+        .field("upstream", upstream or "undefined")
+        .field("user_hash", user_hash or "undefined")
+        .field("chat_id", chat_id or "undefined")
+        .field("response_id", response_id)
+        .field("number_request_messages", number_request_messages)
+        .field("price", price)
+        .field("deployment_price", deployment_price)
+        .field("prompt_tokens", prompt_tokens)
+        .field("cached_prompt_tokens", cached_prompt_tokens)
+        .field("cache_write_prompt_tokens", cache_write_prompt_tokens)
+        .field("completion_tokens", completion_tokens)
+        .field("reasoning_completion_tokens", reasoning_completion_tokens)
+        .time(timestamp)
+    )
+
+
 def create_embeddings_point(
     *,
     parent_deployment: str | None = DEFAULT_PARENT_DEPLOYMENT,

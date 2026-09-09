@@ -1,0 +1,27 @@
+# Example configuration for the InfluxDB rollup plugin.
+# All options are optional; default values are shown below.
+
+# Rollup mode: "hourly" or "monthly"
+# mode = "hourly"
+
+# Raw source table (in the trigger database)
+# raw_table = "analytics"
+
+# Database where aggregates will be written
+# agg_database = "analytics_agg"
+
+# Hourly window size in hours (only used when mode="hourly")
+# Must divide 24 evenly.
+# window_hours = 6
+
+# Backfill window (ISO 8601 timestamps)
+# If both are set, the plugin processes this interval instead of the scheduler time.
+# start_time = "2026-01-01T00:00:00Z"
+# end_time   = "2026-01-01T06:00:00Z"
+
+# Enable verbose logging (SQL queries and written data points)
+# verbose = false
+
+# Local CLI option (not used by scheduled plugin)
+# Prevents writes when running via __main__.py
+# readonly = true

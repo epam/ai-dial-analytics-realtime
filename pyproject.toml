@@ -56,7 +56,7 @@ priority = "explicit"
 [tool.poetry.group.test.dependencies]
 pytest = "^9.0.3"
 httpx = "^0.25.2"
-httpx2 = "^2.0.0"
+httpx2 = "^2.12.0"
 pytest-env = "1.1.1"
 
 [tool.poetry.group.dev.dependencies]

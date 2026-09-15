@@ -32,10 +32,6 @@ _logger_prefix: ContextVar[str] = ContextVar("_logger_prefix", default="")
 
 @asynccontextmanager
 async def with_logger_prefix(*prefixes: str) -> AsyncIterator[None]:
-    """
-    Usable both as a decorator of a coroutine and as an async context manager.
-    """
-
     prefix = "".join(f"[{p}] " for p in prefixes)
     token = _logger_prefix.set(_logger_prefix.get() + prefix)
     try:

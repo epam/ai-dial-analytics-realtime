@@ -1,11 +1,9 @@
 from aidial_analytics_realtime.utils.json import parse_json
 
 
-def get_assembled_response(message: dict, *, api: str) -> dict | None:
+def get_assembled_response(message: dict) -> dict | None:
     assembled_response = parse_json(
-        message.get("assembled_response"),
-        json_path="assembled_response",
-        api=api,
+        message.get("assembled_response"), "assembled_response"
     )
     if assembled_response is None:
         return None

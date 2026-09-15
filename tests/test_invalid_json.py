@@ -41,13 +41,13 @@ INVALID_JSONS = ["", " ", "not a JSON", "{", '{"model": }', "[1, 2"]
             create_chat_point(
                 model=DEFAULT_DEPLOYMENT, number_request_messages=0
             ),
-            "request.body in the Chat Completions API log message isn't valid JSON",
+            "[chat-completions] request.body in the log message isn't valid JSON",
             id="chat-request-body",
         ),
         pytest.param(
             lambda body: create_chat_message(response_assembled=body),
             create_chat_point(response_id="pseudo-uuid-1"),
-            "assembled_response in the Chat Completions API log message isn't valid JSON",
+            "[chat-completions] assembled_response in the log message isn't valid JSON",
             id="chat-assembled-response",
         ),
         pytest.param(
@@ -55,13 +55,13 @@ INVALID_JSONS = ["", " ", "not a JSON", "{", '{"model": }', "[1, 2"]
             create_responses_point(
                 model=DEFAULT_DEPLOYMENT, number_request_messages=0
             ),
-            "request.body in the Responses API log message isn't valid JSON",
+            "[responses] request.body in the log message isn't valid JSON",
             id="responses-request-body",
         ),
         pytest.param(
             lambda body: create_responses_message(response_assembled=body),
             create_responses_point(response_id="pseudo-uuid-1"),
-            "assembled_response in the Responses API log message isn't valid JSON",
+            "[responses] assembled_response in the log message isn't valid JSON",
             id="responses-assembled-response",
         ),
         pytest.param(
@@ -69,7 +69,7 @@ INVALID_JSONS = ["", " ", "not a JSON", "{", '{"model": }', "[1, 2"]
             create_anthropic_messages_point(
                 model=DEFAULT_DEPLOYMENT, number_request_messages=0
             ),
-            "request.body in the Anthropic Messages API log message isn't valid JSON",
+            "[anthropic-messages] request.body in the log message isn't valid JSON",
             id="anthropic-messages-request-body",
         ),
         pytest.param(
@@ -77,7 +77,7 @@ INVALID_JSONS = ["", " ", "not a JSON", "{", '{"model": }', "[1, 2"]
                 response_assembled=body
             ),
             create_anthropic_messages_point(response_id="pseudo-uuid-1"),
-            "assembled_response in the Anthropic Messages API log message isn't valid JSON",
+            "[anthropic-messages] assembled_response in the log message isn't valid JSON",
             id="anthropic-messages-assembled-response",
         ),
         pytest.param(
@@ -85,13 +85,13 @@ INVALID_JSONS = ["", " ", "not a JSON", "{", '{"model": }', "[1, 2"]
             create_embeddings_point(
                 response_id="pseudo-uuid-1", number_request_messages=0
             ),
-            "request.body in the Embeddings API log message isn't valid JSON",
+            "[embeddings] request.body in the log message isn't valid JSON",
             id="embeddings-request-body",
         ),
         pytest.param(
             lambda body: create_embedding_message(response_body=body),
             create_embeddings_point(response_id="pseudo-uuid-1"),
-            "response.body in the Embeddings API log message isn't valid JSON",
+            "[embeddings] response.body in the log message isn't valid JSON",
             id="embeddings-response-body",
         ),
         pytest.param(
@@ -99,7 +99,7 @@ INVALID_JSONS = ["", " ", "not a JSON", "{", '{"model": }', "[1, 2"]
             create_mcp_point(
                 mcp_method="undefined", mcp_tool_call_name="undefined"
             ),
-            "request.body in the MCP API log message isn't valid JSON",
+            "[mcp] request.body in the log message isn't valid JSON",
             id="mcp-request-body",
         ),
     ],

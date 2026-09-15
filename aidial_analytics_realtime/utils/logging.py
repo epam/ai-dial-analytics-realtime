@@ -1,5 +1,7 @@
 import logging
 import os
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
 from contextvars import ContextVar
 
 from aidial_sdk import LogConfig, configure_root_logger
@@ -28,8 +30,18 @@ def configure_loggers():
 _logger_prefix: ContextVar[str] = ContextVar("_logger_prefix", default="")
 
 
-def add_logger_prefix(prefix: str) -> None:
-    _logger_prefix.set(_logger_prefix.get() + prefix)
+@asynccontextmanager
+async def with_logger_prefix(*prefixes: str) -> AsyncIterator[None]:
+    """
+    Usable both as a decorator of a coroutine and as an async context manager.
+    """
+
+    prefix = "".join(f"[{p}] " for p in prefixes)
+    token = _logger_prefix.set(_logger_prefix.get() + prefix)
+    try:
+        yield
+    finally:
+        _logger_prefix.reset(token)
 
 
 class _PrefixFilter(logging.Filter):
@@ -38,5 +50,5 @@ class _PrefixFilter(logging.Filter):
 
     def filter(self, record):
         if prefix := _logger_prefix.get():
-            record.msg = f"{prefix} {record.msg}"
+            record.msg = f"{prefix}{record.msg}"
         return True

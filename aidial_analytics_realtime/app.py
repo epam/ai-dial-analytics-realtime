@@ -34,6 +34,7 @@ from aidial_analytics_realtime.time import parse_time
 from aidial_analytics_realtime.topic_model import TopicModel, create_topic_model
 from aidial_analytics_realtime.utils.concurrency import cpu_task_executor
 from aidial_analytics_realtime.utils.deprecations import check_deprecations
+from aidial_analytics_realtime.utils.json import parse_json
 from aidial_analytics_realtime.utils.logging import (
     add_logger_prefix,
     configure_loggers,
@@ -128,17 +129,15 @@ async def on_chat_completion_message(
     if response["status"] != "200":
         return
 
-    request_body = None
-    model: str | None = None
-
-    if (request_body_str := request.get("body")) is not None:
-        request_body = json.loads(request_body_str)
-        model = request_body.get("model") or deployment
+    request_body = parse_json(
+        request.get("body"), json_path="request.body", api="Chat Completions"
+    )
+    model = (request_body or {}).get("model") or deployment
 
     await on_message(
         influx_writer,
         deployment,
-        model or deployment,
+        model,
         project_id,
         chat_id,
         upstream_url,
@@ -180,16 +179,14 @@ async def on_responses_message(
     if response["status"] != "200":
         return
 
-    request_body = None
-    model: str | None = None
-
-    if (request_body_str := request.get("body")) is not None:
-        request_body = json.loads(request_body_str)
-        model = request_body.get("model") or deployment
+    request_body = parse_json(
+        request.get("body"), json_path="request.body", api="Responses"
+    )
+    model = (request_body or {}).get("model") or deployment
 
     point = await make_responses_point(
         deployment=deployment,
-        model=model or deployment,
+        model=model,
         parent_deployment=parent_deployment,
         project_id=project_id,
         chat_id=chat_id,
@@ -231,16 +228,14 @@ async def on_anthropic_messages_message(
     if response["status"] != "200":
         return
 
-    request_body = None
-    model: str | None = None
-
-    if (request_body_str := request.get("body")) is not None:
-        request_body = json.loads(request_body_str)
-        model = request_body.get("model") or deployment
+    request_body = parse_json(
+        request.get("body"), json_path="request.body", api="Anthropic Messages"
+    )
+    model = (request_body or {}).get("model") or deployment
 
     point = await make_anthropic_messages_point(
         deployment=deployment,
-        model=model or deployment,
+        model=model,
         parent_deployment=parent_deployment,
         project_id=project_id,
         chat_id=chat_id,
@@ -280,14 +275,11 @@ async def on_embedding_message(
     if response["status"] != "200":
         return
 
-    request_body_str = request.get("body")
-    response_body_str = response.get("body")
-
-    request_body = (
-        None if request_body_str is None else json.loads(request_body_str)
+    request_body = parse_json(
+        request.get("body"), json_path="request.body", api="Embeddings"
     )
-    response_body = (
-        None if response_body_str is None else json.loads(response_body_str)
+    response_body = parse_json(
+        response.get("body"), json_path="response.body", api="Embeddings"
     )
 
     await on_message(
@@ -331,9 +323,8 @@ async def on_mcp_message(
     if response["status"] != "200":
         return
 
-    request_body_str = request.get("body")
-    request_body = (
-        None if request_body_str is None else json.loads(request_body_str)
+    request_body = parse_json(
+        request.get("body"), json_path="request.body", api="MCP"
     )
 
     point = make_mcp_point(
@@ -427,7 +418,7 @@ async def on_log_message(
         )
 
     elif re.search(CHAT_COMPLETION_PATTERN, uri):
-        response_body = get_assembled_response(message)
+        response_body = get_assembled_response(message, api="Chat Completions")
         await on_chat_completion_message(
             deployment,
             project_id,
@@ -459,7 +450,7 @@ async def on_log_message(
             timestamp=timestamp,
             request=request,
             response=response,
-            response_body=get_assembled_response(message),
+            response_body=get_assembled_response(message, api="Responses"),
             influx_writer=influx_writer,
             topic_model=topic_model,
             lang_id=lang_id,
@@ -480,7 +471,9 @@ async def on_log_message(
             timestamp=timestamp,
             request=request,
             response=response,
-            response_body=get_assembled_response(message),
+            response_body=get_assembled_response(
+                message, api="Anthropic Messages"
+            ),
             influx_writer=influx_writer,
             topic_model=topic_model,
             lang_id=lang_id,

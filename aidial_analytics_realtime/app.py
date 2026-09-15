@@ -34,11 +34,12 @@ from aidial_analytics_realtime.time import parse_time
 from aidial_analytics_realtime.topic_model import TopicModel, create_topic_model
 from aidial_analytics_realtime.utils.concurrency import cpu_task_executor
 from aidial_analytics_realtime.utils.deprecations import check_deprecations
-from aidial_analytics_realtime.utils.logging import (
-    add_logger_prefix,
-    configure_loggers,
-)
+from aidial_analytics_realtime.utils.json import parse_json
 from aidial_analytics_realtime.utils.logging import app_logger as logger
+from aidial_analytics_realtime.utils.logging import (
+    configure_loggers,
+    with_logger_prefix,
+)
 from aidial_analytics_realtime.utils.request import (
     DataRequest,
     Message,
@@ -82,6 +83,7 @@ configure_loggers()
 check_deprecations()
 
 
+@with_logger_prefix("rate")
 async def on_rate_message(
     deployment: str,
     project_id: str,
@@ -106,7 +108,9 @@ async def on_rate_message(
     await influx_writer(point)
 
 
+@with_logger_prefix("chat-completions")
 async def on_chat_completion_message(
+    message: dict,
     deployment: str,
     project_id: str,
     chat_id: str,
@@ -116,7 +120,6 @@ async def on_chat_completion_message(
     timestamp: datetime,
     request: dict,
     response: dict,
-    response_body: dict | None,
     influx_writer: InfluxWriterAsync,
     topic_model: TopicModel,
     lang_id: LangID,
@@ -128,17 +131,15 @@ async def on_chat_completion_message(
     if response["status"] != "200":
         return
 
-    request_body = None
-    model: str | None = None
+    response_body = get_assembled_response(message)
 
-    if (request_body_str := request.get("body")) is not None:
-        request_body = json.loads(request_body_str)
-        model = request_body.get("model") or deployment
+    request_body = parse_json(request.get("body"), "request.body")
+    model = (request_body or {}).get("model") or deployment
 
     await on_message(
         influx_writer,
         deployment,
-        model or deployment,
+        model,
         project_id,
         chat_id,
         upstream_url,
@@ -157,6 +158,7 @@ async def on_chat_completion_message(
     )
 
 
+@with_logger_prefix("responses")
 async def on_responses_message(
     *,
     deployment: str,
@@ -166,9 +168,9 @@ async def on_responses_message(
     user_hash: str,
     user_title: str,
     timestamp: datetime,
+    message: dict,
     request: dict,
     response: dict,
-    response_body: dict | None,
     influx_writer: InfluxWriterAsync,
     topic_model: TopicModel,
     lang_id: LangID,
@@ -180,16 +182,14 @@ async def on_responses_message(
     if response["status"] != "200":
         return
 
-    request_body = None
-    model: str | None = None
+    response_body = get_assembled_response(message)
 
-    if (request_body_str := request.get("body")) is not None:
-        request_body = json.loads(request_body_str)
-        model = request_body.get("model") or deployment
+    request_body = parse_json(request.get("body"), "request.body")
+    model = (request_body or {}).get("model") or deployment
 
     point = await make_responses_point(
         deployment=deployment,
-        model=model or deployment,
+        model=model,
         parent_deployment=parent_deployment,
         project_id=project_id,
         chat_id=chat_id,
@@ -208,6 +208,7 @@ async def on_responses_message(
     await influx_writer(point)
 
 
+@with_logger_prefix("anthropic-messages")
 async def on_anthropic_messages_message(
     *,
     deployment: str,
@@ -217,9 +218,9 @@ async def on_anthropic_messages_message(
     user_hash: str,
     user_title: str,
     timestamp: datetime,
+    message: dict,
     request: dict,
     response: dict,
-    response_body: dict | None,
     influx_writer: InfluxWriterAsync,
     topic_model: TopicModel,
     lang_id: LangID,
@@ -231,16 +232,14 @@ async def on_anthropic_messages_message(
     if response["status"] != "200":
         return
 
-    request_body = None
-    model: str | None = None
+    response_body = get_assembled_response(message)
 
-    if (request_body_str := request.get("body")) is not None:
-        request_body = json.loads(request_body_str)
-        model = request_body.get("model") or deployment
+    request_body = parse_json(request.get("body"), "request.body")
+    model = (request_body or {}).get("model") or deployment
 
     point = await make_anthropic_messages_point(
         deployment=deployment,
-        model=model or deployment,
+        model=model,
         parent_deployment=parent_deployment,
         project_id=project_id,
         chat_id=chat_id,
@@ -259,6 +258,7 @@ async def on_anthropic_messages_message(
     await influx_writer(point)
 
 
+@with_logger_prefix("embeddings")
 async def on_embedding_message(
     deployment: str,
     project_id: str,
@@ -280,15 +280,8 @@ async def on_embedding_message(
     if response["status"] != "200":
         return
 
-    request_body_str = request.get("body")
-    response_body_str = response.get("body")
-
-    request_body = (
-        None if request_body_str is None else json.loads(request_body_str)
-    )
-    response_body = (
-        None if response_body_str is None else json.loads(response_body_str)
-    )
+    request_body = parse_json(request.get("body"), "request.body")
+    response_body = parse_json(response.get("body"), "response.body")
 
     await on_message(
         influx_writer,
@@ -312,6 +305,7 @@ async def on_embedding_message(
     )
 
 
+@with_logger_prefix("mcp")
 async def on_mcp_message(
     *,
     deployment: str,
@@ -331,10 +325,7 @@ async def on_mcp_message(
     if response["status"] != "200":
         return
 
-    request_body_str = request.get("body")
-    request_body = (
-        None if request_body_str is None else json.loads(request_body_str)
-    )
+    request_body = parse_json(request.get("body"), "request.body")
 
     point = make_mcp_point(
         deployment=deployment,
@@ -352,6 +343,7 @@ async def on_mcp_message(
     await influx_writer(point)
 
 
+@with_logger_prefix("routes")
 async def on_routes_message(
     *,
     deployment: str,
@@ -427,8 +419,8 @@ async def on_log_message(
         )
 
     elif re.search(CHAT_COMPLETION_PATTERN, uri):
-        response_body = get_assembled_response(message)
         await on_chat_completion_message(
+            message,
             deployment,
             project_id,
             chat_id,
@@ -438,7 +430,6 @@ async def on_log_message(
             timestamp,
             request,
             response,
-            response_body,
             influx_writer,
             topic_model,
             lang_id,
@@ -459,7 +450,7 @@ async def on_log_message(
             timestamp=timestamp,
             request=request,
             response=response,
-            response_body=get_assembled_response(message),
+            message=message,
             influx_writer=influx_writer,
             topic_model=topic_model,
             lang_id=lang_id,
@@ -480,7 +471,7 @@ async def on_log_message(
             timestamp=timestamp,
             request=request,
             response=response,
-            response_body=get_assembled_response(message),
+            message=message,
             influx_writer=influx_writer,
             topic_model=topic_model,
             lang_id=lang_id,
@@ -566,11 +557,13 @@ async def on_log_messages(
         async def _task(i: int, message: Any) -> dict:
             trace_id, span_id = get_tracing_ids(message)
 
-            add_logger_prefix(
-                f"[{i}/{n}] [trace_id={trace_id or 'na'} span_id={span_id or 'na'}]"  # noqa: E501
-            )
-
-            async with Timer(logger.debug, format="message {elapsed}"):
+            async with (
+                with_logger_prefix(
+                    f"{i}/{n}",
+                    f"trace_id={trace_id or 'na'} span_id={span_id or 'na'}",
+                ),
+                Timer(logger.debug, format="message {elapsed}"),
+            ):
                 return await process_message(
                     message,
                     influx_writer,

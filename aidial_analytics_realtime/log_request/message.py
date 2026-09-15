@@ -1,16 +1,11 @@
-import json
-
-from aidial_analytics_realtime.utils.logging import app_logger as logger
+from aidial_analytics_realtime.utils.json import parse_json
 
 
 def get_assembled_response(message: dict) -> dict | None:
-    if (assembled_response_str := message.get("assembled_response")) is None:
-        return None
-
-    try:
-        assembled_response = json.loads(assembled_response_str)
-    except json.JSONDecodeError:
-        logger.error("The assembled response isn't a valid JSON")
+    assembled_response = parse_json(
+        message.get("assembled_response"), "assembled_response"
+    )
+    if assembled_response is None:
         return None
 
     # NOTE: this transformation becomes redundant in ai-dial-core>=0.22.1

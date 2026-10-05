@@ -2,14 +2,14 @@
 
 [[package]]
 name = "aidial-sdk"
-version = "0.38.0"
+version = "0.45.0"
 description = "Framework to create applications and model adapters for AI DIAL"
 optional = false
 python-versions = "<4.0,>=3.10"
 groups = ["main"]
 files = [
-    {file = "aidial_sdk-0.38.0-py3-none-any.whl", hash = "sha256:d67dec8e6133de3e0a75a1646c39d52a0f78860bba57b2e30fb1f158f6f13bd6"},
-    {file = "aidial_sdk-0.38.0.tar.gz", hash = "sha256:ce3022f6e488a2f0de21db2a4ef87bc1e62558e8dd7e96816283b9b20214e1b7"},
+    {file = "aidial_sdk-0.45.0-py3-none-any.whl", hash = "sha256:ec6903220610b2d245fed62a4773756bfed23d589df328e98034a6fb9bd78359"},
+    {file = "aidial_sdk-0.45.0.tar.gz", hash = "sha256:bb758899affa0624fd912113a2d3736ce15e0fbf44a6fb38988f0a4da188c4a0"},
 ]
 
 [package.dependencies]
@@ -28,7 +28,7 @@ opentelemetry-sdk = {version = ">=1.22.0,<2.0", optional = true, markers = "extr
 prometheus-client = {version = ">=0.17.1,<1.0", optional = true, markers = "extra == \"telemetry\""}
 pydantic = ">=1.10.17,<3"
 uvicorn = ">=0.19,<1.0"
-wrapt = ">=1.10,<2"
+wrapt = ">=1.10,<3"
 
 [package.extras]
 httpx = ["httpx (>=0.25.0,<1.0)"]
@@ -3703,4 +3703,4 @@ type = ["pytest-mypy"]
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.12,<3.13"
-content-hash = "ca6b151ae22575b25ae53a28e1c973ffe19cf9e854154b72ce8f4de47d978018"
+content-hash = "322b687afe5ff766950a97420524fd4ba23979c645dbf3cb11e7f40c8e55e5c2"

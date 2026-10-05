@@ -50,6 +50,9 @@ WORKDIR /app
 RUN useradd -m -u 1001 -s /bin/bash appuser
 COPY --chown=appuser --from=builder /app .
 
+COPY ./scripts/docker_entrypoint.sh /docker_entrypoint.sh
+RUN chmod +x /docker_entrypoint.sh
+
 ENV PATH="/app/.venv/bin:$PATH"
 
 USER appuser
@@ -59,4 +62,4 @@ EXPOSE 5000
 HEALTHCHECK  --interval=10s --timeout=5s --start-period=30s --retries=6 \
     CMD wget --no-verbose --tries=1 --spider http://localhost:5000/health || exit 1
 
-CMD ["uvicorn", "aidial_analytics_realtime.app:app", "--host", "0.0.0.0", "--port", "5000"]
+ENTRYPOINT ["/docker_entrypoint.sh"]

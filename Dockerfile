@@ -29,6 +29,9 @@ RUN ${POETRY} install --no-interaction --no-ansi --no-cache --only main \
 COPY aidial_analytics_realtime aidial_analytics_realtime
 RUN ${POETRY} install --no-interaction --no-ansi --no-cache --only main
 
+# pip is not needed at runtime; its vendored deps (msgpack, urllib3, setuptools) carry CVEs
+RUN .venv/bin/python -m pip uninstall -y pip
+
 FROM ubuntu:24.04
 
 # Keeps Python from generating .pyc files in the container

@@ -624,306 +624,306 @@ spec:
     cron: 0 0 1 * *
     name: monthly_agg
     query: |-
-      import "influxdata/influxdb/schema" 
-      import "experimental" import "date"
-      import "influxdata/influxdb/secrets"
+        import "influxdata/influxdb/schema"
+        import "experimental" import "date"
+        import "influxdata/influxdb/secrets"
 
 
-      option org = secrets.get(key: "org")
+        option org = secrets.get(key: "org")
 
-      getOrDefault = (f, d) => if exists f then f else d
-
-
-      now_time = now()
+        getOrDefault = (f, d) => if exists f then f else d
 
 
-      first_day_current_month = date.truncate(t: now_time, unit: 1mo)
+        now_time = now()
 
 
-      start_time = experimental.addDuration(d: -1mo, to: first_day_current_month) 
+        first_day_current_month = date.truncate(t: now_time, unit: 1mo)
 
 
-      end_time = experimental.addDuration(d: -1s, to: first_day_current_month)
+        start_time = experimental.addDuration(d: -1mo, to: first_day_current_month)
 
 
-      toBucket_monthly = "default_agg_month"
+        end_time = experimental.addDuration(d: -1s, to: first_day_current_month)
 
 
-      project_api_data =
-          from(bucket: "default_agg_stats")
-              |> range(start: start_time, stop: end_time)
-              |> filter(fn: (r) => r._field == "request_count" or r._field == "price")
-              |> filter(fn: (r) => r["project_id"] != "")
-              |> schema.fieldsAsCols()
-              |> group()
+        toBucket_monthly = "default_agg_month"
 
-      monthly_api_data =
-          project_api_data
-              |> map(
-                  fn: (r) =>
-                      ({r with month: date.truncate(t: r._time, unit: 1mo),
-                              // Truncate time to the month
 
-                      }),
-              )
-              |> group(columns: ["month", "project_id"])
-              // Group by month and user_hash
-              |> reduce(
-                  fn: (r, accumulator) =>
-                      ({
-                          request_count: getOrDefault(f: r.request_count, d: 0) + accumulator.request_count,
-                          price: getOrDefault(f: r.price, d: 0.0) + accumulator.price,
-                      }),
-                  identity: {request_count: 0, price: 0.0},
-              )
+        project_api_data =
+            from(bucket: "default_agg_stats")
+                |> range(start: start_time, stop: end_time)
+                |> filter(fn: (r) => r._field == "request_count" or r._field == "price")
+                |> filter(fn: (r) => r["project_id"] != "")
+                |> schema.fieldsAsCols()
+                |> group()
 
-      monthly_model_data =
-          project_api_data
-              |> map(
-                  fn: (r) =>
-                      ({r with month: date.truncate(t: r._time, unit: 1mo),
-                              // Truncate time to the month
+        monthly_api_data =
+            project_api_data
+                |> map(
+                    fn: (r) =>
+                        ({r with month: date.truncate(t: r._time, unit: 1mo),
+                                // Truncate time to the month
 
-                      }),
-              )
-              |> group(columns: ["month", "model"])
-              // Group by month and user_hash
-              |> reduce(
-                  fn: (r, accumulator) =>
-                      ({
-                          request_count: getOrDefault(f: r.request_count, d: 0) + accumulator.request_count,
-                          price: getOrDefault(f: r.price, d: 0.0) + accumulator.price,
-                      }),
-                  identity: {request_count: 0, price: 0.0},
-              )
+                        }),
+                )
+                |> group(columns: ["month", "project_id"])
+                // Group by month and user_hash
+                |> reduce(
+                    fn: (r, accumulator) =>
+                        ({
+                            request_count: getOrDefault(f: r.request_count, d: 0) + accumulator.request_count,
+                            price: getOrDefault(f: r.price, d: 0.0) + accumulator.price,
+                        }),
+                    identity: {request_count: 0, price: 0.0},
+                )
 
-      total_api_cost =
-          monthly_api_data
-              |> group(columns: ["month"])
-              // Group by month only
-              |> sum(column: "price")
-              // Sum all user costs per month
-              |> rename(columns: {price: "Total_Cost_Per_Api"})
+        monthly_model_data =
+            project_api_data
+                |> map(
+                    fn: (r) =>
+                        ({r with month: date.truncate(t: r._time, unit: 1mo),
+                                // Truncate time to the month
 
-      avg_api_cost =
-          monthly_api_data
-              |> group(columns: ["month"])
-              // Group by month only
-              |> mean(column: "price")
-              // Compute the average cost per user
-              |> rename(columns: {price: "Avg_Cost_Per_Api"})
+                        }),
+                )
+                |> group(columns: ["month", "model"])
+                // Group by month and user_hash
+                |> reduce(
+                    fn: (r, accumulator) =>
+                        ({
+                            request_count: getOrDefault(f: r.request_count, d: 0) + accumulator.request_count,
+                            price: getOrDefault(f: r.price, d: 0.0) + accumulator.price,
+                        }),
+                    identity: {request_count: 0, price: 0.0},
+                )
 
-      unique_api =
-          monthly_api_data
-              |> group(columns: ["month"])
-              // Group by month only
-              |> count(column: "project_id")
-              // Compute the average cost per user
-              |> rename(columns: {project_id: "Active_Apis"})
+        total_api_cost =
+            monthly_api_data
+                |> group(columns: ["month"])
+                // Group by month only
+                |> sum(column: "price")
+                // Sum all user costs per month
+                |> rename(columns: {price: "Total_Cost_Per_Api"})
 
-      total_api_request =
-          monthly_api_data
-              |> group(columns: ["month"])
-              // Group by month only
-              |> sum(column: "request_count")
-              // Compute the average cost per user
-              |> rename(columns: {request_count: "Total_RC_Per_Api"})
+        avg_api_cost =
+            monthly_api_data
+                |> group(columns: ["month"])
+                // Group by month only
+                |> mean(column: "price")
+                // Compute the average cost per user
+                |> rename(columns: {price: "Avg_Cost_Per_Api"})
 
-      avg_api_request =
-          monthly_api_data
-              |> group(columns: ["month"])
-              // Group by month only
-              |> mean(column: "request_count")
-              // Compute the average cost per user
-              |> rename(columns: {request_count: "Avg_RC_Per_Api"})
+        unique_api =
+            monthly_api_data
+                |> group(columns: ["month"])
+                // Group by month only
+                |> count(column: "project_id")
+                // Compute the average cost per user
+                |> rename(columns: {project_id: "Active_Apis"})
 
-      total_model_cost =
-          monthly_model_data
-              |> group(columns: ["month"])
-              // Group by month only
-              |> sum(column: "price")
-              // Sum all user costs per month
-              |> rename(columns: {price: "Total_Cost_Per_Model"})
+        total_api_request =
+            monthly_api_data
+                |> group(columns: ["month"])
+                // Group by month only
+                |> sum(column: "request_count")
+                // Compute the average cost per user
+                |> rename(columns: {request_count: "Total_RC_Per_Api"})
 
-      avg_model_cost =
-          monthly_model_data
-              |> group(columns: ["month"])
-              // Group by month only
-              |> mean(column: "price")
-              // Compute the average cost per user
-              |> rename(columns: {price: "Avg_Cost_Per_Model"})
+        avg_api_request =
+            monthly_api_data
+                |> group(columns: ["month"])
+                // Group by month only
+                |> mean(column: "request_count")
+                // Compute the average cost per user
+                |> rename(columns: {request_count: "Avg_RC_Per_Api"})
 
-      kpi_data =
-          from(bucket: "default_agg_kpi")
-              |> range(start: start_time, stop: end_time)
-              |> filter(fn: (r) => r["_measurement"] == "analytics")
-              |> filter(fn: (r) => r["user_hash"] != "undefined")
-              |> schema.fieldsAsCols()
-              |> group()
+        total_model_cost =
+            monthly_model_data
+                |> group(columns: ["month"])
+                // Group by month only
+                |> sum(column: "price")
+                // Sum all user costs per month
+                |> rename(columns: {price: "Total_Cost_Per_Model"})
 
-      user_cost_per_month =
-          kpi_data
-              |> map(
-                  fn: (r) =>
-                      ({r with month: date.truncate(t: r._time, unit: 1mo),
-                              // Truncate time to the month
+        avg_model_cost =
+            monthly_model_data
+                |> group(columns: ["month"])
+                // Group by month only
+                |> mean(column: "price")
+                // Compute the average cost per user
+                |> rename(columns: {price: "Avg_Cost_Per_Model"})
 
-                      }),
-              )
-              |> group(columns: ["month", "user_hash"])
-              // Group by month and user_hash
-              |> sum(column: "cost")
+        kpi_data =
+            from(bucket: "default_agg_kpi")
+                |> range(start: start_time, stop: end_time)
+                |> filter(fn: (r) => r["_measurement"] == "analytics")
+                |> filter(fn: (r) => r["user_hash"] != "undefined")
+                |> schema.fieldsAsCols()
+                |> group()
 
-      total_user_cost =
-          user_cost_per_month
-              |> group(columns: ["month"])
-              // Group by month only
-              |> sum(column: "cost")
-              // Sum all user costs per month
-              |> rename(columns: {cost: "total_user_cost"})
+        user_cost_per_month =
+            kpi_data
+                |> map(
+                    fn: (r) =>
+                        ({r with month: date.truncate(t: r._time, unit: 1mo),
+                                // Truncate time to the month
 
-      avg_per_user_per_month =
-          user_cost_per_month
-              |> group(columns: ["month"])
-              // Group by month only
-              |> mean(column: "cost")
-              // Compute the average cost per user
-              |> rename(columns: {cost: "Avg_Cost_Per_User"})
+                        }),
+                )
+                |> group(columns: ["month", "user_hash"])
+                // Group by month and user_hash
+                |> sum(column: "cost")
 
-      unique_user_per_month =
-          user_cost_per_month
-              |> group(columns: ["month"])
-              // Group by month only
-              |> count(column: "user_hash")
-              // Compute the average cost per user
-              |> rename(columns: {user_hash: "Unique_Users"})
+        total_user_cost =
+            user_cost_per_month
+                |> group(columns: ["month"])
+                // Group by month only
+                |> sum(column: "cost")
+                // Sum all user costs per month
+                |> rename(columns: {cost: "total_user_cost"})
 
-      final_transformed =
-          union(
-              tables: [
-                  total_user_cost
-                      |> rename(columns: {month: "_time"})
-                      |> map(
-                          fn: (r) =>
-                              ({
-                                  _time: r._time,
-                                  _measurement: "analytics",
-                                  _field: "total_user_cost",
-                                  _value: float(v: r.total_user_cost),
-                              }),
-                      )
-                      |> keep(columns: ["_time", "_measurement", "_field", "_value"]),
-                  avg_per_user_per_month
-                      |> rename(columns: {month: "_time"})
-                      |> map(
-                          fn: (r) =>
-                              ({
-                                  _time: r._time,
-                                  _measurement: "analytics",
-                                  _field: "Avg_Cost_Per_User",
-                                  _value: float(v: r.Avg_Cost_Per_User),
-                              }),
-                      )
-                      |> keep(columns: ["_time", "_measurement", "_field", "_value"]),
-                  unique_user_per_month
-                      |> rename(columns: {month: "_time"})
-                      |> map(
-                          fn: (r) =>
-                              ({
-                                  _time: r._time,
-                                  _measurement: "analytics",
-                                  _field: "Unique_Users",
-                                  _value: float(v: r.Unique_Users),
-                              }),
-                      )
-                      |> keep(columns: ["_time", "_measurement", "_field", "_value"]),
-                  total_api_cost
-                      |> rename(columns: {month: "_time"})
-                      |> map(
-                          fn: (r) =>
-                              ({
-                                  _time: r._time,
-                                  _measurement: "analytics",
-                                  _field: "Total_Cost_Per_Api",
-                                  _value: float(v: r.Total_Cost_Per_Api),
-                              }),
-                      )
-                      |> keep(columns: ["_time", "_measurement", "_field", "_value"]),
-                  avg_api_cost
-                      |> rename(columns: {month: "_time"})
-                      |> map(
-                          fn: (r) =>
-                              ({
-                                  _time: r._time,
-                                  _measurement: "analytics",
-                                  _field: "Avg_Cost_Per_Api",
-                                  _value: float(v: r.Avg_Cost_Per_Api),
-                              }),
-                      )
-                      |> keep(columns: ["_time", "_measurement", "_field", "_value"]),
-                  unique_api
-                      |> rename(columns: {month: "_time"})
-                      |> map(
-                          fn: (r) =>
-                              ({
-                                  _time: r._time,
-                                  _measurement: "analytics",
-                                  _field: "Active_Apis",
-                                  _value: float(v: r.Active_Apis),
-                              }),
-                      )
-                      |> keep(columns: ["_time", "_measurement", "_field", "_value"]),
-                  total_api_request
-                      |> rename(columns: {month: "_time"})
-                      |> map(
-                          fn: (r) =>
-                              ({
-                                  _time: r._time,
-                                  _measurement: "analytics",
-                                  _field: "Total_RC_Per_Api",
-                                  _value: float(v: r.Total_RC_Per_Api),
-                              }),
-                      )
-                      |> keep(columns: ["_time", "_measurement", "_field", "_value"]),
-                  avg_api_request
-                      |> rename(columns: {month: "_time"})
-                      |> map(
-                          fn: (r) =>
-                              ({
-                                  _time: r._time,
-                                  _measurement: "analytics",
-                                  _field: "Avg_RC_Per_Api",
-                                  _value: float(v: r.Avg_RC_Per_Api),
-                              }),
-                      )
-                      |> keep(columns: ["_time", "_measurement", "_field", "_value"]),
-                  total_model_cost
-                      |> rename(columns: {month: "_time"})
-                      |> map(
-                          fn: (r) =>
-                              ({
-                                  _time: r._time,
-                                  _measurement: "analytics",
-                                  _field: "Total_Cost_Per_Model",
-                                  _value: float(v: r.Total_Cost_Per_Model),
-                              }),
-                      )
-                      |> keep(columns: ["_time", "_measurement", "_field", "_value"]),
-                  avg_model_cost
-                      |> rename(columns: {month: "_time"})
-                      |> map(
-                          fn: (r) =>
-                              ({
-                                  _time: r._time,
-                                  _measurement: "analytics",
-                                  _field: "Avg_Cost_Per_Model",
-                                  _value: float(v: r.Avg_Cost_Per_Model),
-                              }),
-                      )
-                      |> keep(columns: ["_time", "_measurement", "_field", "_value"]),
-              ],
-          )
+        avg_per_user_per_month =
+            user_cost_per_month
+                |> group(columns: ["month"])
+                // Group by month only
+                |> mean(column: "cost")
+                // Compute the average cost per user
+                |> rename(columns: {cost: "Avg_Cost_Per_User"})
 
-      final_transformed
-          |> group()
-          |> to(bucket: toBucket_monthly, org: org)
+        unique_user_per_month =
+            user_cost_per_month
+                |> group(columns: ["month"])
+                // Group by month only
+                |> count(column: "user_hash")
+                // Compute the average cost per user
+                |> rename(columns: {user_hash: "Unique_Users"})
+
+        final_transformed =
+            union(
+                tables: [
+                    total_user_cost
+                        |> rename(columns: {month: "_time"})
+                        |> map(
+                            fn: (r) =>
+                                ({
+                                    _time: r._time,
+                                    _measurement: "analytics",
+                                    _field: "total_user_cost",
+                                    _value: float(v: r.total_user_cost),
+                                }),
+                        )
+                        |> keep(columns: ["_time", "_measurement", "_field", "_value"]),
+                    avg_per_user_per_month
+                        |> rename(columns: {month: "_time"})
+                        |> map(
+                            fn: (r) =>
+                                ({
+                                    _time: r._time,
+                                    _measurement: "analytics",
+                                    _field: "Avg_Cost_Per_User",
+                                    _value: float(v: r.Avg_Cost_Per_User),
+                                }),
+                        )
+                        |> keep(columns: ["_time", "_measurement", "_field", "_value"]),
+                    unique_user_per_month
+                        |> rename(columns: {month: "_time"})
+                        |> map(
+                            fn: (r) =>
+                                ({
+                                    _time: r._time,
+                                    _measurement: "analytics",
+                                    _field: "Unique_Users",
+                                    _value: float(v: r.Unique_Users),
+                                }),
+                        )
+                        |> keep(columns: ["_time", "_measurement", "_field", "_value"]),
+                    total_api_cost
+                        |> rename(columns: {month: "_time"})
+                        |> map(
+                            fn: (r) =>
+                                ({
+                                    _time: r._time,
+                                    _measurement: "analytics",
+                                    _field: "Total_Cost_Per_Api",
+                                    _value: float(v: r.Total_Cost_Per_Api),
+                                }),
+                        )
+                        |> keep(columns: ["_time", "_measurement", "_field", "_value"]),
+                    avg_api_cost
+                        |> rename(columns: {month: "_time"})
+                        |> map(
+                            fn: (r) =>
+                                ({
+                                    _time: r._time,
+                                    _measurement: "analytics",
+                                    _field: "Avg_Cost_Per_Api",
+                                    _value: float(v: r.Avg_Cost_Per_Api),
+                                }),
+                        )
+                        |> keep(columns: ["_time", "_measurement", "_field", "_value"]),
+                    unique_api
+                        |> rename(columns: {month: "_time"})
+                        |> map(
+                            fn: (r) =>
+                                ({
+                                    _time: r._time,
+                                    _measurement: "analytics",
+                                    _field: "Active_Apis",
+                                    _value: float(v: r.Active_Apis),
+                                }),
+                        )
+                        |> keep(columns: ["_time", "_measurement", "_field", "_value"]),
+                    total_api_request
+                        |> rename(columns: {month: "_time"})
+                        |> map(
+                            fn: (r) =>
+                                ({
+                                    _time: r._time,
+                                    _measurement: "analytics",
+                                    _field: "Total_RC_Per_Api",
+                                    _value: float(v: r.Total_RC_Per_Api),
+                                }),
+                        )
+                        |> keep(columns: ["_time", "_measurement", "_field", "_value"]),
+                    avg_api_request
+                        |> rename(columns: {month: "_time"})
+                        |> map(
+                            fn: (r) =>
+                                ({
+                                    _time: r._time,
+                                    _measurement: "analytics",
+                                    _field: "Avg_RC_Per_Api",
+                                    _value: float(v: r.Avg_RC_Per_Api),
+                                }),
+                        )
+                        |> keep(columns: ["_time", "_measurement", "_field", "_value"]),
+                    total_model_cost
+                        |> rename(columns: {month: "_time"})
+                        |> map(
+                            fn: (r) =>
+                                ({
+                                    _time: r._time,
+                                    _measurement: "analytics",
+                                    _field: "Total_Cost_Per_Model",
+                                    _value: float(v: r.Total_Cost_Per_Model),
+                                }),
+                        )
+                        |> keep(columns: ["_time", "_measurement", "_field", "_value"]),
+                    avg_model_cost
+                        |> rename(columns: {month: "_time"})
+                        |> map(
+                            fn: (r) =>
+                                ({
+                                    _time: r._time,
+                                    _measurement: "analytics",
+                                    _field: "Avg_Cost_Per_Model",
+                                    _value: float(v: r.Avg_Cost_Per_Model),
+                                }),
+                        )
+                        |> keep(columns: ["_time", "_measurement", "_field", "_value"]),
+                ],
+            )
+
+        final_transformed
+            |> group()
+            |> to(bucket: toBucket_monthly, org: org)

@@ -45,8 +45,10 @@ ENV TOPIC_EMBEDDINGS_MODEL="all-mpnet-base-v2"
 
 # Install ca-certificates is required for https connection to InfluxDB
 # zlib1g is upgraded to fix CVE-2026-85091
+# libpcre2-8-0 is upgraded to fix CVE-2026-103111, CVE-2026-86145, CVE-2026-89156,
+# CVE-2026-89157, CVE-2026-89158, CVE-2026-89160 and CVE-2026-89161
 RUN apt-get update && \
-    apt-get install -y python3 ca-certificates zlib1g
+    apt-get install -y python3 ca-certificates zlib1g libpcre2-8-0
 
 WORKDIR /app
 

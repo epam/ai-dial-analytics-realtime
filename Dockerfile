@@ -49,8 +49,10 @@ ENV TOPIC_EMBEDDINGS_MODEL="all-mpnet-base-v2"
 # CVE-2026-89157, CVE-2026-89158, CVE-2026-89160 and CVE-2026-89161
 # apt and libapt-pkg6.0t64 are upgraded to fix CVE-2026-109518
 # perl-base is upgraded to fix CVE-2026-82560
+# libc6 and libc-bin are upgraded to fix CVE-2026-18374, CVE-2026-84243, CVE-2026-8674,
+# CVE-2026-86805, CVE-2026-95818 and CVE-2026-97399
 RUN apt-get update && \
-    apt-get install -y python3 ca-certificates zlib1g libpcre2-8-0 apt libapt-pkg6.0t64 perl-base
+    apt-get install -y python3 ca-certificates zlib1g libpcre2-8-0 apt libapt-pkg6.0t64 perl-base libc6 libc-bin
 
 WORKDIR /app
 
